@@ -51,7 +51,8 @@
       {
         "id": "DD01-003-on-play",
         "type": "onPlay",
-        "text": "On Play: Look at 5 cards from the top of your deck; reveal up to 1 {Dandadan} type card and add it to your hand. Then, place the rest on the bottom of your deck in any order."
+        "text": "On Play: Look at 5 cards from the top of your deck; reveal up to 1 {Dandadan} type card and add it to your hand. Then, place the rest on the bottom of your deck in any order.",
+        "actionId": "lookTopFiveDandadan"
       }
     ]
   },
