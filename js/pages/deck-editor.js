@@ -210,7 +210,7 @@ class DeckEditor {
 
             const matchesType =
                 selectedType === "all" ||
-                card.type.toLowerCase() === selectedType.toLowerCase();
+                String(card.cardType || "").toLowerCase() === selectedType.toLowerCase();
 
             const matchesColor =
                 selectedColor === "all" ||
@@ -529,6 +529,26 @@ class DeckEditor {
 // Page Load
 // =========================
 
-document.addEventListener("DOMContentLoaded", () => {
-    new DeckEditor();
+document.addEventListener("DOMContentLoaded", async () => {
+    try {
+        if (window.loadCardDatabase) {
+            await window.loadCardDatabase();
+        }
+
+        new DeckEditor();
+    } catch (error) {
+        console.error("Failed to initialize deck editor:", error);
+
+        const cardLibraryGrid = document.getElementById("cardLibraryGrid");
+
+        if (cardLibraryGrid) {
+            cardLibraryGrid.innerHTML = "";
+
+            const message = document.createElement("div");
+            message.classList.add("library-message");
+            message.textContent = "Unable to load card data.";
+
+            cardLibraryGrid.appendChild(message);
+        }
+    }
 });

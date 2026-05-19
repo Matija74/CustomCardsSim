@@ -53,13 +53,18 @@ window.CardEffects = {
     },
 
     hasKeyword(card, keywordName) {
-        if (!card || !Array.isArray(card.keywords)) {
+        if (!card) {
             return false;
         }
 
         const wantedKeyword = this.normalizeKeyword(keywordName);
+        const allKeywords = [
+            ...(Array.isArray(card.keywords) ? card.keywords : []),
+            ...(Array.isArray(card.temporaryKeywords) ? card.temporaryKeywords : []),
+            ...(Array.isArray(card.battleKeywords) ? card.battleKeywords : [])
+        ];
 
-        return card.keywords.some(keyword => {
+        return allKeywords.some(keyword => {
             if (typeof keyword === "string") {
                 return this.normalizeKeyword(keyword) === wantedKeyword;
             }
@@ -285,6 +290,153 @@ window.CardEffects = {
         };
     },
 
+    resolveTakakuraKenCharacterWhenAttacking(gameState, player, attackerData, ui) {
+        const character = attackerData?.cardType === "character"
+            ? player?.characters?.[attackerData.slotIndex]
+            : null;
+
+        if (!character || character.cardNumber !== "DD01-006") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const effectId = "DD01-006-when-attacking-active";
+        const turnNumber = player.turns;
+
+        if (this.hasUsedOncePerTurnEffect(character, effectId, turnNumber)) {
+            return {
+                activated: false,
+                message: `${character.name}'s Once Per Turn effect has already been used this turn.`
+            };
+        }
+
+        if (!this.hasTurboGrannyFormStage(player)) {
+            return {
+                activated: false,
+                message: `${character.name}'s When Attacking effect did not activate because Turbo Granny Form is not in play.`
+            };
+        }
+
+        character.state = "active";
+        this.markOncePerTurnEffectUsed(character, effectId, turnNumber);
+
+        if (ui?.renderCharacters) {
+            ui.renderCharacters();
+        }
+
+        return {
+            activated: true,
+            message: `${character.name}'s When Attacking effect set it as active.`
+        };
+    },
+
+    resolveRefreshDonWhenAttacking(player, attackerData, ui) {
+        const character = attackerData?.cardType === "character"
+            ? player?.characters?.[attackerData.slotIndex]
+            : null;
+
+        if (!character || character.cardNumber !== "DD01-007") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const refreshedDon = setRestedDonActive(player, 2, ui);
+
+        return {
+            activated: refreshedDon > 0,
+            message: refreshedDon > 0
+                ? `${character.name}'s When Attacking effect set ${refreshedDon} DON!! as active.`
+                : `${character.name}'s When Attacking effect found no rested DON!! cards.`
+        };
+    },
+
+    resolveEvilEyeWhenAttacking(player, attackerData, ui) {
+        const character = attackerData?.cardType === "character"
+            ? player?.characters?.[attackerData.slotIndex]
+            : null;
+
+        if (!character || character.cardNumber !== "DD01-010") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const returnedDon = returnDonToDeck(player, 1, ui);
+
+        if (returnedDon < 1) {
+            return {
+                activated: false,
+                message: `${character.name}'s When Attacking effect could not pay DON!! -1.`
+            };
+        }
+
+        addTemporaryKeyword(character, "unblockable");
+
+        return {
+            activated: true,
+            message: `${character.name}'s When Attacking effect returned 1 DON!! and gained Unblockable until end of turn.`
+        };
+    },
+
+    resolveAiraWhenAttacking(player, attackerData, ui) {
+        const character = attackerData?.cardType === "character"
+            ? player?.characters?.[attackerData.slotIndex]
+            : null;
+
+        if (!character || character.cardNumber !== "DD01-017") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const effectId = "DD01-017-when-attacking-ko-blocker";
+        const turnNumber = player.turns;
+
+        if (this.hasUsedOncePerTurnEffect(character, effectId, turnNumber)) {
+            return {
+                activated: false,
+                message: `${character.name}'s Once Per Turn effect has already been used this turn.`
+            };
+        }
+
+        const returnedDon = returnDonToDeck(player, 1, ui);
+
+        if (returnedDon < 1) {
+            return {
+                activated: false,
+                message: `${character.name}'s When Attacking effect could not pay DON!! -1.`
+            };
+        }
+
+        this.markOncePerTurnEffectUsed(character, effectId, turnNumber);
+
+        const blockerChoices = getOpponentCharacterChoices(player, card => {
+            return Number(card.cost ?? 0) <= 5 && this.hasKeyword(card, "blocker");
+        });
+
+        if (blockerChoices.length === 0) {
+            return {
+                activated: true,
+                message: `${character.name}'s When Attacking effect returned 1 DON!! but found no opposing cost 5 or lower Blockers.`
+            };
+        }
+
+        const blockerChoice = blockerChoices[0];
+        const defender = gameState[blockerChoice.playerKey];
+        const result = KOCharacter(defender, blockerChoice.slotIndex, ui);
+
+        return {
+            activated: true,
+            message: `${character.name}'s When Attacking effect returned 1 DON!! and K.O.'d ${blockerChoice.card.name}. ${result.message}`
+        };
+    },
+
     // =========================
     // Stage Effects
     // =========================
@@ -353,16 +505,19 @@ window.CardEffects = {
 
     resolveWhenAttackingEffects(gameState, player, attackerData, ui) {
         const results = [];
-        const takakuraKenResult = this.resolveTakakuraKenLeaderWhenAttacking(
-            gameState,
-            player,
-            attackerData,
-            ui
-        );
+        const effectResults = [
+            this.resolveTakakuraKenLeaderWhenAttacking(gameState, player, attackerData, ui),
+            this.resolveTakakuraKenCharacterWhenAttacking(gameState, player, attackerData, ui),
+            this.resolveRefreshDonWhenAttacking(player, attackerData, ui),
+            this.resolveEvilEyeWhenAttacking(player, attackerData, ui),
+            this.resolveAiraWhenAttacking(player, attackerData, ui)
+        ];
 
-        if (takakuraKenResult.message) {
-            results.push(takakuraKenResult);
-        }
+        effectResults.forEach(result => {
+            if (result.message) {
+                results.push(result);
+            }
+        });
 
         return results;
     }

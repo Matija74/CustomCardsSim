@@ -87,6 +87,18 @@ function addDon(player, amount, ui) {
     return donToAdd;
 }
 
+function addRestedDon(player, amount, ui) {
+    const donToAdd = Math.min(amount, player.donDeck);
+
+    player.restedDon += donToAdd;
+    player.donDeck -= donToAdd;
+
+    ui.updateDonDisplay();
+    ui.renderDonDecks();
+
+    return donToAdd;
+}
+
 function restDonForCost(player, cost, ui) {
     if (player.don < cost) {
         return false;
@@ -98,6 +110,37 @@ function restDonForCost(player, cost, ui) {
     ui.updateDonDisplay();
 
     return true;
+}
+
+function returnDonToDeck(player, amount, ui) {
+    const totalDon = player.don + player.restedDon;
+    const donToReturn = Math.min(amount, totalDon);
+
+    for (let i = 0; i < donToReturn; i++) {
+        if (player.restedDon > 0) {
+            player.restedDon--;
+        } else {
+            player.don--;
+        }
+
+        player.donDeck++;
+    }
+
+    ui.updateDonDisplay();
+    ui.renderDonDecks();
+
+    return donToReturn;
+}
+
+function setRestedDonActive(player, amount, ui) {
+    const donToRefresh = Math.min(amount, player.restedDon);
+
+    player.restedDon -= donToRefresh;
+    player.don += donToRefresh;
+
+    ui.updateDonDisplay();
+
+    return donToRefresh;
 }
 
 // =========================
@@ -141,7 +184,52 @@ function drawCards(player, amount, uiInstance = ui) {
 // =========================
 
 function getCardCounterValue(card, player = null) {
-    return Number(card?.counter ?? 0) + getEventCounterBonusFromBoard(card, player);
+    return Number(card?.counter ?? 0) +
+        getEventCounterBonusFromBoard(card, player) +
+        getCounterEffectPower(card, player);
+}
+
+function getCounterEffectPower(card, player) {
+    if (!card || !player) {
+        return 0;
+    }
+
+    return card.effects
+        ?.filter(effect => effect.type === "counter")
+        .reduce((total, effect) => {
+            if (!canUseCounterEffect(card, player, effect)) {
+                return total;
+            }
+
+            return total + Number(effect.powerModifier ?? 0);
+        }, 0) ?? 0;
+}
+
+function canUseCounterEffect(card, player, effect) {
+    if (!card || !player || !effect) {
+        return false;
+    }
+
+    if (effect.id === "DD01-013-counter") {
+        if (!player.leader || (player.leader.state || "active") !== "rested") {
+            return false;
+        }
+
+        if (typeof currentAttack === "undefined" || !currentAttack) {
+            return false;
+        }
+
+        const targetCard = getBoardCardFromData(currentAttack.target);
+
+        return isLeaderOrDandadanCharacter(targetCard);
+    }
+
+    return Boolean(effect.actionId) || Number(effect.powerModifier ?? 0) > 0;
+}
+
+function getCounterEffects(card, player) {
+    return card.effects
+        ?.filter(effect => effect.type === "counter" && canUseCounterEffect(card, player, effect)) ?? [];
 }
 
 function getEventCounterBonusFromBoard(card, player) {
@@ -172,7 +260,7 @@ function getEventCounterBonusFromBoard(card, player) {
 }
 
 function canCardBeUsedAsCounter(card, player = null) {
-    return getCardCounterValue(card, player) > 0;
+    return getCardCounterValue(card, player) > 0 || getCounterEffects(card, player).length > 0;
 }
 
 function useCounterFromHand(player, handIndex, ui) {
@@ -188,7 +276,7 @@ function useCounterFromHand(player, handIndex, ui) {
 
     const counterPower = getCardCounterValue(card, player);
 
-    if (counterPower <= 0) {
+    if (counterPower <= 0 && getCounterEffects(card, player).length === 0) {
         return {
             success: false,
             counterPower: 0,
@@ -200,14 +288,22 @@ function useCounterFromHand(player, handIndex, ui) {
 
     moveCardToTrash(player, counterCard, ui);
 
+    const effectMessages = resolveCounterEffects(player, counterCard, ui);
+
     ui.renderHands();
     ui.renderTrash();
+
+    const effectText = effectMessages.length > 0
+        ? ` ${effectMessages.join(" ")}`
+        : "";
 
     return {
         success: true,
         counterPower,
         card: counterCard,
-        message: `${player.name} countered with ${counterCard.name} for +${counterPower} power.`
+        message: counterPower > 0
+            ? `${player.name} countered with ${counterCard.name} for +${counterPower} power.${effectText}`
+            : `${player.name} countered with ${counterCard.name}.${effectText}`
     };
 }
 
@@ -457,6 +553,82 @@ function resolveEffectAction(player, sourceCard, effect, ui) {
         return lookTopCardsForType(player, sourceCard, 5, "Dandadan", ui);
     }
 
+    if (effect.actionId === "lookTopFiveAddOne") {
+        return lookTopCardsForType(player, sourceCard, 5, "", ui);
+    }
+
+    if (effect.id === "DD01-008-on-play-add-don") {
+        const addedDon = addRestedDon(player, 1, ui);
+
+        return addedDon > 0
+            ? `${sourceCard.name}'s On Play effect added 1 rested DON!!.`
+            : `${sourceCard.name}'s On Play effect found no DON!! cards to add.`;
+    }
+
+    if (effect.id === "DD01-009-on-play-rest-character") {
+        return chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing cost 4 or lower character to rest.",
+            optional: true,
+            filter: card => Number(card.cost ?? 0) <= 4,
+            onSelect: ({ card }) => {
+                card.state = "rested";
+                ui.renderCharacters();
+                addGameLog(`${sourceCard.name}'s On Play effect rested ${card.name}.`);
+            },
+            skipMessage: `${player.name} did not rest a character with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name}'s On Play effect found no opposing cost 4 or lower characters.`
+        });
+    }
+
+    if (effect.id === "DD01-012-play-choice") {
+        const choseBlocker = typeof window !== "undefined" && typeof window.confirm === "function"
+            ? window.confirm(`${sourceCard.name}: choose OK for Blocker, or Cancel for Rush.`)
+            : true;
+        const keyword = choseBlocker ? "blocker" : "rush";
+
+        sourceCard.keywords = sourceCard.keywords || [];
+        sourceCard.keywords.push(keyword);
+
+        return `${sourceCard.name} gained ${choseBlocker ? "Blocker" : "Rush"}.`;
+    }
+
+    if (effect.id === "DD01-004-main") {
+        return playTurboGrannyFormFromDeck(player, sourceCard, ui);
+    }
+
+    if (effect.id === "DD01-011-main") {
+        const damageResult = takeLifeDamage(player, 1, ui);
+
+        if (!damageResult.success) {
+            return `${sourceCard.name}'s Main effect could not take life because ${player.name} has no life cards.`;
+        }
+
+        const message = setOneNamedOwnCardActive(player, sourceCard, "Okarun", ui);
+
+        return `${player.name} took 1 damage. ${message}`;
+    }
+
+    if (effect.id === "DD01-013-main") {
+        if (!restDonForCost(player, 3, ui)) {
+            return `${player.name} could not rest 3 active DON!! for ${sourceCard.name}.`;
+        }
+
+        return chooseOwnBoardCard(player, sourceCard, {
+            prompt: "Choose one of your Dandadan characters to give +4000 and Unblockable for its next battle.",
+            optional: true,
+            includeLeader: false,
+            filter: card => card.cardType === "character" && hasTypeText(card, "Dandadan"),
+            onSelect: ({ card }) => {
+                addBattlePowerBonus(card, 4000);
+                addBattleKeyword(card, "unblockable");
+                ui.renderCharacters();
+                addGameLog(`${sourceCard.name} gave ${card.name} +4000 power and Unblockable for its next battle.`);
+            },
+            skipMessage: `${player.name} paid 3 DON!! but did not choose a character for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no eligible Dandadan characters.`
+        });
+    }
+
     return "";
 }
 
@@ -526,6 +698,255 @@ function lookTopCardsForType(player, sourceCard, amount, typeText, ui) {
     return `${sourceCard.name}'s look top effect resolved.`;
 }
 
+function getPlayerKey(player) {
+    if (typeof gameState === "undefined") {
+        return null;
+    }
+
+    if (player === gameState.player1) {
+        return "player1";
+    }
+
+    if (player === gameState.player2) {
+        return "player2";
+    }
+
+    return null;
+}
+
+function getOpponentPlayer(player) {
+    const playerKey = getPlayerKey(player);
+
+    if (!playerKey) {
+        return null;
+    }
+
+    return gameState[playerKey === "player1" ? "player2" : "player1"];
+}
+
+function hasTypeText(card, typeText) {
+    return String(card?.type || "")
+        .toLowerCase()
+        .includes(String(typeText).toLowerCase());
+}
+
+function isLeaderOrDandadanCharacter(card) {
+    if (!card) {
+        return false;
+    }
+
+    if (card.cardType === "leader") {
+        return true;
+    }
+
+    return card.cardType === "character" && hasTypeText(card, "Dandadan");
+}
+
+function getOwnBoardChoices(player, options = {}) {
+    const playerKey = getPlayerKey(player);
+
+    if (!playerKey) {
+        return [];
+    }
+
+    const choices = [];
+
+    if (options.includeLeader !== false && player.leader) {
+        choices.push({
+            playerKey,
+            cardType: "leader",
+            card: player.leader
+        });
+    }
+
+    player.characters.forEach((card, slotIndex) => {
+        if (!card) {
+            return;
+        }
+
+        choices.push({
+            playerKey,
+            cardType: "character",
+            slotIndex,
+            card
+        });
+    });
+
+    if (options.includeStage && player.stage) {
+        choices.push({
+            playerKey,
+            cardType: "stage",
+            card: player.stage
+        });
+    }
+
+    return choices;
+}
+
+function getOpponentCharacterChoices(player, filter) {
+    const opponent = getOpponentPlayer(player);
+    const opponentKey = getPlayerKey(opponent);
+
+    if (!opponent || !opponentKey) {
+        return [];
+    }
+
+    return opponent.characters
+        .map((card, slotIndex) => ({
+            playerKey: opponentKey,
+            cardType: "character",
+            slotIndex,
+            card
+        }))
+        .filter(choice => choice.card && (!filter || filter(choice.card, choice)));
+}
+
+function chooseBoardCard(player, sourceCard, choices, options = {}) {
+    const validChoices = choices.filter(choice => {
+        return choice.card && (!options.filter || options.filter(choice.card, choice));
+    });
+
+    if (validChoices.length === 0) {
+        return options.emptyMessage || `${sourceCard.name} found no eligible cards.`;
+    }
+
+    const finishSelection = (choice) => {
+        if (!choice) {
+            addGameLog(options.skipMessage || `${player.name} did not choose a card for ${sourceCard.name}.`);
+            return;
+        }
+
+        options.onSelect(choice);
+    };
+
+    if (ui && typeof ui.chooseBoardCard === "function") {
+        ui.chooseBoardCard({
+            player,
+            sourceCard,
+            prompt: options.prompt || "Choose a card.",
+            choices: validChoices,
+            optional: options.optional !== false,
+            onComplete: finishSelection
+        });
+
+        return `${player.name} is choosing a card for ${sourceCard.name}.`;
+    }
+
+    finishSelection(validChoices[0]);
+
+    return `${sourceCard.name}'s effect resolved.`;
+}
+
+function chooseOwnBoardCard(player, sourceCard, options) {
+    return chooseBoardCard(
+        player,
+        sourceCard,
+        getOwnBoardChoices(player, options),
+        options
+    );
+}
+
+function chooseOpponentCharacter(player, sourceCard, options) {
+    return chooseBoardCard(
+        player,
+        sourceCard,
+        getOpponentCharacterChoices(player, options.filter),
+        {
+            ...options,
+            filter: null
+        }
+    );
+}
+
+function addTemporaryKeyword(card, keyword) {
+    if (!card.temporaryKeywords) {
+        card.temporaryKeywords = [];
+    }
+
+    card.temporaryKeywords.push(keyword);
+}
+
+function addBattleKeyword(card, keyword) {
+    if (!card.battleKeywords) {
+        card.battleKeywords = [];
+    }
+
+    card.battleKeywords.push(keyword);
+}
+
+function addBattlePowerBonus(card, amount) {
+    card.battlePowerBonus = Number(card.battlePowerBonus || 0) + amount;
+}
+
+function setOneNamedOwnCardActive(player, sourceCard, cardName, ui) {
+    return chooseOwnBoardCard(player, sourceCard, {
+        prompt: `Choose one of your ${cardName} cards to set as active.`,
+        optional: true,
+        includeLeader: true,
+        filter: card => CardEffects.hasCardName(card, cardName),
+        onSelect: ({ card }) => {
+            card.state = "active";
+            ui.renderLeaders();
+            ui.renderCharacters();
+            addGameLog(`${sourceCard.name} set ${card.name} as active.`);
+        },
+        skipMessage: `${player.name} did not set a ${cardName} card as active with ${sourceCard.name}.`,
+        emptyMessage: `${sourceCard.name} found no ${cardName} cards to set active.`
+    });
+}
+
+function playTurboGrannyFormFromDeck(player, sourceCard, ui) {
+    const totalDon = player.don + player.restedDon;
+
+    if (totalDon < 5) {
+        return `${sourceCard.name}'s Main effect did not resolve because ${player.name} has fewer than 5 DON!! cards.`;
+    }
+
+    const stageIndex = player.deck.findIndex(card => CardEffects.hasCardName(card, "Turbo Granny Form"));
+
+    if (stageIndex === -1) {
+        shuffleDeck(player.deck);
+        ui.renderDecks();
+        return `${sourceCard.name} found no Turbo Granny Form in the deck. ${player.name} shuffled the deck.`;
+    }
+
+    const oldStage = player.stage;
+    const stage = player.deck.splice(stageIndex, 1)[0];
+
+    stage.state = "active";
+    player.stage = stage;
+
+    if (oldStage) {
+        moveCardToTrash(player, oldStage, ui);
+    }
+
+    shuffleDeck(player.deck);
+
+    ui.renderDecks();
+    ui.renderStages();
+    ui.renderTrash();
+
+    return oldStage
+        ? `${sourceCard.name} played ${stage.name} from the deck, replacing ${oldStage.name}, then shuffled the deck.`
+        : `${sourceCard.name} played ${stage.name} from the deck, then shuffled the deck.`;
+}
+
+function resolveCounterEffects(player, card, ui) {
+    const messages = [];
+
+    getCounterEffects(card, player).forEach(effect => {
+        if (effect.actionId) {
+            const message = resolveEffectAction(player, card, effect, ui);
+
+            if (message) {
+                messages.push(message);
+            }
+        }
+    });
+
+    return messages;
+}
+
 function resolveOnPlayEffects(player, card, ui) {
     if (!player || !card) {
         return [];
@@ -536,6 +957,37 @@ function resolveOnPlayEffects(player, card, ui) {
     card.effects
         ?.filter(effect => effect.type === "onPlay")
         .forEach(effect => {
+            const message = resolveEffectAction(player, card, effect, ui);
+
+            if (message) {
+                messages.push(message);
+            }
+        });
+
+    return messages;
+}
+
+function resolveOnKOEffects(player, card, ui) {
+    if (!player || !card) {
+        return [];
+    }
+
+    const messages = [];
+
+    card.effects
+        ?.filter(effect => effect.type === "onKO")
+        .forEach(effect => {
+            if (effect.id === "DD01-012-on-ko-add-don") {
+                const addedDon = addDon(player, 1, ui);
+
+                messages.push(
+                    addedDon > 0
+                        ? `${card.name}'s On K.O. effect added 1 active DON!!.`
+                        : `${card.name}'s On K.O. effect found no DON!! cards to add.`
+                );
+                return;
+            }
+
             const message = resolveEffectAction(player, card, effect, ui);
 
             if (message) {
@@ -672,13 +1124,19 @@ function KOCharacter(player, slotIndex, ui) {
 
     moveCardToTrash(player, character, ui);
 
+    const effectMessages = resolveOnKOEffects(player, character, ui);
+
     ui.renderLeaders();
     ui.renderCharacters();
     ui.renderTrash();
 
+    const effectText = effectMessages.length > 0
+        ? ` ${effectMessages.join(" ")}`
+        : "";
+
     return {
         success: true,
-        message: `${character.name} was K.O.'d and placed in the trash.`
+        message: `${character.name} was K.O.'d and placed in the trash.${effectText}`
     };
 }
 
@@ -688,6 +1146,7 @@ function KOCharacter(player, slotIndex, ui) {
 
 function takeLifeDamage(player, amount, ui) {
     let lifeTaken = 0;
+    const triggerMessages = [];
 
     for (let i = 0; i < amount; i++) {
         const topLifeCard = player.life.shift();
@@ -696,21 +1155,115 @@ function takeLifeDamage(player, amount, ui) {
             break;
         }
 
-        player.hand.push(topLifeCard);
+        const triggerEffects = topLifeCard.effects
+            ?.filter(effect => effect.type === "trigger") ?? [];
+
+        if (triggerEffects.length > 0) {
+            triggerMessages.push(...resolveTriggerEffects(player, topLifeCard, triggerEffects, ui));
+        } else {
+            player.hand.push(topLifeCard);
+        }
+
         lifeTaken++;
     }
 
     ui.renderLifeCards();
     ui.renderHands();
 
+    const triggerText = triggerMessages.length > 0
+        ? ` ${triggerMessages.join(" ")}`
+        : "";
+
     return {
         success: lifeTaken > 0,
         lifeTaken,
         remainingLife: player.life.length,
         message: lifeTaken > 0
-            ? `${player.name} took ${lifeTaken} life card${lifeTaken === 1 ? "" : "s"} into hand.`
+            ? `${player.name} took ${lifeTaken} life card${lifeTaken === 1 ? "" : "s"}.${triggerText}`
             : `${player.name} has no life cards left.`
     };
+}
+
+function resolveTriggerEffects(player, card, triggerEffects, ui) {
+    const messages = [];
+
+    triggerEffects.forEach(effect => {
+        if (effect.actionId === "playThisCardFromTrigger") {
+            messages.push(playCardFromTrigger(player, card, ui));
+            return;
+        }
+
+        if (effect.actionId === "activateMainEffect") {
+            const mainMessages = resolveMainEffects(player, card, ui);
+            moveCardToTrash(player, card, ui);
+            messages.push(
+                mainMessages.length > 0
+                    ? `${card.name}'s Trigger activated its Main effect. ${mainMessages.join(" ")}`
+                    : `${card.name}'s Trigger activated, then it was placed in trash.`
+            );
+            return;
+        }
+
+        if (effect.id === "DD01-011-trigger") {
+            messages.push(setOneNamedOwnCardActive(player, card, "Okarun", ui));
+            moveCardToTrash(player, card, ui);
+            return;
+        }
+
+        const message = resolveEffectAction(player, card, effect, ui);
+        moveCardToTrash(player, card, ui);
+
+        if (message) {
+            messages.push(`${card.name}'s Trigger resolved. ${message}`);
+        }
+    });
+
+    return messages;
+}
+
+function playCardFromTrigger(player, card, ui) {
+    if (card.cardType === "character") {
+        const slotIndex = getFirstOpenCharacterSlotIndex(player);
+
+        if (slotIndex === -1) {
+            moveCardToTrash(player, card, ui);
+            return `${card.name}'s Trigger could not play it because ${player.name}'s character area is full. It was placed in trash.`;
+        }
+
+        card.state = "active";
+        card.playedOnTurn = player.turns;
+        player.characters[slotIndex] = card;
+
+        const effectMessages = resolveOnPlayEffects(player, card, ui);
+
+        ui.renderCharacters();
+
+        return effectMessages.length > 0
+            ? `${card.name}'s Trigger played it in character slot ${slotIndex + 1}. ${effectMessages.join(" ")}`
+            : `${card.name}'s Trigger played it in character slot ${slotIndex + 1}.`;
+    }
+
+    if (card.cardType === "stage") {
+        const oldStage = player.stage;
+
+        card.state = "active";
+        player.stage = card;
+
+        if (oldStage) {
+            moveCardToTrash(player, oldStage, ui);
+        }
+
+        const effectMessages = resolveOnPlayEffects(player, card, ui);
+
+        ui.renderStages();
+
+        return effectMessages.length > 0
+            ? `${card.name}'s Trigger played it to the stage area. ${effectMessages.join(" ")}`
+            : `${card.name}'s Trigger played it to the stage area.`;
+    }
+
+    player.hand.push(card);
+    return `${card.name}'s Trigger could not play that card type, so it was added to hand.`;
 }
 
 function banishLifeDamage(player, amount, ui) {
@@ -874,11 +1427,51 @@ function resolveEndOfTurnEffects(player, ui) {
         results.push(turboGrannyResult);
     }
 
+    player.characters.forEach(character => {
+        if (!character) {
+            return;
+        }
+
+        character.effects
+            ?.filter(effect => effect.type === "endOfYourTurn")
+            .forEach(effect => {
+                if (effect.actionId !== "setThisCardActive") {
+                    return;
+                }
+
+                character.state = "active";
+                results.push({
+                    activated: true,
+                    message: `${character.name}'s End of Your Turn effect set it as active.`
+                });
+            });
+    });
+
+    clearEndOfTurnTemporaryEffects(player);
+
     if (ui?.renderLeaders) {
         ui.renderLeaders();
     }
 
+    if (ui?.renderCharacters) {
+        ui.renderCharacters();
+    }
+
     return results;
+}
+
+function clearEndOfTurnTemporaryEffects(player) {
+    const cards = [
+        player.leader,
+        ...player.characters.filter(Boolean),
+        player.stage
+    ].filter(Boolean);
+
+    cards.forEach(card => {
+        card.temporaryKeywords = [];
+        card.battleKeywords = [];
+        card.battlePowerBonus = 0;
+    });
 }
 
 // =========================

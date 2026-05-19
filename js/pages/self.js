@@ -105,7 +105,8 @@ function createUiBridge() {
         renderCharacters,
         renderTrash,
         renderStages,
-        lookTopCardsAddToHand
+        lookTopCardsAddToHand,
+        chooseBoardCard
     };
 }
 
@@ -1282,7 +1283,9 @@ function showSelectedCounterActions() {
         counterButton.textContent = "No Counter";
         counterButton.title = `${card.name} has no counter value.`;
     } else {
-        counterButton.textContent = `Counter +${counterValue}`;
+        counterButton.textContent = counterValue > 0
+            ? `Counter +${counterValue}`
+            : "Counter";
         counterButton.title = `Use ${card.name} as counter.`;
     }
 
@@ -1307,11 +1310,13 @@ function showSelectedCounterActions() {
 
         if (!result.success) return;
 
-        applyCounterPowerToCurrentAttack(result.counterPower);
+        if (result.counterPower > 0) {
+            applyCounterPowerToCurrentAttack(result.counterPower);
 
-        addGameLog(
-            `${player.name}'s attack target has +${currentAttack.targetPowerBonus} counter power this battle.`
-        );
+            addGameLog(
+                `${player.name}'s attack target has +${currentAttack.targetPowerBonus} counter power this battle.`
+            );
+        }
 
         clearHandSelection();
     });
@@ -1588,6 +1593,42 @@ function resolveBoardActionEffect(player, card, effect) {
             message: drawResult?.deckOut
                 ? `${player.name} could not draw a card.`
                 : `${player.name} drew 1 card.`
+        };
+    }
+
+    if (effect.id === "DD01-015-activate-main-power") {
+        if ((card.state || "active") === "rested") {
+            return {
+                success: false,
+                message: `${card.name} is already rested.`
+            };
+        }
+
+        card.state = "rested";
+
+        const message = chooseOwnBoardCard(player, card, {
+            prompt: "Choose up to 1 Ayase Seiko or Okarun to give +3000 power for its next battle.",
+            optional: true,
+            includeLeader: true,
+            filter: targetCard => {
+                return CardEffects.hasCardName(targetCard, "Ayase Seiko") ||
+                    CardEffects.hasCardName(targetCard, "Okarun");
+            },
+            onSelect: ({ card: targetCard }) => {
+                addBattlePowerBonus(targetCard, Number(effect.powerModifier ?? 3000));
+                renderLeaders();
+                renderCharacters();
+                addGameLog(`${card.name} gave ${targetCard.name} +3000 power for its next battle.`);
+            },
+            skipMessage: `${player.name} rested ${card.name} but did not choose a target.`,
+            emptyMessage: `${card.name} found no Ayase Seiko or Okarun cards.`
+        });
+
+        renderCharacters();
+
+        return {
+            success: true,
+            message
         };
     }
 
@@ -2248,6 +2289,8 @@ function resolveCurrentAttack() {
         ${battleResultText}
     `);
 
+    clearBattleOnlyEffectsForCurrentAttack(attackerCard, targetCard);
+
     currentAttack = null;
     pendingAttack = null;
     pendingBlock = null;
@@ -2270,6 +2313,13 @@ function resolveCurrentAttack() {
     }
 
     gameState.currentPhase = "main";
+}
+
+function clearBattleOnlyEffectsForCurrentAttack(attackerCard, targetCard) {
+    [attackerCard, targetCard].filter(Boolean).forEach(card => {
+        card.battlePowerBonus = 0;
+        card.battleKeywords = [];
+    });
 }
 
 function clearCancelAttackButton() {
@@ -2446,6 +2496,120 @@ function removeLookTopOverlay() {
 }
 
 // =========================
+// Board Choice UI
+// =========================
+
+function chooseBoardCard({
+    player,
+    sourceCard,
+    prompt,
+    choices,
+    optional,
+    onComplete
+}) {
+    removeBoardChoiceOverlay();
+
+    const overlay = document.createElement("div");
+    overlay.className = "look-top-overlay";
+    overlay.id = "boardChoiceOverlay";
+
+    const popup = document.createElement("div");
+    popup.className = "look-top-popup";
+
+    const title = document.createElement("h2");
+    title.textContent = sourceCard ? sourceCard.name : "Choose a card";
+
+    const description = document.createElement("p");
+    description.textContent = prompt || `Choose a card for ${player.name}.`;
+
+    const cardGrid = document.createElement("div");
+    cardGrid.className = "look-top-card-grid";
+
+    let selectedChoice = null;
+
+    choices.forEach(choice => {
+        const cardButton = document.createElement("button");
+        cardButton.className = "look-top-card-button";
+
+        const img = document.createElement("img");
+        img.src = choice.card.image;
+        img.alt = choice.card.name;
+        img.className = "look-top-card-img";
+
+        const name = document.createElement("span");
+        name.className = "look-top-card-name";
+        name.textContent = choice.card.name;
+
+        cardButton.appendChild(img);
+        cardButton.appendChild(name);
+
+        cardButton.addEventListener("click", () => {
+            selectedChoice = choice;
+
+            document.querySelectorAll("#boardChoiceOverlay .look-top-card-button").forEach(button => {
+                button.classList.remove("selected-look-card");
+            });
+
+            cardButton.classList.add("selected-look-card");
+
+            chooseButton.disabled = false;
+        });
+
+        cardGrid.appendChild(cardButton);
+    });
+
+    const buttonRow = document.createElement("div");
+    buttonRow.className = "look-top-buttons";
+
+    const chooseButton = document.createElement("button");
+    chooseButton.className = "look-top-action-button";
+    chooseButton.textContent = "Choose";
+    chooseButton.disabled = true;
+
+    const skipButton = document.createElement("button");
+    skipButton.className = "look-top-action-button secondary";
+    skipButton.textContent = "Skip";
+    skipButton.disabled = !optional;
+
+    chooseButton.addEventListener("click", () => {
+        if (!selectedChoice) return;
+
+        removeBoardChoiceOverlay();
+
+        if (typeof onComplete === "function") {
+            onComplete(selectedChoice);
+        }
+    });
+
+    skipButton.addEventListener("click", () => {
+        removeBoardChoiceOverlay();
+
+        if (typeof onComplete === "function") {
+            onComplete(null);
+        }
+    });
+
+    buttonRow.appendChild(chooseButton);
+    buttonRow.appendChild(skipButton);
+
+    popup.appendChild(title);
+    popup.appendChild(description);
+    popup.appendChild(cardGrid);
+    popup.appendChild(buttonRow);
+
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+}
+
+function removeBoardChoiceOverlay() {
+    const oldOverlay = document.getElementById("boardChoiceOverlay");
+
+    if (oldOverlay) {
+        oldOverlay.remove();
+    }
+}
+
+// =========================
 // Board Helpers
 // =========================
 
@@ -2560,7 +2724,8 @@ function getPowerModifier(card, player = null) {
     return getYourTurnPowerBonus(card, player) +
         getTurboGrannyFormPowerModifier(card, player) +
         getOpponentTurnPowerModifier(card, player) +
-        getTokenAttachedPowerModifier(card);
+        getTokenAttachedPowerModifier(card) +
+        getBattlePowerModifier(card);
 }
 
 function getYourTurnPowerBonus(card, player) {
@@ -2644,6 +2809,10 @@ function getTokenAttachedPowerModifier(card) {
 
             return total + Number(effect.powerModifier ?? 0);
         }, 0) ?? 0;
+}
+
+function getBattlePowerModifier(card) {
+    return Number(card?.battlePowerBonus ?? 0);
 }
 
 function renderPowerModifierBadge(card, player, container, boardCardData = null) {
