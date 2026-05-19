@@ -1134,6 +1134,155 @@ body {
 }
 
 /* =========================
+   Look Top Cards Popup
+========================= */
+
+.look-top-overlay {
+    position: fixed;
+    inset: 0;
+
+    width: 100vw;
+    height: 100vh;
+
+    background: rgba(0, 0, 0, 0.78);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    z-index: 10000;
+}
+
+.look-top-popup {
+    width: min(900px, calc(100vw - 40px));
+
+    padding: 24px;
+
+    border: 3px solid black;
+    border-radius: 18px;
+
+    background: rgba(35, 35, 35, 0.98);
+    color: white;
+
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.65);
+}
+
+.look-top-popup h2 {
+    margin: 0 0 8px;
+
+    font-size: 1.5rem;
+    font-weight: 900;
+}
+
+.look-top-popup p {
+    margin: 0 0 18px;
+
+    color: #d0d0d0;
+    font-size: 0.95rem;
+}
+
+.look-top-card-grid {
+    display: flex;
+    gap: 14px;
+
+    overflow-x: auto;
+
+    padding: 8px 2px 16px;
+}
+
+.look-top-card-button {
+    width: 140px;
+    flex: 0 0 auto;
+
+    padding: 6px;
+
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+
+    cursor: pointer;
+
+    transition: 0.2s ease;
+}
+
+.look-top-card-button:hover:not(:disabled) {
+    transform: translateY(-4px);
+    border-color: #66ccff;
+    box-shadow: 0 0 16px rgba(102, 204, 255, 0.75);
+}
+
+.look-top-card-button.selected-look-card {
+    border-color: #66ff66;
+    box-shadow: 0 0 18px rgba(102, 255, 102, 0.9);
+}
+
+.look-top-card-button.disabled-choice {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.look-top-card-img {
+    width: 100%;
+    height: 196px;
+
+    object-fit: contain;
+
+    border-radius: 6px;
+}
+
+.look-top-card-name {
+    display: block;
+
+    margin-top: 6px;
+
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-align: center;
+}
+
+.look-top-buttons {
+    display: flex;
+    gap: 12px;
+}
+
+.look-top-action-button {
+    flex: 1;
+
+    padding: 12px 16px;
+
+    border: none;
+    border-radius: 10px;
+
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+
+    font-size: 0.95rem;
+    font-weight: 900;
+
+    cursor: pointer;
+
+    transition: 0.2s ease;
+}
+
+.look-top-action-button.secondary {
+    background: linear-gradient(135deg, #777 0%, #444 100%);
+}
+
+.look-top-action-button:disabled {
+    background: #555;
+    color: #aaa;
+
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.look-top-action-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+}
+
+/* =========================
    Game Over Popup Fix
 ========================= */
 
