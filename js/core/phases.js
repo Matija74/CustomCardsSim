@@ -270,6 +270,8 @@ function passTurn(phaseButton, phaseInfo) {
     const drawResult = runDrawPhase(gameState.currentPlayer, phaseInfo);
 
     if (drawResult?.deckOut || gameState.currentPhase === "gameOver") {
+        phaseButton.disabled = true;
+        phaseButton.textContent = "Game Over";
         return;
     }
 
