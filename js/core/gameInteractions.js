@@ -109,7 +109,7 @@ function drawCard(player, uiInstance = ui) {
 
     if (!card) {
         console.log(`${player.name} has no cards left in deck.`);
-        return loseByDeckOut(player);
+        return loseByDeckOut(player, `${player.name} tried to draw from an empty deck.`);
     }
 
     player.hand.push(assignCardInstance(card));
@@ -119,9 +119,7 @@ function drawCard(player, uiInstance = ui) {
         uiInstance.renderDecks();
     }
 
-    return {
-        deckOut: false
-    };
+    return checkDeckOut(player, `${player.name} drew the last card from their deck.`);
 }
 
 function drawCards(player, amount, uiInstance = ui) {
@@ -758,7 +756,7 @@ function getOpponentOfPlayer(player) {
     return null;
 }
 
-function loseByDeckOut(player) {
+function loseByDeckOut(player, reasonText = "") {
     const winnerPlayer = getOpponentOfPlayer(player);
 
     if (!winnerPlayer) {
@@ -773,7 +771,7 @@ function loseByDeckOut(player) {
         endGame(
             winnerPlayer,
             "Deck Out",
-            `${player.name} has no cards left in deck.`
+            reasonText || `${player.name} has no cards left in deck.`
         );
     }
 
@@ -784,14 +782,23 @@ function loseByDeckOut(player) {
     };
 }
 
-function checkDeckOut(player) {
-    if (!player || player.deck.length > 0) {
+function checkDeckOut(player, reasonText = "") {
+    if (!player) {
         return {
             deckOut: false
         };
     }
 
-    return loseByDeckOut(player);
+    if (player.deck.length > 0) {
+        return {
+            deckOut: false
+        };
+    }
+
+    return loseByDeckOut(
+        player,
+        reasonText || `${player.name} has no cards left in deck.`
+    );
 }
 
 // =========================
