@@ -104,7 +104,8 @@ function createUiBridge() {
         renderLeaders,
         renderCharacters,
         renderTrash,
-        renderStages
+        renderStages,
+        lookTopCardsAddToHand
     };
 }
 
@@ -2318,6 +2319,130 @@ function cancelPendingAttack() {
     clearCancelAttackButton();
 
     gameState.currentPhase = "main";
+}
+
+// =========================
+// Look Top Cards UI
+// =========================
+
+function lookTopCardsAddToHand({
+    player,
+    sourceCard,
+    cards,
+    isSelectable,
+    onComplete
+}) {
+    removeLookTopOverlay();
+
+    const overlay = document.createElement("div");
+    overlay.className = "look-top-overlay";
+    overlay.id = "lookTopOverlay";
+
+    const popup = document.createElement("div");
+    popup.className = "look-top-popup";
+
+    const title = document.createElement("h2");
+    title.textContent = sourceCard
+        ? `${sourceCard.name}`
+        : "Look at cards";
+
+    const description = document.createElement("p");
+    description.textContent = `Choose up to 1 valid card to add to ${player.name}'s hand. The rest go to the bottom of the deck.`;
+
+    const cardGrid = document.createElement("div");
+    cardGrid.className = "look-top-card-grid";
+
+    let selectedIndex = null;
+
+    cards.forEach((card, index) => {
+        const cardButton = document.createElement("button");
+        cardButton.className = "look-top-card-button";
+
+        const validChoice = isSelectable(card);
+
+        if (!validChoice) {
+            cardButton.classList.add("disabled-choice");
+            cardButton.disabled = true;
+            cardButton.title = "This card is not a valid choice.";
+        }
+
+        const img = document.createElement("img");
+        img.src = card.image;
+        img.alt = card.name;
+        img.className = "look-top-card-img";
+
+        const name = document.createElement("span");
+        name.className = "look-top-card-name";
+        name.textContent = card.name;
+
+        cardButton.appendChild(img);
+        cardButton.appendChild(name);
+
+        cardButton.addEventListener("click", () => {
+            if (!validChoice) return;
+
+            selectedIndex = index;
+
+            document.querySelectorAll(".look-top-card-button").forEach(button => {
+                button.classList.remove("selected-look-card");
+            });
+
+            cardButton.classList.add("selected-look-card");
+
+            addButton.disabled = false;
+        });
+
+        cardGrid.appendChild(cardButton);
+    });
+
+    const buttonRow = document.createElement("div");
+    buttonRow.className = "look-top-buttons";
+
+    const addButton = document.createElement("button");
+    addButton.className = "look-top-action-button";
+    addButton.textContent = "Add Selected";
+    addButton.disabled = true;
+
+    const skipButton = document.createElement("button");
+    skipButton.className = "look-top-action-button secondary";
+    skipButton.textContent = "Add Nothing";
+
+    addButton.addEventListener("click", () => {
+        if (selectedIndex === null) return;
+
+        removeLookTopOverlay();
+
+        if (typeof onComplete === "function") {
+            onComplete(selectedIndex);
+        }
+    });
+
+    skipButton.addEventListener("click", () => {
+        removeLookTopOverlay();
+
+        if (typeof onComplete === "function") {
+            onComplete(null);
+        }
+    });
+
+    buttonRow.appendChild(addButton);
+    buttonRow.appendChild(skipButton);
+
+    popup.appendChild(title);
+    popup.appendChild(description);
+    popup.appendChild(cardGrid);
+    popup.appendChild(buttonRow);
+
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+}
+
+function removeLookTopOverlay() {
+    const oldOverlay = document.getElementById("lookTopOverlay");
+
+    if (oldOverlay) {
+        oldOverlay.remove();
+    }
 }
 
 // =========================
