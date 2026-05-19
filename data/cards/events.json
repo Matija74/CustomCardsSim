@@ -67,7 +67,8 @@
       {
         "id": "DD01-005-main",
         "type": "main",
-        "text": "Main: Look at 5 cards from the top of your deck; reveal up to 1 {Dandadan} type card and add it to your hand. Then, place the rest on the bottom of your deck in any order."
+        "text": "Main: Look at 5 cards from the top of your deck; reveal up to 1 {Dandadan} type card and add it to your hand. Then, place the rest on the bottom of your deck in any order.",
+        "actionId": "lookTopFiveDandadan"
       },
       {
         "id": "DD01-005-trigger",
