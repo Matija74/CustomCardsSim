@@ -1,0 +1,376 @@
+{
+  "TEST-001": {
+    "id": "TEST-001",
+    "cardNumber": "TEST-001",
+    "name": "Test Rush & On Play",
+    "cardType": "character",
+    "type": "type",
+    "color": "red",
+    "cost": 1,
+    "power": 5000,
+    "counter": 1000,
+    "attribute": "slash",
+    "image": "../images/testCards/test-rush-onplay.png",
+    "keywords": ["rush"],
+    "effects": [
+      {
+        "id": "TEST-001-on-play",
+        "type": "onPlay",
+        "text": "On Play: Draw 1 card.",
+        "actionId": "drawOneCard"
+      },
+      {
+        "id": "TEST-001-opponents-turn",
+        "type": "opponentsTurn",
+        "text": "Opponent's turn: This card has -5000 power.",
+        "powerModifier": -5000
+      },
+      {
+        "id": "TEST-001-trigger",
+        "type": "trigger",
+        "text": "Trigger: Play this card.",
+        "actionId": "playThisCardFromTrigger"
+      }
+    ]
+  },
+
+  "DD01-003": {
+    "id": "DD01-003",
+    "cardNumber": "DD01-003",
+    "name": "Ayase Seiko",
+    "cardType": "character",
+    "type": "Dandadan/Power Wielder",
+    "color": "purple",
+    "cost": 1,
+    "power": 2000,
+    "counter": 1000,
+    "attribute": "wisdom",
+    "image": "../images/Okarun Deck/DD01-003.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "DD01-003-on-play",
+        "type": "onPlay",
+        "text": "On Play: Look at 5 cards from the top of your deck; reveal up to 1 {Dandadan} type card and add it to your hand. Then, place the rest on the bottom of your deck in any order."
+      }
+    ]
+  },
+
+  "DD01-006": {
+    "id": "DD01-006",
+    "cardNumber": "DD01-006",
+    "name": "Takakura Ken",
+    "cardType": "character",
+    "type": "Dandadan/The Cursed",
+    "color": "green",
+    "cost": 7,
+    "power": 7000,
+    "counter": 1000,
+    "attribute": "strike",
+    "image": "../images/Okarun Deck/DD01-006.png",
+    "keywords": ["rush"],
+    "effects": [
+      {
+        "id": "DD01-006-name-okarun",
+        "type": "continuous",
+        "text": "Also treat this card's name as [Okarun]."
+      },
+      {
+        "id": "DD01-006-when-attacking-active",
+        "type": "whenAttacking",
+        "oncePerTurn": true,
+        "text": "When Attacking Once Per Turn: If you have a [Turbo Granny Form] stage card in play, set this character as active."
+      }
+    ]
+  },
+
+  "DD01-007": {
+    "id": "DD01-007",
+    "cardNumber": "DD01-007",
+    "name": "Unji Zuma",
+    "cardType": "character",
+    "type": "Dandadan/The Cursed",
+    "color": "green",
+    "cost": 8,
+    "power": 9000,
+    "counter": 0,
+    "attribute": "strike",
+    "image": "../images/Okarun Deck/DD01-007.png",
+    "keywords": ["doubleAttack"],
+    "effects": [
+      {
+        "id": "DD01-007-when-attacking-refresh-don",
+        "type": "whenAttacking",
+        "text": "When Attacking: You may set up to 2 of your DON!! cards as active."
+      }
+    ]
+  },
+
+  "DD01-008": {
+    "id": "DD01-008",
+    "cardNumber": "DD01-008",
+    "name": "Ayase Momo",
+    "cardType": "character",
+    "type": "Dandadan/Power Wielder",
+    "color": "purple",
+    "cost": 4,
+    "power": 5000,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/Okarun Deck/DD01-008.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "DD01-008-on-play-add-don",
+        "type": "onPlay",
+        "text": "On Play: Add up to 1 DON!! card from your DON!! deck and rest it."
+      },
+      {
+        "id": "DD01-008-on-ko-draw",
+        "type": "onKO",
+        "text": "On K.O.: Draw 1 card.",
+        "actionId": "drawOneCard"
+      }
+    ]
+  },
+
+  "DD01-009": {
+    "id": "DD01-009",
+    "cardNumber": "DD01-009",
+    "name": "Sakata Kinta",
+    "cardType": "character",
+    "type": "Dandadan/Power Wielder",
+    "color": "green",
+    "cost": 3,
+    "power": 3000,
+    "counter": 2000,
+    "attribute": "strike",
+    "image": "../images/Okarun Deck/DD01-009.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "DD01-009-on-play-rest-character",
+        "type": "onPlay",
+        "text": "On Play: Rest up to 1 of your opponent's characters with a cost of 4 or less."
+      }
+    ]
+  },
+
+  "DD01-010": {
+    "id": "DD01-010",
+    "cardNumber": "DD01-010",
+    "name": "Evil Eye",
+    "cardType": "character",
+    "type": "Dandadan/Curse",
+    "color": "purple",
+    "cost": 9,
+    "power": 10000,
+    "counter": 0,
+    "attribute": "strike",
+    "image": "../images/Okarun Deck/DD01-010.png",
+    "keywords": ["rush"],
+    "effects": [
+      {
+        "id": "DD01-010-when-attacking-unblockable",
+        "type": "whenAttacking",
+        "text": "When Attacking: DON!! -1: This character gains Unblockable until the end of this turn."
+      }
+    ]
+  },
+
+  "DD01-012": {
+    "id": "DD01-012",
+    "cardNumber": "DD01-012",
+    "name": "Vamola",
+    "cardType": "character",
+    "type": "Dandadan/Alien",
+    "color": "purple",
+    "cost": 5,
+    "power": 6000,
+    "counter": 1000,
+    "attribute": "strike",
+    "image": "../images/Okarun Deck/DD01-012.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "DD01-012-play-choice",
+        "type": "onPlay",
+        "text": "When you play this character, choose whether it will gain Blocker or Rush."
+      },
+      {
+        "id": "DD01-012-on-ko-add-don",
+        "type": "onKO",
+        "text": "On K.O.: Add up to 1 DON!! card from your DON!! deck and set it as active."
+      }
+    ]
+  },
+
+  "DD01-014": {
+    "id": "DD01-014",
+    "cardNumber": "DD01-014",
+    "name": "Sawaki Rin",
+    "cardType": "character",
+    "type": "Dandadan/The Cursed",
+    "color": "purple",
+    "cost": 1,
+    "power": 2000,
+    "counter": 2000,
+    "attribute": "ranged",
+    "image": "../images/Okarun Deck/DD01-0014.png",
+    "keywords": [],
+    "effects": []
+  },
+
+  "DD01-015": {
+    "id": "DD01-015",
+    "cardNumber": "DD01-015",
+    "name": "Turbo Granny",
+    "cardType": "character",
+    "type": "Dandadan/Curse",
+    "color": "purple",
+    "cost": 1,
+    "power": 0,
+    "counter": 2000,
+    "attribute": "unknown",
+    "image": "../images/Okarun Deck/DD01-015.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "DD01-015-activate-main-power",
+        "type": "activateMain",
+        "oncePerTurn": true,
+        "text": "Activate: Main Once Per Turn: You may rest this character: Give up to 1 of your [Ayase Seiko] or [Okarun] +3000 power for 1 battle.",
+        "powerModifier": 3000
+      }
+    ]
+  },
+
+  "DD01-016": {
+    "id": "DD01-016",
+    "cardNumber": "DD01-016",
+    "name": "Enjoji Jin",
+    "cardType": "character",
+    "type": "Dandadan/The Cursed",
+    "color": "green",
+    "cost": 6,
+    "power": 7000,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/Okarun Deck/DD01-016.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "DD01-016-name-jiji",
+        "type": "continuous",
+        "text": "Also treat this card's name as [Jiji]."
+      },
+      {
+        "id": "DD01-016-opponents-turn-event-counter",
+        "type": "opponentsTurn",
+        "text": "Opponent's Turn: If your Leader is rested, all your Events in hand gain +1000 counter.",
+        "actionId": "eventCounterIfLeaderRested",
+        "counterModifier": 1000
+      }
+    ]
+  },
+
+  "DD01-017": {
+    "id": "DD01-017",
+    "cardNumber": "DD01-017",
+    "name": "Shiratori Aira",
+    "cardType": "character",
+    "type": "Dandadan/The Cursed",
+    "color": "purple",
+    "cost": 6,
+    "power": 7000,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/Okarun Deck/DD01-017.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "DD01-017-when-attacking-ko-blocker",
+        "type": "whenAttacking",
+        "oncePerTurn": true,
+        "text": "When Attacking Once Per Turn: DON!! -1: K.O. up to 1 of your opponent's cost 5 or lower Blocker characters. Your opponent cannot protect that character with anti-K.O. effects."
+      }
+    ]
+  },
+
+  "TEST-002": {
+    "id": "TEST-002",
+    "cardNumber": "TEST-002",
+    "name": "Test Blocker & On K.O.",
+    "cardType": "character",
+    "type": "type",
+    "color": "red",
+    "cost": 1,
+    "power": 5000,
+    "counter": 1000,
+    "attribute": "slash",
+    "image": "../images/testCards/test-blocker-onko.png",
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "TEST-002-on-ko",
+        "type": "onKO",
+        "text": "On K.O.: Draw 1 card.",
+        "actionId": "drawOneCard"
+      },
+      {
+        "id": "TEST-002-opponents-turn",
+        "type": "opponentsTurn",
+        "text": "Opponent's turn: This card has -5000 power.",
+        "powerModifier": -5000
+      },
+      {
+        "id": "TEST-002-trigger",
+        "type": "trigger",
+        "text": "Trigger: Play this card.",
+        "actionId": "playThisCardFromTrigger"
+      }
+    ]
+  },
+
+  "TEST-003": {
+    "id": "TEST-003",
+    "cardNumber": "TEST-003",
+    "name": "Test Banish & DA & Token Effects",
+    "cardType": "character",
+    "type": "type",
+    "color": "red",
+    "cost": 1,
+    "power": 5000,
+    "counter": 1000,
+    "attribute": "slash",
+    "image": "../images/testCards/test-banish-da-don.png",
+    "keywords": ["rushCharacters", "banish", "doubleAttack"],
+    "effects": [
+      {
+        "id": "TEST-003-token-x1",
+        "type": "tokenAttached",
+        "requiredTokens": 1,
+        "text": "Token x1: This character gets +1000 power.",
+        "powerModifier": 1000
+      },
+      {
+        "id": "TEST-003-on-play",
+        "type": "onPlay",
+        "text": "On Play: Draw 1 card.",
+        "actionId": "drawOneCard"
+      },
+      {
+        "id": "TEST-003-end-of-your-turn",
+        "type": "endOfYourTurn",
+        "text": "End of Your Turn: Set this character as active.",
+        "actionId": "setThisCardActive"
+      },
+      {
+        "id": "TEST-003-trigger",
+        "type": "trigger",
+        "text": "Trigger: Play this card.",
+        "actionId": "playThisCardFromTrigger"
+      }
+    ]
+  }
+}

@@ -1,0 +1,127 @@
+{
+  "TEST-005": {
+    "id": "TEST-005",
+    "cardNumber": "TEST-005",
+    "name": "Test Main & Counter",
+    "cardType": "event",
+    "type": "type",
+    "color": "yellow",
+    "cost": 0,
+    "image": "../images/testCards/test-event.png",
+    "effects": [
+      {
+        "id": "TEST-005-main",
+        "type": "main",
+        "text": "Main: Draw 1 card.",
+        "actionId": "drawOneCard"
+      },
+      {
+        "id": "TEST-005-counter",
+        "type": "counter",
+        "text": "Counter: Look top 5, reveal 1, add to hand and place the rest on bottom.",
+        "actionId": "lookTopFiveAddOne"
+      },
+      {
+        "id": "TEST-005-trigger",
+        "type": "trigger",
+        "text": "Trigger: Activate Main.",
+        "actionId": "activateMainEffect"
+      }
+    ]
+  },
+
+  "DD01-004": {
+    "id": "DD01-004",
+    "cardNumber": "DD01-004",
+    "name": "If you lose the race against Turbo Granny...",
+    "cardType": "event",
+    "type": "Dandadan",
+    "color": "purple",
+    "cost": 3,
+    "image": "../images/Okarun Deck/DD01-004.png",
+    "effects": [
+      {
+        "id": "DD01-004-main",
+        "type": "main",
+        "text": "Main: If you have 5 or more DON!! cards on your field, play up to one [Turbo Granny Form] stage card from your deck. Then, shuffle your deck."
+      },
+      {
+        "id": "DD01-004-trigger",
+        "type": "trigger",
+        "text": "Trigger: Activate this card's Main effect.",
+        "actionId": "activateMainEffect"
+      }
+    ]
+  },
+
+  "DD01-005": {
+    "id": "DD01-005",
+    "cardNumber": "DD01-005",
+    "name": "We'll kill all of ya.",
+    "cardType": "event",
+    "type": "Dandadan/Curse",
+    "color": "green",
+    "cost": 1,
+    "image": "../images/Okarun Deck/DD01-005.png",
+    "effects": [
+      {
+        "id": "DD01-005-main",
+        "type": "main",
+        "text": "Main: Look at 5 cards from the top of your deck; reveal up to 1 {Dandadan} type card and add it to your hand. Then, place the rest on the bottom of your deck in any order."
+      },
+      {
+        "id": "DD01-005-trigger",
+        "type": "trigger",
+        "text": "Trigger: Activate this card's Main effect.",
+        "actionId": "activateMainEffect"
+      }
+    ]
+  },
+
+  "DD01-011": {
+    "id": "DD01-011",
+    "cardNumber": "DD01-011",
+    "name": "If its for Momo-chan, I can go All-out!",
+    "cardType": "event",
+    "type": "Dandadan/The Cursed",
+    "color": "green",
+    "cost": 3,
+    "image": "../images/Okarun Deck/DD01-011.png",
+    "effects": [
+      {
+        "id": "DD01-011-main",
+        "type": "main",
+        "text": "Main: Take 1 damage: Set 1 of your [Okarun] cards as active."
+      },
+      {
+        "id": "DD01-011-trigger",
+        "type": "trigger",
+        "text": "Trigger: Set 1 of your [Okarun] cards as active."
+      }
+    ]
+  },
+
+  "DD01-013": {
+    "id": "DD01-013",
+    "cardNumber": "DD01-013",
+    "name": "The Power of Words!",
+    "cardType": "event",
+    "type": "Dandadan",
+    "color": "green",
+    "cost": 1,
+    "image": "../images/Okarun Deck/DD01-013.png",
+    "effects": [
+      {
+        "id": "DD01-013-main",
+        "type": "main",
+        "text": "Main: You may rest 3 of your DON!! cards: give up to one of your {Dandadan} type characters +4000 power for 1 battle. That character also gains Unblockable for that battle."
+      },
+      {
+        "id": "DD01-013-counter",
+        "type": "counter",
+        "text": "Counter: If your leader is rested, give your leader or 1 of your {Dandadan} type characters +3000 power during this battle.",
+        "powerModifier": 3000
+      }
+    ]
+  }
+}
