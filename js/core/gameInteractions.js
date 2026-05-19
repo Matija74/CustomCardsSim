@@ -119,7 +119,9 @@ function drawCard(player, uiInstance = ui) {
         uiInstance.renderDecks();
     }
 
-    return checkDeckOut(player);
+    return {
+        deckOut: false
+    };
 }
 
 function drawCards(player, amount, uiInstance = ui) {
@@ -322,16 +324,22 @@ function playCharacterCard(player, handIndex, ui, targetSlotIndex = null) {
         moveCardToTrash(player, replacedCard, ui);
     }
 
+    const effectMessages = resolveOnPlayEffects(player, playedCard, ui);
+
     ui.renderHands();
     ui.renderLeaders();
     ui.renderCharacters();
     ui.renderTrash();
 
+    const effectText = effectMessages.length > 0
+        ? ` ${effectMessages.join(" ")}`
+        : "";
+
     return {
         success: true,
         message: replacedCard
-            ? `${player.name} replaced ${replacedCard.name} with ${playedCard.name}.`
-            : `${player.name} played ${playedCard.name} in character slot ${slotIndex + 1}.`
+            ? `${player.name} replaced ${replacedCard.name} with ${playedCard.name}.${effectText}`
+            : `${player.name} played ${playedCard.name} in character slot ${slotIndex + 1}.${effectText}`
     };
 }
 
@@ -431,6 +439,136 @@ function resolveOnPlayEffects(player, card, ui) {
 }
 
 // =========================
+// Effect Action Helpers
+// =========================
+
+function resolveEffectAction(player, sourceCard, effect, ui) {
+    if (!player || !sourceCard || !effect) {
+        return "";
+    }
+
+    if (effect.actionId === "drawOneCard") {
+        const drawResult = drawCard(player, ui);
+
+        return drawResult?.deckOut
+            ? `${sourceCard.name}'s effect tried to draw 1 card, but ${player.name} lost by deck out.`
+            : `${sourceCard.name}'s effect drew 1 card.`;
+    }
+
+    if (effect.actionId === "lookTopFiveDandadan") {
+        return lookTopCardsForType(player, sourceCard, 5, "Dandadan", ui);
+    }
+
+    return "";
+}
+
+function lookTopCardsForType(player, sourceCard, amount, typeText, ui) {
+    if (!player || !sourceCard) {
+        return "";
+    }
+
+    const cardsToLookAt = player.deck.splice(0, amount);
+
+    if (cardsToLookAt.length === 0) {
+        return `${sourceCard.name}'s effect found no cards because ${player.name}'s deck is empty.`;
+    }
+
+    const isSelectable = (card) => {
+        return String(card.type || "")
+            .toLowerCase()
+            .includes(String(typeText).toLowerCase());
+    };
+
+    const finishSelection = (selectedIndex) => {
+        let selectedCard = null;
+
+        if (
+            selectedIndex !== null &&
+            selectedIndex >= 0 &&
+            selectedIndex < cardsToLookAt.length &&
+            isSelectable(cardsToLookAt[selectedIndex])
+        ) {
+            selectedCard = cardsToLookAt.splice(selectedIndex, 1)[0];
+            player.hand.push(assignCardInstance(selectedCard));
+
+            addGameLog(`${player.name} revealed ${selectedCard.name} and added it to hand.`);
+        } else {
+            addGameLog(`${player.name} did not add a card with ${sourceCard.name}'s effect.`);
+        }
+
+        player.deck.push(...cardsToLookAt);
+
+        if (ui?.renderHands) {
+            ui.renderHands();
+        }
+
+        if (ui?.renderDecks) {
+            ui.renderDecks();
+        }
+
+        addGameLog(`${player.name} placed the remaining card${cardsToLookAt.length === 1 ? "" : "s"} on the bottom of the deck.`);
+    };
+
+    if (ui && typeof ui.lookTopCardsAddToHand === "function") {
+        ui.lookTopCardsAddToHand({
+            player,
+            sourceCard,
+            cards: cardsToLookAt,
+            isSelectable,
+            onComplete: finishSelection
+        });
+
+        return `${player.name} is looking at the top ${cardsToLookAt.length} card${cardsToLookAt.length === 1 ? "" : "s"} of the deck.`;
+    }
+
+    const firstValidIndex = cardsToLookAt.findIndex(isSelectable);
+
+    finishSelection(firstValidIndex === -1 ? null : firstValidIndex);
+
+    return `${sourceCard.name}'s look top effect resolved.`;
+}
+
+function resolveOnPlayEffects(player, card, ui) {
+    if (!player || !card) {
+        return [];
+    }
+
+    const messages = [];
+
+    card.effects
+        ?.filter(effect => effect.type === "onPlay")
+        .forEach(effect => {
+            const message = resolveEffectAction(player, card, effect, ui);
+
+            if (message) {
+                messages.push(message);
+            }
+        });
+
+    return messages;
+}
+
+function resolveMainEffects(player, card, ui) {
+    if (!player || !card) {
+        return [];
+    }
+
+    const messages = [];
+
+    card.effects
+        ?.filter(effect => effect.type === "main")
+        .forEach(effect => {
+            const message = resolveEffectAction(player, card, effect, ui);
+
+            if (message) {
+                messages.push(message);
+            }
+        });
+
+    return messages;
+}
+
+// =========================
 // Event Play Actions
 // =========================
 
@@ -473,20 +611,20 @@ function playEventCard(player, handIndex, ui) {
     // This prevents draw effects from changing the hand while the event is still in it.
     const playedEvent = player.hand.splice(handIndex, 1)[0];
 
-    const mainEffect = playedEvent.effects?.find(effect => effect.type === "main");
-
-    if (mainEffect && typeof mainEffect.action === "function") {
-        mainEffect.action(gameState, player, playedEvent, ui);
-    }
+    const effectMessages = resolveMainEffects(player, playedEvent, ui);
 
     moveCardToTrash(player, playedEvent, ui);
 
     ui.renderHands();
     ui.renderTrash();
 
+    const effectText = effectMessages.length > 0
+        ? ` ${effectMessages.join(" ")}`
+        : "";
+
     return {
         success: true,
-        message: `${player.name} played ${playedEvent.name}. It was placed in the trash.`
+        message: `${player.name} played ${playedEvent.name}. It was placed in the trash.${effectText}`
     };
 }
 
