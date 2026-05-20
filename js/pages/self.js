@@ -106,7 +106,9 @@ function createUiBridge() {
         renderTrash,
         renderStages,
         lookTopCardsAddToHand,
-        chooseBoardCard
+        chooseBoardCard: showBoardCardChoice,
+        chooseEffectActivation,
+        chooseEffectOption
     };
 }
 
@@ -991,6 +993,12 @@ function renderPlayerTrash(player, trashAreaId) {
     if (!trashArea) return;
 
     trashArea.innerHTML = "";
+    trashArea.classList.toggle("clickable-trash", player.trash.length > 0);
+    trashArea.onclick = () => {
+        if (player.trash.length === 0) return;
+
+        showTrashViewer(player);
+    };
 
     if (player.trash.length > 0) {
         const topCard = player.trash[player.trash.length - 1];
@@ -1020,6 +1028,75 @@ function renderPlayerTrash(player, trashAreaId) {
     trashArea.appendChild(count);
 
     setupCardPreview();
+}
+
+function showTrashViewer(player) {
+    removeTrashViewer();
+
+    const overlay = document.createElement("div");
+    overlay.className = "look-top-overlay";
+    overlay.id = "trashViewerOverlay";
+
+    const popup = document.createElement("div");
+    popup.className = "look-top-popup trash-viewer-popup";
+
+    const title = document.createElement("h2");
+    title.textContent = `${player.name}'s Trash`;
+
+    const description = document.createElement("p");
+    description.textContent = player.trash.length > 0
+        ? "Cards are shown from newest to oldest."
+        : "Trash is empty.";
+
+    const cardGrid = document.createElement("div");
+    cardGrid.className = "look-top-card-grid trash-viewer-grid";
+
+    [...player.trash].reverse().forEach(card => {
+        const cardFrame = document.createElement("div");
+        cardFrame.className = "look-top-card-button trash-viewer-card";
+
+        const img = document.createElement("img");
+        img.src = card.image;
+        img.alt = card.name;
+        img.className = "look-top-card-img";
+        img.setAttribute("data-card-image", card.image);
+
+        const name = document.createElement("span");
+        name.className = "look-top-card-name";
+        name.textContent = card.name;
+
+        cardFrame.appendChild(img);
+        cardFrame.appendChild(name);
+        cardGrid.appendChild(cardFrame);
+    });
+
+    const buttonRow = document.createElement("div");
+    buttonRow.className = "look-top-buttons";
+
+    const closeButton = document.createElement("button");
+    closeButton.className = "look-top-action-button secondary";
+    closeButton.textContent = "Close";
+    closeButton.addEventListener("click", removeTrashViewer);
+
+    buttonRow.appendChild(closeButton);
+
+    popup.appendChild(title);
+    popup.appendChild(description);
+    popup.appendChild(cardGrid);
+    popup.appendChild(buttonRow);
+
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+
+    setupCardPreview();
+}
+
+function removeTrashViewer() {
+    const oldOverlay = document.getElementById("trashViewerOverlay");
+
+    if (oldOverlay) {
+        oldOverlay.remove();
+    }
 }
 
 // =========================
@@ -1268,7 +1345,9 @@ function showSelectedCounterActions() {
 
     const defenderPlayerKey = currentAttack.defenderPlayerKey;
     const isDefender = selectedHandCardData.playerKey === defenderPlayerKey;
-    const counterValue = getCardCounterValue(card, player);
+    const counterValue = typeof getCounterPowerForUse === "function"
+        ? getCounterPowerForUse(card, player)
+        : getCardCounterValue(card, player);
 
     const counterButton = document.createElement("button");
 
@@ -1568,6 +1647,33 @@ function activateMainBoardEffect(player, card, effect) {
         return;
     }
 
+    if (typeof isOptionalEffect === "function" && isOptionalEffect(effect)) {
+        chooseEffectActivation({
+            player,
+            sourceCard: card,
+            effect,
+            title: card.name,
+            prompt: `${effect.text || "Activate this effect?"}`,
+            activateText: "Activate",
+            skipText: "Skip",
+            onComplete: (shouldActivate) => {
+                if (!shouldActivate) {
+                    addGameLog(`${player.name} skipped ${card.name}'s Activate: Main effect.`);
+                    showSelectedBoardActions();
+                    return;
+                }
+
+                resolveActivateMainBoardEffect(player, card, effect);
+            }
+        });
+
+        return;
+    }
+
+    resolveActivateMainBoardEffect(player, card, effect);
+}
+
+function resolveActivateMainBoardEffect(player, card, effect) {
     const result = resolveBoardActionEffect(player, card, effect);
 
     if (!result.success) {
@@ -1605,6 +1711,7 @@ function resolveBoardActionEffect(player, card, effect) {
         }
 
         card.state = "rested";
+        renderCharacters();
 
         const message = chooseOwnBoardCard(player, card, {
             prompt: "Choose up to 1 Ayase Seiko or Okarun to give +3000 power for its next battle.",
@@ -2100,27 +2207,83 @@ function beginAttack(targetData) {
 function resolveWhenAttackingEffectsBeforeBattle(attackerPlayer, attackerData, onComplete) {
     const attackerCard = getBoardCardFromData(attackerData);
 
-    CardEffects.resolveWhenAttackingEffects(
-        gameState,
-        attackerPlayer,
-        attackerData,
-        ui
-    ).forEach(result => {
-        addGameLog(result.message);
-    });
+    promptOptionalWhenAttackingEffects(attackerPlayer, attackerCard, () => {
+        CardEffects.resolveWhenAttackingEffects(
+            gameState,
+            attackerPlayer,
+            attackerData,
+            ui
+        ).forEach(result => {
+            addGameLog(result.message);
+        });
 
-    const trashEffect = attackerCard?.effects?.find(effect => {
-        return effect.type === "whenAttacking" && effect.actionId === "trashOneCard";
-    });
+        const trashEffect = attackerCard?.effects?.find(effect => {
+            return effect.type === "whenAttacking" && effect.actionId === "trashOneCard";
+        });
 
-    if (trashEffect) {
-        promptTrashOneCardForAttack(attackerPlayer, attackerCard, trashEffect, onComplete);
-        return;
+        if (trashEffect && !isAttackEffectSkipped(attackerCard, trashEffect.id)) {
+            promptTrashOneCardForAttack(attackerPlayer, attackerCard, trashEffect, onComplete);
+            return;
+        }
+
+        if (typeof onComplete === "function") {
+            onComplete();
+        }
+    });
+}
+
+function promptOptionalWhenAttackingEffects(player, sourceCard, onComplete) {
+    const optionalEffects = sourceCard?.effects
+        ?.filter(effect => effect.type === "whenAttacking" && typeof isOptionalEffect === "function" && isOptionalEffect(effect)) ?? [];
+
+    const promptNext = (index) => {
+        const effect = optionalEffects[index];
+
+        if (!effect) {
+            if (typeof onComplete === "function") {
+                onComplete();
+            }
+
+            return;
+        }
+
+        chooseEffectActivation({
+            player,
+            sourceCard,
+            effect,
+            title: sourceCard.name,
+            prompt: effect.text || "Activate this When Attacking effect?",
+            activateText: "Activate",
+            skipText: "Skip",
+            onComplete: (shouldActivate) => {
+                if (!shouldActivate) {
+                    markAttackEffectSkipped(sourceCard, effect.id);
+                    addGameLog(`${player.name} skipped ${sourceCard.name}'s When Attacking effect.`);
+                }
+
+                promptNext(index + 1);
+            }
+        });
+    };
+
+    promptNext(0);
+}
+
+function markAttackEffectSkipped(card, effectId) {
+    if (!card || !effectId) return;
+
+    if (!Array.isArray(card.skippedEffectIdsThisAttack)) {
+        card.skippedEffectIdsThisAttack = [];
     }
 
-    if (typeof onComplete === "function") {
-        onComplete();
+    if (!card.skippedEffectIdsThisAttack.includes(effectId)) {
+        card.skippedEffectIdsThisAttack.push(effectId);
     }
+}
+
+function isAttackEffectSkipped(card, effectId) {
+    return Array.isArray(card?.skippedEffectIdsThisAttack) &&
+        card.skippedEffectIdsThisAttack.includes(effectId);
 }
 
 function promptTrashOneCardForAttack(player, sourceCard, effect, onComplete) {
@@ -2319,6 +2482,7 @@ function clearBattleOnlyEffectsForCurrentAttack(attackerCard, targetCard) {
     [attackerCard, targetCard].filter(Boolean).forEach(card => {
         card.battlePowerBonus = 0;
         card.battleKeywords = [];
+        card.skippedEffectIdsThisAttack = [];
     });
 }
 
@@ -2404,6 +2568,33 @@ function lookTopCardsAddToHand({
 
     let selectedIndex = null;
 
+    const continueToBottomOrder = () => {
+        const remainingCards = cards
+            .map((card, index) => ({ card, index }))
+            .filter(entry => entry.index !== selectedIndex);
+
+        if (remainingCards.length <= 1) {
+            removeLookTopOverlay();
+
+            if (typeof onComplete === "function") {
+                onComplete({
+                    selectedIndex,
+                    bottomOrder: remainingCards.map(entry => entry.index)
+                });
+            }
+
+            return;
+        }
+
+        renderBottomOrderStep({
+            player,
+            sourceCard,
+            remainingCards,
+            selectedIndex,
+            onComplete
+        });
+    };
+
     cards.forEach((card, index) => {
         const cardButton = document.createElement("button");
         cardButton.className = "look-top-card-button";
@@ -2460,19 +2651,13 @@ function lookTopCardsAddToHand({
     addButton.addEventListener("click", () => {
         if (selectedIndex === null) return;
 
-        removeLookTopOverlay();
-
-        if (typeof onComplete === "function") {
-            onComplete(selectedIndex);
-        }
+        continueToBottomOrder();
     });
 
     skipButton.addEventListener("click", () => {
-        removeLookTopOverlay();
+        selectedIndex = null;
 
-        if (typeof onComplete === "function") {
-            onComplete(null);
-        }
+        continueToBottomOrder();
     });
 
     buttonRow.appendChild(addButton);
@@ -2499,7 +2684,7 @@ function removeLookTopOverlay() {
 // Board Choice UI
 // =========================
 
-function chooseBoardCard({
+function showBoardCardChoice({
     player,
     sourceCard,
     prompt,
@@ -2601,8 +2786,230 @@ function chooseBoardCard({
     document.body.appendChild(overlay);
 }
 
+function renderBottomOrderStep({
+    player,
+    sourceCard,
+    remainingCards,
+    selectedIndex,
+    onComplete
+}) {
+    const overlay = document.getElementById("lookTopOverlay");
+    const popup = overlay?.querySelector(".look-top-popup");
+
+    if (!overlay || !popup) return;
+
+    popup.innerHTML = "";
+
+    const title = document.createElement("h2");
+    title.textContent = sourceCard
+        ? `${sourceCard.name}`
+        : "Order cards";
+
+    const description = document.createElement("p");
+    description.textContent = `Click the remaining cards in the order ${player.name} wants to place them on the bottom of the deck.`;
+
+    const cardGrid = document.createElement("div");
+    cardGrid.className = "look-top-card-grid";
+
+    const selectedOrder = [];
+    const doneButton = document.createElement("button");
+
+    const updateDoneState = () => {
+        doneButton.disabled = selectedOrder.length !== remainingCards.length;
+    };
+
+    remainingCards.forEach(entry => {
+        const cardButton = document.createElement("button");
+        cardButton.className = "look-top-card-button bottom-order-card-button";
+
+        const orderBadge = document.createElement("span");
+        orderBadge.className = "bottom-order-badge";
+
+        const img = document.createElement("img");
+        img.src = entry.card.image;
+        img.alt = entry.card.name;
+        img.className = "look-top-card-img";
+
+        const name = document.createElement("span");
+        name.className = "look-top-card-name";
+        name.textContent = entry.card.name;
+
+        cardButton.appendChild(orderBadge);
+        cardButton.appendChild(img);
+        cardButton.appendChild(name);
+
+        cardButton.addEventListener("click", () => {
+            if (selectedOrder.includes(entry.index)) return;
+
+            selectedOrder.push(entry.index);
+            orderBadge.textContent = selectedOrder.length;
+            cardButton.classList.add("selected-look-card", "bottom-order-selected");
+            updateDoneState();
+        });
+
+        cardGrid.appendChild(cardButton);
+    });
+
+    const buttonRow = document.createElement("div");
+    buttonRow.className = "look-top-buttons";
+
+    doneButton.className = "look-top-action-button";
+    doneButton.textContent = "Place on Bottom";
+    doneButton.disabled = true;
+
+    const resetButton = document.createElement("button");
+    resetButton.className = "look-top-action-button secondary";
+    resetButton.textContent = "Reset Order";
+
+    doneButton.addEventListener("click", () => {
+        if (selectedOrder.length !== remainingCards.length) return;
+
+        removeLookTopOverlay();
+
+        if (typeof onComplete === "function") {
+            onComplete({
+                selectedIndex,
+                bottomOrder: selectedOrder
+            });
+        }
+    });
+
+    resetButton.addEventListener("click", () => {
+        selectedOrder.splice(0, selectedOrder.length);
+
+        cardGrid.querySelectorAll(".bottom-order-card-button").forEach(cardButton => {
+            cardButton.classList.remove("selected-look-card", "bottom-order-selected");
+            const orderBadge = cardButton.querySelector(".bottom-order-badge");
+
+            if (orderBadge) {
+                orderBadge.textContent = "";
+            }
+        });
+
+        updateDoneState();
+    });
+
+    buttonRow.appendChild(doneButton);
+    buttonRow.appendChild(resetButton);
+
+    popup.appendChild(title);
+    popup.appendChild(description);
+    popup.appendChild(cardGrid);
+    popup.appendChild(buttonRow);
+}
+
 function removeBoardChoiceOverlay() {
     const oldOverlay = document.getElementById("boardChoiceOverlay");
+
+    if (oldOverlay) {
+        oldOverlay.remove();
+    }
+}
+
+// =========================
+// Effect Choice UI
+// =========================
+
+function chooseEffectActivation({
+    player,
+    sourceCard,
+    effect,
+    title,
+    prompt,
+    activateText = "Activate",
+    skipText = "Skip",
+    onComplete
+}) {
+    chooseEffectOption({
+        player,
+        sourceCard,
+        effect,
+        title,
+        prompt,
+        options: [
+            {
+                label: activateText,
+                value: true
+            },
+            {
+                label: skipText,
+                value: false,
+                secondary: true
+            }
+        ],
+        onComplete
+    });
+}
+
+function chooseEffectOption({
+    sourceCard,
+    title,
+    prompt,
+    options,
+    onComplete
+}) {
+    removeEffectChoiceOverlay();
+
+    const overlay = document.createElement("div");
+    overlay.className = "look-top-overlay";
+    overlay.id = "effectChoiceOverlay";
+
+    const popup = document.createElement("div");
+    popup.className = "look-top-popup effect-choice-popup";
+
+    const heading = document.createElement("h2");
+    heading.textContent = title || sourceCard?.name || "Choose Effect";
+
+    const body = document.createElement("div");
+    body.className = "effect-choice-body";
+
+    if (sourceCard?.image) {
+        const image = document.createElement("img");
+        image.src = sourceCard.image;
+        image.alt = sourceCard.name;
+        image.className = "effect-choice-card-img";
+        body.appendChild(image);
+    }
+
+    const content = document.createElement("div");
+    content.className = "effect-choice-content";
+
+    const description = document.createElement("p");
+    description.textContent = prompt || "Choose how to resolve this effect.";
+
+    const buttonRow = document.createElement("div");
+    buttonRow.className = "look-top-buttons effect-choice-buttons";
+
+    options.forEach(option => {
+        const button = document.createElement("button");
+        button.className = option.secondary
+            ? "look-top-action-button secondary"
+            : "look-top-action-button";
+        button.textContent = option.label;
+
+        button.addEventListener("click", () => {
+            removeEffectChoiceOverlay();
+
+            if (typeof onComplete === "function") {
+                onComplete(option.value);
+            }
+        });
+
+        buttonRow.appendChild(button);
+    });
+
+    content.appendChild(description);
+    content.appendChild(buttonRow);
+    body.appendChild(content);
+
+    popup.appendChild(heading);
+    popup.appendChild(body);
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+}
+
+function removeEffectChoiceOverlay() {
+    const oldOverlay = document.getElementById("effectChoiceOverlay");
 
     if (oldOverlay) {
         oldOverlay.remove();

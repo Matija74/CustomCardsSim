@@ -185,8 +185,15 @@ function drawCards(player, amount, uiInstance = ui) {
 
 function getCardCounterValue(card, player = null) {
     return Number(card?.counter ?? 0) +
-        getEventCounterBonusFromBoard(card, player) +
-        getCounterEffectPower(card, player);
+        getEventCounterBonusFromBoard(card, player);
+}
+
+function getCounterPowerForUse(card, player = null) {
+    const counterEffectPower = getCounterEffectPower(card, player);
+
+    return counterEffectPower > 0
+        ? counterEffectPower
+        : getCardCounterValue(card, player);
 }
 
 function getCounterEffectPower(card, player) {
@@ -219,9 +226,7 @@ function canUseCounterEffect(card, player, effect) {
             return false;
         }
 
-        const targetCard = getBoardCardFromData(currentAttack.target);
-
-        return isLeaderOrDandadanCharacter(targetCard);
+        return true;
     }
 
     return Boolean(effect.actionId) || Number(effect.powerModifier ?? 0) > 0;
@@ -260,7 +265,8 @@ function getEventCounterBonusFromBoard(card, player) {
 }
 
 function canCardBeUsedAsCounter(card, player = null) {
-    return getCardCounterValue(card, player) > 0 || getCounterEffects(card, player).length > 0;
+    return getCardCounterValue(card, player) > 0 ||
+        getCounterEffects(card, player).length > 0;
 }
 
 function useCounterFromHand(player, handIndex, ui) {
@@ -274,13 +280,14 @@ function useCounterFromHand(player, handIndex, ui) {
         };
     }
 
-    const counterPower = getCardCounterValue(card, player);
+    const counterPower = getCounterPowerForUse(card, player);
+    const counterEffects = getCounterEffects(card, player);
 
-    if (counterPower <= 0 && getCounterEffects(card, player).length === 0) {
+    if (counterPower <= 0 && counterEffects.length === 0) {
         return {
             success: false,
             counterPower: 0,
-            message: `${card.name} does not have a counter value.`
+            message: `${card.name} has no usable counter effect right now.`
         };
     }
 
@@ -536,7 +543,77 @@ function resolveOnPlayEffects(player, card, ui) {
 // Effect Action Helpers
 // =========================
 
-function resolveEffectAction(player, sourceCard, effect, ui) {
+function isOptionalEffect(effect) {
+    const effectText = String(effect?.text || "").toLowerCase();
+
+    return effect?.optional === true ||
+        effectText.includes("may ") ||
+        effectText.includes("up to") ||
+        /don!!?\s*-\s*\d+/.test(effectText) ||
+        /trash\s+\d+/.test(effectText) ||
+        /rest\s+\d+/.test(effectText);
+}
+
+function shouldPromptEffectActivation(effect, options = {}) {
+    return !options.skipActivationPrompt && isOptionalEffect(effect);
+}
+
+function getEffectLabel(effect) {
+    if (!effect) {
+        return "Effect";
+    }
+
+    const typeLabels = {
+        onPlay: "On Play",
+        onKO: "On K.O.",
+        main: "Main",
+        activateMain: "Activate: Main",
+        counter: "Counter",
+        trigger: "Trigger"
+    };
+
+    return typeLabels[effect.type] || "Effect";
+}
+
+function getEffectPrompt(effect) {
+    const label = getEffectLabel(effect);
+    const text = String(effect?.text || "Activate this effect?");
+
+    return text.toLowerCase().startsWith(label.toLowerCase())
+        ? text
+        : `${label}: ${text}`;
+}
+
+function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
+    if (shouldPromptEffectActivation(effect, options) && ui && typeof ui.chooseEffectActivation === "function") {
+        ui.chooseEffectActivation({
+            player,
+            sourceCard,
+            effect,
+            title: sourceCard?.name || "Effect",
+            prompt: getEffectPrompt(effect),
+            activateText: "Activate",
+            skipText: "Skip",
+            onComplete: (shouldActivate) => {
+                if (!shouldActivate) {
+                    addGameLog(`${player.name} skipped ${sourceCard.name}'s ${getEffectLabel(effect)} effect.`);
+                    return;
+                }
+
+                const message = resolveEffectAction(player, sourceCard, effect, ui, {
+                    ...options,
+                    skipActivationPrompt: true
+                });
+
+                if (message) {
+                    addGameLog(message);
+                }
+            }
+        });
+
+        return `${player.name} is choosing whether to activate ${sourceCard.name}'s effect.`;
+    }
+
     if (!player || !sourceCard || !effect) {
         return "";
     }
@@ -569,7 +646,7 @@ function resolveEffectAction(player, sourceCard, effect, ui) {
         return chooseOpponentCharacter(player, sourceCard, {
             prompt: "Choose up to 1 opposing cost 4 or lower character to rest.",
             optional: true,
-            filter: card => Number(card.cost ?? 0) <= 4,
+            filter: card => Number(card.cost ?? 0) <= 4 && (card.state || "active") === "active",
             onSelect: ({ card }) => {
                 card.state = "rested";
                 ui.renderCharacters();
@@ -581,13 +658,52 @@ function resolveEffectAction(player, sourceCard, effect, ui) {
     }
 
     if (effect.id === "DD01-012-play-choice") {
+        const applyKeywordChoice = (keyword) => {
+            sourceCard.keywords = sourceCard.keywords || [];
+
+            if (!sourceCard.keywords.includes(keyword)) {
+                sourceCard.keywords.push(keyword);
+            }
+
+            if (ui?.renderCharacters) {
+                ui.renderCharacters();
+            }
+
+            addGameLog(`${sourceCard.name} gained ${keyword === "blocker" ? "Blocker" : "Rush"}.`);
+        };
+
+        if (ui && typeof ui.chooseEffectOption === "function") {
+            ui.chooseEffectOption({
+                player,
+                sourceCard,
+                title: sourceCard.name,
+                prompt: "Choose which keyword Vamola gains.",
+                options: [
+                    {
+                        label: "Blocker",
+                        value: "blocker"
+                    },
+                    {
+                        label: "Rush",
+                        value: "rush"
+                    }
+                ],
+                onComplete: applyKeywordChoice
+            });
+
+            return `${player.name} is choosing whether ${sourceCard.name} gains Blocker or Rush.`;
+        }
+
         const choseBlocker = typeof window !== "undefined" && typeof window.confirm === "function"
             ? window.confirm(`${sourceCard.name}: choose OK for Blocker, or Cancel for Rush.`)
             : true;
         const keyword = choseBlocker ? "blocker" : "rush";
 
         sourceCard.keywords = sourceCard.keywords || [];
-        sourceCard.keywords.push(keyword);
+
+        if (!sourceCard.keywords.includes(keyword)) {
+            sourceCard.keywords.push(keyword);
+        }
 
         return `${sourceCard.name} gained ${choseBlocker ? "Blocker" : "Rush"}.`;
     }
@@ -600,7 +716,8 @@ function resolveEffectAction(player, sourceCard, effect, ui) {
         const damageResult = takeLifeDamage(player, 1, ui);
 
         if (!damageResult.success) {
-            return `${sourceCard.name}'s Main effect could not take life because ${player.name} has no life cards.`;
+            loseByLifeDamage(player, `${player.name} took damage from ${sourceCard.name} with no life cards remaining.`);
+            return `${sourceCard.name}'s Main effect dealt damage while ${player.name} had no life cards.`;
         }
 
         const message = setOneNamedOwnCardActive(player, sourceCard, "Okarun", ui);
@@ -649,7 +766,14 @@ function lookTopCardsForType(player, sourceCard, amount, typeText, ui) {
             .includes(String(typeText).toLowerCase());
     };
 
-    const finishSelection = (selectedIndex) => {
+    const finishSelection = (selection) => {
+        const originalCardsToLookAt = [...cardsToLookAt];
+        const selectedIndex = typeof selection === "object" && selection !== null
+            ? selection.selectedIndex
+            : selection;
+        const bottomOrder = typeof selection === "object" && selection !== null
+            ? selection.bottomOrder
+            : null;
         let selectedCard = null;
 
         if (
@@ -666,7 +790,17 @@ function lookTopCardsForType(player, sourceCard, amount, typeText, ui) {
             addGameLog(`${player.name} did not add a card with ${sourceCard.name}'s effect.`);
         }
 
-        player.deck.push(...cardsToLookAt);
+        const orderedBottomCards = Array.isArray(bottomOrder)
+            ? bottomOrder
+                .map(index => originalCardsToLookAt[index])
+                .filter(card => cardsToLookAt.includes(card))
+                .filter(Boolean)
+            : cardsToLookAt;
+
+        const orderedSet = new Set(orderedBottomCards);
+        const unorderedBottomCards = cardsToLookAt.filter(card => !orderedSet.has(card));
+
+        player.deck.push(...orderedBottomCards, ...unorderedBottomCards);
 
         if (ui?.renderHands) {
             ui.renderHands();
@@ -998,7 +1132,7 @@ function resolveOnKOEffects(player, card, ui) {
     return messages;
 }
 
-function resolveMainEffects(player, card, ui) {
+function resolveMainEffects(player, card, ui, options = {}) {
     if (!player || !card) {
         return [];
     }
@@ -1008,7 +1142,7 @@ function resolveMainEffects(player, card, ui) {
     card.effects
         ?.filter(effect => effect.type === "main")
         .forEach(effect => {
-            const message = resolveEffectAction(player, card, effect, ui);
+            const message = resolveEffectAction(player, card, effect, ui, options);
 
             if (message) {
                 messages.push(message);
@@ -1188,37 +1322,121 @@ function resolveTriggerEffects(player, card, triggerEffects, ui) {
     const messages = [];
 
     triggerEffects.forEach(effect => {
-        if (effect.actionId === "playThisCardFromTrigger") {
-            messages.push(playCardFromTrigger(player, card, ui));
+        const activateTrigger = () => {
+            const message = resolveSingleTriggerEffect(player, card, effect, ui);
+
+            if (message) {
+                addGameLog(message);
+            }
+        };
+
+        const skipTrigger = () => {
+            player.hand.push(card);
+
+            if (ui?.renderHands) {
+                ui.renderHands();
+            }
+
+            addGameLog(`${player.name} skipped ${card.name}'s Trigger and added it to hand.`);
+        };
+
+        if (ui && typeof ui.chooseEffectActivation === "function") {
+            ui.chooseEffectActivation({
+                player,
+                sourceCard: card,
+                effect,
+                title: `${card.name} Trigger`,
+                prompt: effect.text || "Activate this Trigger?",
+                activateText: "Activate Trigger",
+                skipText: "Add to Hand",
+                onComplete: (shouldActivate) => {
+                    if (shouldActivate) {
+                        activateTrigger();
+                    } else {
+                        skipTrigger();
+                    }
+                }
+            });
+
+            messages.push(`${player.name} is choosing whether to activate ${card.name}'s Trigger.`);
             return;
         }
 
-        if (effect.actionId === "activateMainEffect") {
-            const mainMessages = resolveMainEffects(player, card, ui);
-            moveCardToTrash(player, card, ui);
-            messages.push(
-                mainMessages.length > 0
-                    ? `${card.name}'s Trigger activated its Main effect. ${mainMessages.join(" ")}`
-                    : `${card.name}'s Trigger activated, then it was placed in trash.`
-            );
-            return;
-        }
-
-        if (effect.id === "DD01-011-trigger") {
-            messages.push(setOneNamedOwnCardActive(player, card, "Okarun", ui));
-            moveCardToTrash(player, card, ui);
-            return;
-        }
-
-        const message = resolveEffectAction(player, card, effect, ui);
-        moveCardToTrash(player, card, ui);
-
-        if (message) {
-            messages.push(`${card.name}'s Trigger resolved. ${message}`);
-        }
+        activateTrigger();
     });
 
     return messages;
+}
+
+function resolveSingleTriggerEffect(player, card, effect, ui) {
+    if (effect.actionId === "playThisCardFromTrigger") {
+        return playCardFromTrigger(player, card, ui);
+    }
+
+    if (effect.actionId === "activateMainEffect") {
+        const mainMessages = resolveMainEffects(player, card, ui, {
+            skipActivationPrompt: true
+        });
+
+        moveCardToTrash(player, card, ui);
+
+        if (ui?.renderTrash) {
+            ui.renderTrash();
+        }
+
+        return mainMessages.length > 0
+            ? `${card.name}'s Trigger activated its Main effect. ${mainMessages.join(" ")}`
+            : `${card.name}'s Trigger activated, then it was placed in trash.`;
+    }
+
+    if (effect.id === "DD01-011-trigger") {
+        const message = setOneNamedOwnCardActive(player, card, "Okarun", ui);
+        moveCardToTrash(player, card, ui);
+
+        if (ui?.renderTrash) {
+            ui.renderTrash();
+        }
+
+        return message;
+    }
+
+    const message = resolveEffectAction(player, card, effect, ui, {
+        skipActivationPrompt: true
+    });
+
+    moveCardToTrash(player, card, ui);
+
+    if (ui?.renderTrash) {
+        ui.renderTrash();
+    }
+
+    return message
+        ? `${card.name}'s Trigger resolved. ${message}`
+        : `${card.name}'s Trigger resolved.`;
+}
+
+function loseByLifeDamage(player, reasonText = "") {
+    const winnerPlayer = getOpponentOfPlayer(player);
+
+    if (!winnerPlayer) {
+        return {
+            success: false,
+            winnerPlayer: null
+        };
+    }
+
+    if (typeof endGame === "function") {
+        endGame(
+            winnerPlayer,
+            "Life Damage",
+            reasonText || `${player.name} took damage with no life cards remaining.`
+        );
+    }
+
+    return {
+        success: true,
+        winnerPlayer
+    };
 }
 
 function playCardFromTrigger(player, card, ui) {

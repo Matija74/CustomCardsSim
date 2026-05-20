@@ -232,6 +232,11 @@ window.CardEffects = {
         card.oncePerTurnEffectsUsed[effectId] = turnNumber;
     },
 
+    wasEffectSkippedForAttack(card, effectId) {
+        return Array.isArray(card?.skippedEffectIdsThisAttack) &&
+            card.skippedEffectIdsThisAttack.includes(effectId);
+    },
+
     // =========================
     // DD01-001 Takakura Ken
     // =========================
@@ -344,6 +349,13 @@ window.CardEffects = {
             };
         }
 
+        if (this.wasEffectSkippedForAttack(character, "DD01-007-when-attacking-refresh-don")) {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
         const refreshedDon = setRestedDonActive(player, 2, ui);
 
         return {
@@ -360,6 +372,13 @@ window.CardEffects = {
             : null;
 
         if (!character || character.cardNumber !== "DD01-010") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        if (this.wasEffectSkippedForAttack(character, "DD01-010-when-attacking-unblockable")) {
             return {
                 activated: false,
                 message: ""
@@ -397,6 +416,13 @@ window.CardEffects = {
 
         const effectId = "DD01-017-when-attacking-ko-blocker";
         const turnNumber = player.turns;
+
+        if (this.wasEffectSkippedForAttack(character, effectId)) {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
 
         if (this.hasUsedOncePerTurnEffect(character, effectId, turnNumber)) {
             return {
