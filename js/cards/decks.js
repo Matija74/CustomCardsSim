@@ -41,7 +41,7 @@ const rbGutsDeckText = `
 4xBK01-012
 2xBK01-013
 4xBK01-014
-3xBK01-015
+4xBK01-015
 4xBK01-016
 `;
 
