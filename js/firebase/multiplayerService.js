@@ -98,6 +98,18 @@ function createInitialPublicPlayerState(privateState) {
     };
 }
 
+function shuffleCards(cards) {
+    const shuffled = [...cards];
+
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const randomIndex = Math.floor(Math.random() * (i + 1));
+
+        [shuffled[i], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[i]];
+    }
+
+    return shuffled;
+}
+
 export async function createRoom(user) {
     console.log("createRoom() called with user:", user);
 
@@ -301,6 +313,7 @@ export async function initializeMultiplayerGame(roomCode) {
             p2: 0
         },
         "public/revealedCards": [],
+        "public/currentAttack": null,
         "public/setup": {
             dice: {
                 p1Roll: null,
@@ -312,6 +325,16 @@ export async function initializeMultiplayerGame(roomCode) {
                 chooser: null,
                 firstPlayer: null,
                 secondPlayer: null
+            },
+            mulligan: {
+                p1: {
+                    done: false,
+                    took: false
+                },
+                p2: {
+                    done: false,
+                    took: false
+                }
             }
         },
         "public/player1": {
@@ -321,6 +344,82 @@ export async function initializeMultiplayerGame(roomCode) {
         [`private/${player1.uid}`]: p1Private,
         [`private/${player2.uid}`]: p2Private
     });
+}
+
+export async function updateCurrentAttack(roomCode, attackState) {
+    await updatePublicState(roomCode, attackState
+        ? {
+            currentAttack: attackState,
+            phase: "attackResolving"
+        }
+        : {
+            currentAttack: null
+        });
+}
+
+export async function applyMultiplayerLifeDamage(roomCode, defenderSlot, attackerSlot, amount, options = {}) {
+    if (defenderSlot !== "p1" && defenderSlot !== "p2") {
+        throw new Error("Invalid defender slot.");
+    }
+
+    const matchRef = ref(database, `matches/${cleanRoomCode(roomCode)}`);
+    const snapshot = await get(matchRef);
+
+    if (!snapshot.exists()) {
+        throw new Error("Room does not exist.");
+    }
+
+    const match = snapshot.val();
+    const defender = match.players?.[defenderSlot];
+
+    if (!defender?.uid) {
+        throw new Error("Defender was not found.");
+    }
+
+    const privateState = match.private?.[defender.uid] || {};
+    const publicKey = defenderSlot === "p1" ? "player1" : "player2";
+    const life = [...(privateState.life || [])];
+    const hand = [...(privateState.hand || [])];
+    const publicPlayer = match.public?.[publicKey] || {};
+    const trash = [...(publicPlayer.trash || [])];
+    let moved = 0;
+
+    for (let i = 0; i < Number(amount || 0); i++) {
+        const lifeCard = life.shift();
+
+        if (!lifeCard) break;
+
+        if (options.banish) {
+            trash.push(lifeCard);
+        } else {
+            hand.push(lifeCard);
+        }
+
+        moved++;
+    }
+
+    const updates = {
+        [`private/${defender.uid}/life`]: life,
+        [`private/${defender.uid}/hand`]: hand,
+        [`public/${publicKey}/lifeCount`]: life.length,
+        [`public/${publicKey}/handCount`]: hand.length,
+        "public/currentAttack": null
+    };
+
+    if (options.banish) {
+        updates[`public/${publicKey}/trash`] = trash;
+    }
+
+    if (moved === 0 && attackerSlot) {
+        updates["public/winner"] = attackerSlot;
+    }
+
+    await update(matchRef, updates);
+
+    return {
+        moved,
+        remainingLife: life.length
+    };
 }
 
 export async function rollMultiplayerDice(roomCode, playerSlot) {
@@ -384,18 +483,16 @@ export async function chooseMultiplayerTurnOrder(roomCode, chooserSlot, choice) 
         const otherSlot = chooserSlot === "p1" ? "p2" : "p1";
         const firstPlayer = choice === "first" ? chooserSlot : otherSlot;
         const secondPlayer = firstPlayer === "p1" ? "p2" : "p1";
-        const firstPublicKey = firstPlayer === "p1" ? "player1" : "player2";
-
         return {
             ...publicState,
-            phase: "main",
-            currentPlayer: firstPlayer,
-            turnNumber: 1,
+            phase: "mulligan",
+            currentPlayer: null,
+            turnNumber: 0,
             firstPlayer,
             secondPlayer,
             playerTurns: {
-                p1: firstPlayer === "p1" ? 1 : 0,
-                p2: firstPlayer === "p2" ? 1 : 0
+                p1: 0,
+                p2: 0
             },
             setup: {
                 ...publicState.setup,
@@ -404,15 +501,85 @@ export async function chooseMultiplayerTurnOrder(roomCode, chooserSlot, choice) 
                     firstPlayer,
                     secondPlayer
                 }
-            },
-            [firstPublicKey]: {
-                ...publicState[firstPublicKey],
-                activeTokens: 1,
-                tokenDeckCount: Math.max(0, Number(publicState[firstPublicKey]?.tokenDeckCount ?? 10) - 1),
-                turns: 1
             }
         };
     });
+}
+
+export async function setMultiplayerMulligan(roomCode, user, playerSlot, tookMulligan) {
+    if (!user?.uid) {
+        throw new Error("User is required for mulligan.");
+    }
+
+    if (playerSlot !== "p1" && playerSlot !== "p2") {
+        throw new Error("Invalid player slot.");
+    }
+
+    const matchRef = ref(database, `matches/${cleanRoomCode(roomCode)}`);
+    const snapshot = await get(matchRef);
+
+    if (!snapshot.exists()) {
+        throw new Error("Room does not exist.");
+    }
+
+    const match = snapshot.val();
+    const publicState = match.public || {};
+    const player = match.players?.[playerSlot];
+
+    if (publicState.phase !== "mulligan") {
+        throw new Error("Mulligan is not available right now.");
+    }
+
+    if (player?.uid !== user.uid) {
+        throw new Error("Only your player slot can mulligan.");
+    }
+
+    if (publicState.setup?.mulligan?.[playerSlot]?.done) {
+        throw new Error("Mulligan was already chosen.");
+    }
+
+    const privateState = match.private?.[user.uid] || {};
+    let hand = privateState.hand || [];
+    let deck = privateState.deck || [];
+
+    if (tookMulligan) {
+        deck = shuffleCards([...deck, ...hand]);
+        hand = deck.splice(0, 5);
+    }
+
+    const publicPlayerKey = playerSlot === "p1" ? "player1" : "player2";
+    const mulliganState = {
+        ...(publicState.setup?.mulligan || {}),
+        [playerSlot]: {
+            done: true,
+            took: Boolean(tookMulligan)
+        }
+    };
+    const bothDone = Boolean(mulliganState.p1?.done && mulliganState.p2?.done);
+    const updates = {
+        [`private/${user.uid}/hand`]: hand,
+        [`private/${user.uid}/deck`]: deck,
+        [`public/${publicPlayerKey}/handCount`]: hand.length,
+        [`public/${publicPlayerKey}/deckCount`]: deck.length,
+        [`public/setup/mulligan/${playerSlot}`]: mulliganState[playerSlot]
+    };
+
+    if (bothDone) {
+        const firstPlayer = publicState.firstPlayer || publicState.setup?.turnChoice?.firstPlayer || "p1";
+        const firstPublicKey = firstPlayer === "p1" ? "player1" : "player2";
+        const firstPlayerState = publicState[firstPublicKey] || {};
+
+        updates["public/phase"] = "main";
+        updates["public/currentPlayer"] = firstPlayer;
+        updates["public/turnNumber"] = 1;
+        updates[`public/playerTurns/${firstPlayer}`] = 1;
+        updates[`public/${firstPublicKey}/activeTokens`] = 1;
+        updates[`public/${firstPublicKey}/tokenDeckCount`] =
+            Math.max(0, Number(firstPlayerState.tokenDeckCount ?? 10) - 1);
+        updates[`public/${firstPublicKey}/turns`] = 1;
+    }
+
+    await update(matchRef, updates);
 }
 
 export async function sendMultiplayerAction(roomCode, user, actionType, payload) {
