@@ -20,9 +20,13 @@ class DeckEditor {
         this.deckCardCount = document.getElementById("deckCardCount");
 
         this.cardSearch = document.getElementById("cardSearch");
+        this.categoryFilter = document.getElementById("categoryFilter");
         this.typeFilter = document.getElementById("typeFilter");
         this.colorFilter = document.getElementById("colorFilter");
         this.costFilter = document.getElementById("costFilter");
+        this.powerFilter = document.getElementById("powerFilter");
+        this.attributeFilter = document.getElementById("attributeFilter");
+        this.counterFilter = document.getElementById("counterFilter");
 
         this.clearDeckButton = document.getElementById("clearDeckButton");
 
@@ -40,6 +44,7 @@ class DeckEditor {
     // =========================
 
     init() {
+        this.populateFilterOptions();
         this.setupEvents();
         this.renderLeaderSelection();
         this.renderDeck();
@@ -47,9 +52,13 @@ class DeckEditor {
 
     setupEvents() {
         this.cardSearch.addEventListener("input", () => this.renderCardLibrary());
+        this.categoryFilter.addEventListener("change", () => this.renderCardLibrary());
         this.typeFilter.addEventListener("change", () => this.renderCardLibrary());
         this.colorFilter.addEventListener("change", () => this.renderCardLibrary());
         this.costFilter.addEventListener("change", () => this.renderCardLibrary());
+        this.powerFilter.addEventListener("change", () => this.renderCardLibrary());
+        this.attributeFilter.addEventListener("change", () => this.renderCardLibrary());
+        this.counterFilter.addEventListener("change", () => this.renderCardLibrary());
 
         this.clearDeckButton.addEventListener("click", () => this.clearDeck());
 
@@ -75,7 +84,11 @@ class DeckEditor {
         message.textContent = "Choose a Leader before adding cards to your deck.";
         this.cardLibraryGrid.appendChild(message);
 
-        Object.values(this.leaders).forEach(leader => {
+        const filteredLeaders = this.getFilteredCards({
+            leadersOnly: true
+        });
+
+        filteredLeaders.forEach(leader => {
             const leaderCard = this.createLibraryCard(leader, true);
             this.cardLibraryGrid.appendChild(leaderCard);
         });
@@ -128,7 +141,8 @@ class DeckEditor {
         }
 
         filteredCards.forEach(card => {
-            const cardElement = this.createLibraryCard(card, false);
+            const isLeaderCard = card.cardType === "leader";
+            const cardElement = this.createLibraryCard(card, isLeaderCard);
             this.cardLibraryGrid.appendChild(cardElement);
         });
     }
@@ -192,25 +206,128 @@ class DeckEditor {
     // Filters
     // =========================
 
-    getFilteredCards() {
+    populateFilterOptions() {
+        const allCards = this.getAllCards();
+
+        this.populateSelect(
+            this.typeFilter,
+            "All Types",
+            this.getUniqueSortedTextValues(
+                allCards.flatMap(card => this.getCardTypeValues(card))
+            )
+        );
+
+        this.populateSelect(
+            this.costFilter,
+            "All Costs",
+            this.getUniqueSortedNumberValues(
+                allCards.map(card => card.cost)
+            )
+        );
+
+        this.populateSelect(
+            this.powerFilter,
+            "All Power",
+            this.getUniqueSortedNumberValues(
+                allCards.map(card => card.power)
+            )
+        );
+
+        this.populateSelect(
+            this.attributeFilter,
+            "All Attributes",
+            this.getUniqueSortedTextValues(
+                allCards.map(card => card.attribute)
+            )
+        );
+
+        this.populateSelect(
+            this.counterFilter,
+            "All Counters",
+            this.getUniqueSortedNumberValues(
+                allCards.map(card => card.counter)
+            )
+        );
+    }
+
+    populateSelect(selectElement, allLabel, values) {
+        if (!selectElement) {
+            return;
+        }
+
+        selectElement.innerHTML = "";
+
+        const allOption = document.createElement("option");
+        allOption.value = "all";
+        allOption.textContent = allLabel;
+        selectElement.appendChild(allOption);
+
+        values.forEach(value => {
+            const option = document.createElement("option");
+            option.value = String(value).toLowerCase();
+            option.textContent = value;
+            selectElement.appendChild(option);
+        });
+    }
+
+    getUniqueSortedTextValues(values) {
+        return [...new Set(
+            values
+                .filter(value => value !== undefined && value !== null)
+                .map(value => String(value).trim())
+                .filter(Boolean)
+        )].sort((firstValue, secondValue) => {
+            return firstValue.localeCompare(secondValue);
+        });
+    }
+
+    getUniqueSortedNumberValues(values) {
+        return [...new Set(
+            values
+                .filter(value => value !== undefined && value !== null && value !== "")
+                .map(value => Number(value))
+                .filter(value => Number.isFinite(value))
+        )].sort((firstValue, secondValue) => firstValue - secondValue);
+    }
+
+    getAllCards() {
+        return [
+            ...Object.values(this.leaders),
+            ...Object.values(this.cardDatabase)
+        ];
+    }
+
+    getFilteredCards(options = {}) {
         const searchValue = this.cardSearch.value.toLowerCase().trim();
+        const selectedCategory = this.categoryFilter.value;
         const selectedType = this.typeFilter.value;
         const selectedColor = this.colorFilter.value;
         const selectedCost = this.costFilter.value;
+        const selectedPower = this.powerFilter.value;
+        const selectedAttribute = this.attributeFilter.value;
+        const selectedCounter = this.counterFilter.value;
 
-        return Object.values(this.cardDatabase).filter(card => {
+        const cards = options.leadersOnly
+            ? Object.values(this.leaders)
+            : this.getAllCards();
+
+        return cards.filter(card => {
             const cardName = card.name.toLowerCase();
 
-            const cardColors = Array.isArray(card.color)
-                ? card.color.map(color => color.toLowerCase())
-                : [String(card.color || "").toLowerCase()];
+            const cardColors = this.getCardColors(card);
+            const cardTypes = this.getCardTypeValues(card)
+                .map(type => type.toLowerCase());
 
             const matchesSearch =
                 searchValue === "" || cardName.includes(searchValue);
 
+            const matchesCategory =
+                selectedCategory === "all" ||
+                String(card.cardType || "").toLowerCase() === selectedCategory.toLowerCase();
+
             const matchesType =
                 selectedType === "all" ||
-                String(card.cardType || "").toLowerCase() === selectedType.toLowerCase();
+                cardTypes.includes(selectedType.toLowerCase());
 
             const matchesColor =
                 selectedColor === "all" ||
@@ -218,20 +335,54 @@ class DeckEditor {
 
             const matchesCost =
                 selectedCost === "all" ||
-                this.matchesCostFilter(card.cost, selectedCost);
+                this.matchesNumberFilter(card.cost, selectedCost);
 
-            return matchesSearch && matchesType && matchesColor && matchesCost;
+            const matchesPower =
+                selectedPower === "all" ||
+                this.matchesNumberFilter(card.power, selectedPower);
+
+            const matchesAttribute =
+                selectedAttribute === "all" ||
+                String(card.attribute || "").toLowerCase() === selectedAttribute.toLowerCase();
+
+            const matchesCounter =
+                selectedCounter === "all" ||
+                this.matchesNumberFilter(card.counter, selectedCounter);
+
+            return matchesSearch &&
+                matchesCategory &&
+                matchesType &&
+                matchesColor &&
+                matchesCost &&
+                matchesPower &&
+                matchesAttribute &&
+                matchesCounter;
         });
     }
 
-    matchesCostFilter(cardCost, selectedCost) {
-        const cost = Number(cardCost);
+    getCardColors(card) {
+        const colors = Array.isArray(card.color)
+            ? card.color
+            : String(card.color || "").split("/");
 
-        if (selectedCost === "5") {
-            return cost >= 5;
+        return colors
+            .map(color => String(color).trim().toLowerCase())
+            .filter(Boolean);
+    }
+
+    getCardTypeValues(card) {
+        return String(card.type || "")
+            .split("/")
+            .map(type => type.trim())
+            .filter(Boolean);
+    }
+
+    matchesNumberFilter(cardValue, selectedValue) {
+        if (cardValue === undefined || cardValue === null || cardValue === "") {
+            return false;
         }
 
-        return cost === Number(selectedCost);
+        return Number(cardValue) === Number(selectedValue);
     }
 
     // =========================

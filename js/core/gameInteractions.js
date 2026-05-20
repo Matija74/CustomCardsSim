@@ -33,6 +33,18 @@ function getCardPlayCost(card) {
     return Number(card.cost ?? card.playCost ?? 0);
 }
 
+function getCardEffectiveCost(card) {
+    if (!card) {
+        return 0;
+    }
+
+    const printedCost = Number(card.cost ?? card.playCost ?? 0);
+    const modifier = card.costModifiers
+        ?.reduce((total, entry) => total + Number(entry.amount ?? 0), 0) ?? 0;
+
+    return Math.max(0, printedCost + modifier);
+}
+
 function canPlayerAffordCard(player, card) {
     const cardCost = getCardPlayCost(card);
 
@@ -639,6 +651,12 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
         return lookTopCardsForType(player, sourceCard, 5, "", ui);
     }
 
+    if (effect.actionId === "lookTopFiveBlackSwordsmanPartyOtherThanSelf") {
+        return lookTopCardsForType(player, sourceCard, 5, "Black Swordsman Party", ui, {
+            excludeNames: [sourceCard.name]
+        });
+    }
+
     if (effect.id === "DD01-008-on-play-add-don") {
         const addedDon = addRestedDon(player, 1, ui);
 
@@ -651,7 +669,7 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
         return chooseOpponentCharacter(player, sourceCard, {
             prompt: "Choose up to 1 opposing cost 4 or lower character to rest.",
             optional: true,
-            filter: card => Number(card.cost ?? 0) <= 4 && (card.state || "active") === "active",
+            filter: card => getCardEffectiveCost(card) <= 4 && (card.state || "active") === "active",
             onSelect: ({ card }) => {
                 card.state = "rested";
                 ui.renderCharacters();
@@ -751,10 +769,202 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
         });
     }
 
+    if (effect.id === "BK01-002-main") {
+        return chooseOwnBoardCard(player, sourceCard, {
+            prompt: "Choose up to 1 Guts or Skull Knight character to give +5000 power and prevent blocking this turn.",
+            optional: true,
+            includeLeader: false,
+            filter: card => {
+                return card.cardType === "character" &&
+                    (CardEffects.hasCardName(card, "Guts") || CardEffects.hasCardName(card, "Skull Knight"));
+            },
+            onSelect: ({ card }) => {
+                addTemporaryPowerBonus(card, 5000);
+                addTemporaryKeyword(card, "unblockable");
+                takeTopLifeToHand(player, ui);
+                ui.renderCharacters();
+                ui.renderLifeCards();
+                ui.renderHands();
+                addGameLog(`${sourceCard.name} gave ${card.name} +5000 power and made its attacks unblockable this turn.`);
+            },
+            skipMessage: `${player.name} did not choose a character for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no Guts or Skull Knight characters.`
+        });
+    }
+
+    if (effect.id === "BK01-002-trigger") {
+        addTemporaryPowerBonus(player.leader, 1000);
+        ui.renderLeaders();
+        return `${sourceCard.name}'s Trigger gave ${player.name}'s leader +1000 power until end of turn.`;
+    }
+
+    if (effect.id === "BK01-004-on-play-minus-cost") {
+        if (!player.characters.some(card => CardEffects.hasCardName(card, "Guts"))) {
+            return `${sourceCard.name}'s On Play effect did not resolve because ${player.name} has no Guts character.`;
+        }
+
+        return chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing character to give -1 cost for this turn.",
+            optional: true,
+            onSelect: ({ card }) => {
+                addCostModifier(card, -1);
+                addGameLog(`${sourceCard.name} gave ${card.name} -1 cost this turn.`);
+            },
+            skipMessage: `${player.name} did not reduce a character's cost with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no opposing characters.`
+        });
+    }
+
+    if (
+        effect.id === "BK01-005-activate-main-give-don" ||
+        effect.id === "BK01-007-on-play-give-don"
+    ) {
+        return giveRestedDonToOwnBoardCard(player, sourceCard, ui, {
+            prompt: "Choose your leader or up to 1 character to receive 1 rested DON!!."
+        });
+    }
+
+    if (effect.id === "BK01-006-activate-main-protect-guts") {
+        return chooseOwnBoardCard(player, sourceCard, {
+            prompt: "Choose up to 1 Guts character to protect from opponent effects until your next turn.",
+            optional: true,
+            includeLeader: false,
+            filter: card => card.cardType === "character" && CardEffects.hasCardName(card, "Guts"),
+            onSelect: ({ card }) => {
+                card.protectedFromOpponentEffects = true;
+                addGameLog(`${sourceCard.name} protected ${card.name} from opponent effects.`);
+            },
+            skipMessage: `${player.name} did not choose a Guts character for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no Guts characters.`
+        });
+    }
+
+    if (effect.id === "BK01-008-activate-main-minus-cost-rest") {
+        if ((sourceCard.state || "active") === "rested") {
+            return `${sourceCard.name} is already rested.`;
+        }
+
+        sourceCard.state = "rested";
+        sourceCard.uiAnimation = "rested";
+
+        if (ui?.renderCharacters) {
+            ui.renderCharacters();
+        }
+
+        return chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing character to give -2 cost this turn.",
+            optional: true,
+            onSelect: ({ card }) => {
+                addCostModifier(card, -2);
+                addGameLog(`${sourceCard.name} rested and gave ${card.name} -2 cost this turn.`);
+            },
+            skipMessage: `${player.name} rested ${sourceCard.name} but did not choose a target.`,
+            emptyMessage: `${sourceCard.name} found no opposing characters.`
+        });
+    }
+
+    if (effect.id === "BK01-009-on-play-ko-cost-five") {
+        return chooseOpponentCharacterToKO(player, sourceCard, ui, 5);
+    }
+
+    if (effect.id === "BK01-010-on-play-rush") {
+        if (!player.characters.some(card => CardEffects.hasCardName(card, "Farnese"))) {
+            return `${sourceCard.name}'s On Play effect found no Farnese character.`;
+        }
+
+        addTemporaryKeyword(sourceCard, "rush");
+        ui.renderCharacters();
+        return `${sourceCard.name} gained Rush.`;
+    }
+
+    if (effect.id === "BK01-011-main") {
+        const costMessage = chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing character to give -2 cost this turn.",
+            optional: true,
+            onSelect: ({ card }) => {
+                addCostModifier(card, -2);
+                addGameLog(`${sourceCard.name} gave ${card.name} -2 cost this turn.`);
+            },
+            skipMessage: `${player.name} did not reduce a character's cost with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no opposing characters for cost reduction.`
+        });
+
+        const koMessage = chooseOpponentCharacterToKO(player, sourceCard, ui, 5);
+
+        return `${costMessage} ${koMessage}`;
+    }
+
+    if (effect.id === "BK01-012-on-play-minus-cost") {
+        return chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing character to give -2 cost this turn.",
+            optional: true,
+            onSelect: ({ card }) => {
+                addCostModifier(card, -2);
+                addGameLog(`${sourceCard.name} gave ${card.name} -2 cost this turn.`);
+            },
+            skipMessage: `${player.name} did not reduce a character's cost with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no opposing characters.`
+        });
+    }
+
+    if (
+        effect.id === "BK01-013-on-play-give-don" ||
+        effect.id === "BK01-016-on-play-give-don"
+    ) {
+        if (!CardEffects.hasCardName(player.leader, "Guts")) {
+            return `${sourceCard.name}'s On Play effect did not resolve because ${player.name}'s leader is not Guts.`;
+        }
+
+        return giveRestedDonToCard(player, sourceCard, player.leader, ui);
+    }
+
+    if (effect.id === "BK01-014-on-play-ko-each") {
+        const ownMessage = chooseOwnBoardCard(player, sourceCard, {
+            prompt: "Choose up to 1 of your characters to K.O.",
+            optional: true,
+            includeLeader: false,
+            filter: card => card.cardType === "character",
+            onSelect: ({ slotIndex }) => {
+                const result = KOCharacter(player, slotIndex, ui);
+                addGameLog(`${sourceCard.name} K.O.'d one of your characters. ${result.message}`);
+            },
+            skipMessage: `${player.name} did not K.O. one of their characters with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no own characters to K.O.`
+        });
+        const opponentMessage = chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing character to K.O.",
+            optional: true,
+            onSelect: ({ playerKey, slotIndex, card }) => {
+                if (isProtectedFromOpponentEffects(card, playerKey, player)) {
+                    addGameLog(`${card.name} is protected from opponent effects.`);
+                    return;
+                }
+
+                const result = KOCharacter(gameState[playerKey], slotIndex, ui);
+                addGameLog(`${sourceCard.name} K.O.'d ${card.name}. ${result.message}`);
+            },
+            skipMessage: `${player.name} did not K.O. an opposing character with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no opposing characters.`
+        });
+
+        return `${ownMessage} ${opponentMessage}`;
+    }
+
+    if (effect.id === "BK01-015-main") {
+        if (!CardEffects.hasCardName(player.leader, "Guts")) {
+            return `${sourceCard.name}'s Main effect did not resolve because ${player.name}'s leader is not Guts.`;
+        }
+
+        const donMessage = giveRestedDonToCard(player, sourceCard, player.leader, ui);
+        const koMessage = chooseOpponentCharacterToKO(player, sourceCard, ui, 3, false);
+
+        return `${donMessage} ${koMessage}`;
+    }
+
     return "";
 }
 
-function lookTopCardsForType(player, sourceCard, amount, typeText, ui) {
+function lookTopCardsForType(player, sourceCard, amount, typeText, ui, options = {}) {
     if (!player || !sourceCard) {
         return "";
     }
@@ -766,9 +976,13 @@ function lookTopCardsForType(player, sourceCard, amount, typeText, ui) {
     }
 
     const isSelectable = (card) => {
-        return String(card.type || "")
+        const matchesType = String(card.type || "")
             .toLowerCase()
             .includes(String(typeText).toLowerCase());
+        const isExcludedName = (options.excludeNames || [])
+            .some(name => CardEffects.hasCardName(card, name));
+
+        return matchesType && !isExcludedName;
     };
 
     const finishSelection = (selection) => {
@@ -946,12 +1160,21 @@ function chooseBoardCard(player, sourceCard, choices, options = {}) {
     });
 
     if (validChoices.length === 0) {
+        if (typeof options.onEmpty === "function") {
+            options.onEmpty();
+        }
+
         return options.emptyMessage || `${sourceCard.name} found no eligible cards.`;
     }
 
     const finishSelection = (choice) => {
         if (!choice) {
             addGameLog(options.skipMessage || `${player.name} did not choose a card for ${sourceCard.name}.`);
+
+            if (typeof options.onSkip === "function") {
+                options.onSkip();
+            }
+
             return;
         }
 
@@ -1015,6 +1238,159 @@ function addBattleKeyword(card, keyword) {
 
 function addBattlePowerBonus(card, amount) {
     card.battlePowerBonus = Number(card.battlePowerBonus || 0) + amount;
+}
+
+function addTemporaryPowerBonus(card, amount) {
+    if (!card) {
+        return;
+    }
+
+    card.temporaryPowerBonus = Number(card.temporaryPowerBonus || 0) + Number(amount || 0);
+}
+
+function addDurationPowerBonus(card, amount, expiresAtEndOfTurns) {
+    if (!card) {
+        return;
+    }
+
+    if (!Array.isArray(card.durationPowerBonuses)) {
+        card.durationPowerBonuses = [];
+    }
+
+    card.durationPowerBonuses.push({
+        amount: Number(amount || 0),
+        expiresAtEndOfTurns
+    });
+}
+
+function addCostModifier(card, amount) {
+    if (!card) {
+        return;
+    }
+
+    if (!Array.isArray(card.costModifiers)) {
+        card.costModifiers = [];
+    }
+
+    card.costModifiers.push({
+        amount: Number(amount || 0)
+    });
+}
+
+function giveRestedDonToCard(player, sourceCard, targetCard, ui) {
+    if (!player || !sourceCard || !targetCard) {
+        return "";
+    }
+
+    if (player.restedDon < 1) {
+        return `${sourceCard.name} found no rested DON!! to give.`;
+    }
+
+    player.restedDon -= 1;
+    targetCard.attachedDon = Number(targetCard.attachedDon || 0) + 1;
+
+    if (ui?.updateDonDisplay) {
+        ui.updateDonDisplay();
+    }
+
+    if (ui?.renderLeaders) {
+        ui.renderLeaders();
+    }
+
+    if (ui?.renderCharacters) {
+        ui.renderCharacters();
+    }
+
+    return `${sourceCard.name} gave 1 rested DON!! to ${targetCard.name}.`;
+}
+
+function giveRestedDonToOwnBoardCard(player, sourceCard, ui, options = {}) {
+    if (player.restedDon < 1) {
+        return `${sourceCard.name} found no rested DON!! to give.`;
+    }
+
+    return chooseOwnBoardCard(player, sourceCard, {
+        prompt: options.prompt || "Choose your leader or up to 1 character to receive 1 rested DON!!.",
+        optional: true,
+        includeLeader: true,
+        filter: card => card.cardType === "leader" || card.cardType === "character",
+        onSelect: ({ card }) => {
+            addGameLog(giveRestedDonToCard(player, sourceCard, card, ui));
+        },
+        skipMessage: `${player.name} did not give a DON!! card with ${sourceCard.name}.`,
+        emptyMessage: `${sourceCard.name} found no eligible cards to receive DON!!.`
+    });
+}
+
+function chooseOpponentCharacterToKO(player, sourceCard, ui, maxCost, optional = true) {
+    return chooseOpponentCharacter(player, sourceCard, {
+        prompt: `Choose ${optional ? "up to 1" : "1"} opposing cost ${maxCost} or lower character to K.O.`,
+        optional,
+        filter: card => getCardEffectiveCost(card) <= maxCost,
+        onSelect: ({ playerKey, slotIndex, card }) => {
+            if (isProtectedFromOpponentEffects(card, playerKey, player)) {
+                addGameLog(`${card.name} is protected from opponent effects.`);
+                return;
+            }
+
+            const result = KOCharacter(gameState[playerKey], slotIndex, ui);
+            addGameLog(`${sourceCard.name} K.O.'d ${card.name}. ${result.message}`);
+        },
+        skipMessage: `${player.name} did not K.O. a character with ${sourceCard.name}.`,
+        emptyMessage: `${sourceCard.name} found no opposing cost ${maxCost} or lower characters.`
+    });
+}
+
+function takeTopLifeToHand(player, ui) {
+    const card = player?.life?.shift();
+
+    if (!card) {
+        loseByLifeDamage(player, `${player.name} tried to add life to hand with no life cards remaining.`);
+        return null;
+    }
+
+    player.hand.push(card);
+
+    if (ui?.renderLifeCards) {
+        ui.renderLifeCards();
+    }
+
+    if (ui?.renderHands) {
+        ui.renderHands();
+    }
+
+    return card;
+}
+
+function isProtectedFromOpponentEffects(card, cardPlayerKey, actingPlayer) {
+    if (!card?.protectedFromOpponentEffects) {
+        return false;
+    }
+
+    const actingPlayerKey = getPlayerKey(actingPlayer);
+
+    return actingPlayerKey && actingPlayerKey !== cardPlayerKey;
+}
+
+function resolveGutsLeaderCharacterRemovedBonus(removedCharacterPlayer, ui) {
+    const opponent = getOpponentOfPlayer(removedCharacterPlayer);
+    const leader = opponent?.leader;
+
+    if (!leader || leader.cardNumber !== "BK01-001") {
+        return;
+    }
+
+    if (Number(leader.attachedDon || 0) < 1) {
+        return;
+    }
+
+    addDurationPowerBonus(leader, 1000, Number(opponent.turns || 0) + 1);
+
+    if (ui?.renderLeaders) {
+        ui.renderLeaders();
+    }
+
+    addGameLog(`${leader.name}'s effect gave it +1000 power until the end of ${opponent.name}'s next turn.`);
 }
 
 function setOneNamedOwnCardActive(player, sourceCard, cardName, ui) {
@@ -1265,6 +1641,7 @@ function KOCharacter(player, slotIndex, ui) {
     player.characters[slotIndex] = null;
 
     moveCardToTrash(player, character, ui);
+    resolveGutsLeaderCharacterRemovedBonus(player, ui);
 
     const effectMessages = resolveOnKOEffects(player, character, ui);
 
@@ -1673,7 +2050,16 @@ function resolveEndOfTurnEffects(player, ui) {
             });
     });
 
+    returnAttachedDonToCostArea(player, ui);
     clearEndOfTurnTemporaryEffects(player);
+
+    const opponent = getOpponentOfPlayer(player);
+
+    if (opponent) {
+        clearEndOfTurnTemporaryEffects(opponent, {
+            preserveDurationPower: true
+        });
+    }
 
     if (ui?.renderLeaders) {
         ui.renderLeaders();
@@ -1686,7 +2072,34 @@ function resolveEndOfTurnEffects(player, ui) {
     return results;
 }
 
-function clearEndOfTurnTemporaryEffects(player) {
+function returnAttachedDonToCostArea(player, ui) {
+    if (!player) {
+        return 0;
+    }
+
+    const cards = [
+        player.leader,
+        ...player.characters.filter(Boolean)
+    ].filter(Boolean);
+    let returnedDon = 0;
+
+    cards.forEach(card => {
+        returnedDon += Number(card.attachedDon || 0);
+        card.attachedDon = 0;
+    });
+
+    player.restedDon += returnedDon;
+
+    if (returnedDon > 0) {
+        ui.updateDonDisplay();
+        ui.renderLeaders();
+        ui.renderCharacters();
+    }
+
+    return returnedDon;
+}
+
+function clearEndOfTurnTemporaryEffects(player, options = {}) {
     const cards = [
         player.leader,
         ...player.characters.filter(Boolean),
@@ -1697,6 +2110,15 @@ function clearEndOfTurnTemporaryEffects(player) {
         card.temporaryKeywords = [];
         card.battleKeywords = [];
         card.battlePowerBonus = 0;
+        card.temporaryPowerBonus = 0;
+        card.costModifiers = [];
+        card.protectedFromOpponentEffects = false;
+
+        if (!options.preserveDurationPower && Array.isArray(card.durationPowerBonuses)) {
+            card.durationPowerBonuses = card.durationPowerBonuses.filter(entry => {
+                return Number(entry.expiresAtEndOfTurns ?? 0) > Number(player.turns || 0);
+            });
+        }
     });
 }
 

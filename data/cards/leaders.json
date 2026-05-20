@@ -60,5 +60,27 @@
         "text": "When Attacking Once Per Turn: If you have a [Turbo Granny Form] stage in play, set this leader as active."
       }
     ]
+  },
+
+  "BK01-001": {
+    "id": "BK01-001",
+    "cardNumber": "BK01-001",
+    "name": "Guts",
+    "cardType": "leader",
+    "type": "Former Band of the Hawk/Black Swordsman Party",
+    "color": "red/black",
+    "attribute": "slash",
+    "power": 5000,
+    "life": 4,
+    "image": "../images/RB Guts by Mrki/BK01-001.jpg",
+    "aliases": [],
+    "keywords": [],
+    "effects": [
+      {
+        "id": "BK01-001-removed-character-power",
+        "type": "continuous",
+        "text": "DON!! x1: When one of your opponent's Characters is removed from the field, give this Leader +1000 power until the end of your next turn."
+      }
+    ]
   }
 }

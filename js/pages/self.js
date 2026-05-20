@@ -1909,6 +1909,17 @@ function resolveBoardActionEffect(player, card, effect) {
         };
     }
 
+    const message = resolveEffectAction(player, card, effect, ui, {
+        skipActivationPrompt: true
+    });
+
+    if (message) {
+        return {
+            success: true,
+            message
+        };
+    }
+
     return {
         success: false,
         message: `${card.name}'s effect is not implemented yet.`
@@ -2363,15 +2374,87 @@ function beginAttack(targetData) {
         addGameLog(result.message);
     });
 
-    resolveWhenAttackingEffectsBeforeBattle(
-        attackerPlayer,
-        attackerData,
-        () => {
-            showResolveAttackButton(currentAttack.defenderPlayerKey, () => {
-                resolveCurrentAttack();
-            });
+    promptOnOpponentAttackCharacterEffects(defenderPlayer, () => {
+        resolveWhenAttackingEffectsBeforeBattle(
+            attackerPlayer,
+            attackerData,
+            () => {
+                showResolveAttackButton(currentAttack.defenderPlayerKey, () => {
+                    resolveCurrentAttack();
+                });
+            }
+        );
+    });
+}
+
+function promptOnOpponentAttackCharacterEffects(defenderPlayer, onComplete) {
+    const playerKey = defenderPlayer === gameState.player1 ? "player1" : "player2";
+    const effects = defenderPlayer.characters
+        .map((card, slotIndex) => ({ card, slotIndex }))
+        .filter(entry => entry.card?.effects?.some(effect => effect.type === "onOpponentAttack"));
+
+    const promptNext = (index) => {
+        const entry = effects[index];
+
+        if (!entry) {
+            if (typeof onComplete === "function") {
+                onComplete();
+            }
+
+            return;
         }
-    );
+
+        const currentCard = defenderPlayer.characters[entry.slotIndex];
+        const effect = currentCard?.effects?.find(cardEffect => cardEffect.type === "onOpponentAttack");
+
+        if (!currentCard || !effect) {
+            promptNext(index + 1);
+            return;
+        }
+
+        chooseEffectActivation({
+            player: defenderPlayer,
+            sourceCard: currentCard,
+            effect,
+            title: currentCard.name,
+            prompt: effect.text || "Activate this On Your Opponent's Attack effect?",
+            activateText: "Activate",
+            skipText: "Skip",
+            onComplete: (shouldActivate) => {
+                if (!shouldActivate) {
+                    addGameLog(`${defenderPlayer.name} skipped ${currentCard.name}'s On Your Opponent's Attack effect.`);
+                    promptNext(index + 1);
+                    return;
+                }
+
+                if (effect.actionId === "trashThisDrawOne") {
+                    const trashedCard = defenderPlayer.characters[entry.slotIndex];
+
+                    defenderPlayer.characters[entry.slotIndex] = null;
+                    moveCardToTrash(defenderPlayer, trashedCard, ui);
+                    drawCard(defenderPlayer, ui);
+
+                    renderCharacters();
+                    renderTrash();
+                    renderHands();
+
+                    addGameLog(`${defenderPlayer.name} trashed ${trashedCard.name} and drew 1 card.`);
+
+                    if (
+                        currentAttack?.target?.playerKey === playerKey &&
+                        currentAttack.target.cardType === "character" &&
+                        currentAttack.target.slotIndex === entry.slotIndex
+                    ) {
+                        addGameLog(`${trashedCard.name} left the field, so the attack target is gone.`);
+                    }
+                }
+
+                promptNext(index + 1);
+            }
+        });
+    };
+
+    promptNext(0);
 }
 
 function resolveWhenAttackingEffectsBeforeBattle(attackerPlayer, attackerData, onComplete) {
@@ -3290,6 +3373,14 @@ function getCardBattlePower(card, player = null) {
 }
 
 function getPrintedPower(card) {
+    if (card?.cardNumber === "BK01-007") {
+        const player = getPlayerForBoardCard(card);
+
+        if (player?.characters?.some(character => CardEffects.hasCardName(character, "Guts"))) {
+            return 6000;
+        }
+    }
+
     return Number(card?.power ?? 0);
 }
 
@@ -3300,9 +3391,24 @@ function getPowerModifier(card, player = null) {
 
     return getYourTurnPowerBonus(card, player) +
         getTurboGrannyFormPowerModifier(card, player) +
+        getSerpicoFarnesePowerModifier(card, player) +
+        getGutsLeaderPowerModifier(card, player) +
         getOpponentTurnPowerModifier(card, player) +
+        getAttachedDonPowerModifier(card) +
+        getTemporaryPowerModifier(card) +
+        getDurationPowerModifier(card) +
         getTokenAttachedPowerModifier(card) +
         getBattlePowerModifier(card);
+}
+
+function getPlayerForBoardCard(card) {
+    if (!card || !gameState) {
+        return null;
+    }
+
+    return [gameState.player1, gameState.player2].find(player => {
+        return player.leader === card || player.stage === card || player.characters.includes(card);
+    }) || null;
 }
 
 function getYourTurnPowerBonus(card, player) {
@@ -3386,6 +3492,53 @@ function getTokenAttachedPowerModifier(card) {
 
             return total + Number(effect.powerModifier ?? 0);
         }, 0) ?? 0;
+}
+
+function getSerpicoFarnesePowerModifier(card, player) {
+    if (!card || !player || card.cardType !== "character") {
+        return 0;
+    }
+
+    if (!CardEffects.hasCardName(card, "Farnese")) {
+        return 0;
+    }
+
+    return player.characters
+        .filter(character => character?.cardNumber === "BK01-010")
+        .reduce((total, character) => {
+            const effect = character.effects?.find(cardEffect => cardEffect.id === "BK01-010-farnese-power");
+            return total + Number(effect?.powerModifier ?? 0);
+        }, 0);
+}
+
+function getGutsLeaderPowerModifier(card, player) {
+    if (!card || !player || card.cardType !== "leader") {
+        return 0;
+    }
+
+    if (!CardEffects.hasCardName(card, "Guts")) {
+        return 0;
+    }
+
+    return player.characters
+        .filter(character => character?.cardNumber === "BK01-016")
+        .reduce((total, character) => {
+            const effect = character.effects?.find(cardEffect => cardEffect.id === "BK01-016-guts-rush-leader-power");
+            return total + Number(effect?.leaderPowerModifier ?? 0);
+        }, 0);
+}
+
+function getAttachedDonPowerModifier(card) {
+    return Number(card?.attachedDon ?? 0) * 1000;
+}
+
+function getTemporaryPowerModifier(card) {
+    return Number(card?.temporaryPowerBonus ?? 0);
+}
+
+function getDurationPowerModifier(card) {
+    return card?.durationPowerBonuses
+        ?.reduce((total, entry) => total + Number(entry.amount ?? 0), 0) ?? 0;
 }
 
 function getBattlePowerModifier(card) {

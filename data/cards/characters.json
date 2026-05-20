@@ -373,5 +373,301 @@
         "actionId": "playThisCardFromTrigger"
       }
     ]
+  },
+
+  "BK01-003": {
+    "id": "BK01-003",
+    "cardNumber": "BK01-003",
+    "name": "Isma",
+    "cardType": "character",
+    "type": "Black Swordsman Party/Solitary Island",
+    "color": "black",
+    "cost": 1,
+    "power": 0,
+    "counter": 1000,
+    "attribute": "wisdom",
+    "image": "../images/RB Guts by Mrki/BK01-003.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "BK01-003-on-play-search",
+        "type": "onPlay",
+        "text": "On Play: Look at 5 cards from the top of your deck; reveal up to 1 {Black Swordsman Party} type card other than [Isma] and add it to your hand. Then, place the rest at the bottom of the deck in any order.",
+        "actionId": "lookTopFiveBlackSwordsmanPartyOtherThanSelf"
+      },
+      {
+        "id": "BK01-003-on-opponent-attack-draw",
+        "type": "onOpponentAttack",
+        "text": "On Your Opponent's Attack: You may trash this Character; draw 1 card.",
+        "actionId": "trashThisDrawOne"
+      }
+    ]
+  },
+
+  "BK01-004": {
+    "id": "BK01-004",
+    "cardNumber": "BK01-004",
+    "name": "Puck",
+    "cardType": "character",
+    "type": "Black Swordsman Party/Elfhelm/Astral Realm",
+    "color": "black",
+    "cost": 1,
+    "power": 1000,
+    "counter": 2000,
+    "attribute": "special",
+    "image": "../images/RB Guts by Mrki/BK01-004.jpg",
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "BK01-004-on-play-minus-cost",
+        "type": "onPlay",
+        "text": "On Play: If you have a [Guts] Character in play; give up to one of your opponent's Characters -1 cost for this turn."
+      }
+    ]
+  },
+
+  "BK01-005": {
+    "id": "BK01-005",
+    "cardNumber": "BK01-005",
+    "name": "Puck",
+    "cardType": "character",
+    "type": "Black Swordsman Party/Elfhelm/Astral Realm",
+    "color": "red",
+    "cost": 1,
+    "power": 1000,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/RB Guts by Mrki/BK01-005.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "BK01-005-activate-main-give-don",
+        "type": "activateMain",
+        "oncePerTurn": true,
+        "text": "Activate: Main Once Per Turn: Give up to 1 rested DON!! card to your Leader or 1 of your Characters."
+      }
+    ]
+  },
+
+  "BK01-006": {
+    "id": "BK01-006",
+    "cardNumber": "BK01-006",
+    "name": "Schierke",
+    "cardType": "character",
+    "type": "Black Swordsman Party/Astral Realm/Mage",
+    "color": "black",
+    "cost": 5,
+    "power": 2000,
+    "counter": 1000,
+    "attribute": "wisdom",
+    "image": "../images/RB Guts by Mrki/BK01-006.jpg",
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "BK01-006-activate-main-protect-guts",
+        "type": "activateMain",
+        "text": "Activate: Main: Up to 1 of your [Guts] Characters cannot be removed from play by your opponent's effects until the start of your next turn."
+      }
+    ]
+  },
+
+  "BK01-007": {
+    "id": "BK01-007",
+    "cardNumber": "BK01-007",
+    "name": "Ishidro",
+    "cardType": "character",
+    "type": "Black Swordsman Party",
+    "color": "red",
+    "cost": 4,
+    "power": 4000,
+    "counter": 1000,
+    "attribute": "slash",
+    "image": "../images/RB Guts by Mrki/BK01-007.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "BK01-007-guts-base-power",
+        "type": "continuous",
+        "text": "If you have a [Guts] Character in play, this character gains a base power of 6000.",
+        "conditionalBasePower": 6000
+      },
+      {
+        "id": "BK01-007-on-play-give-don",
+        "type": "onPlay",
+        "text": "On Play: Give your Leader or up to 1 Character 1 rested DON!!"
+      }
+    ]
+  },
+
+  "BK01-008": {
+    "id": "BK01-008",
+    "cardNumber": "BK01-008",
+    "name": "Ishidro",
+    "cardType": "character",
+    "type": "Black Swordsman Party",
+    "color": "black",
+    "cost": 5,
+    "power": 5000,
+    "counter": 1000,
+    "attribute": "slash",
+    "image": "../images/RB Guts by Mrki/BK01-008.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "BK01-008-activate-main-minus-cost-rest",
+        "type": "activateMain",
+        "text": "Activate: Main: Give up to 1 of your opponent's Characters -2 cost during this turn then, rest this Character."
+      }
+    ]
+  },
+
+  "BK01-009": {
+    "id": "BK01-009",
+    "cardNumber": "BK01-009",
+    "name": "Serpico",
+    "cardType": "character",
+    "type": "Former Holy Iron Chain Knights/Black Swordsman Party",
+    "color": "black",
+    "cost": 6,
+    "power": 7000,
+    "counter": 0,
+    "attribute": "slash",
+    "image": "../images/RB Guts by Mrki/BK01-009.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "BK01-009-on-play-ko-cost-five",
+        "type": "onPlay",
+        "text": "On Play: K.O. up to 1 of your opponent's Characters with a cost of 5 or less."
+      }
+    ]
+  },
+
+  "BK01-010": {
+    "id": "BK01-010",
+    "cardNumber": "BK01-010",
+    "name": "Serpico",
+    "cardType": "character",
+    "type": "Former Holy Iron Chain Knights/Black Swordsman Party",
+    "color": "red",
+    "cost": 5,
+    "power": 5000,
+    "counter": 1000,
+    "attribute": "slash",
+    "image": "../images/RB Guts by Mrki/BK01-010.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "BK01-010-farnese-power",
+        "type": "continuous",
+        "text": "Give all of your [Farnese] Characters +2000 power.",
+        "powerModifier": 2000
+      },
+      {
+        "id": "BK01-010-on-play-rush",
+        "type": "onPlay",
+        "text": "On Play: If you have a [Farnese] Character in play, this Character gains Rush."
+      }
+    ]
+  },
+
+  "BK01-012": {
+    "id": "BK01-012",
+    "cardNumber": "BK01-012",
+    "name": "Farnese de Vandimion",
+    "cardType": "character",
+    "type": "Former Holy Iron Chain Knights/de Vandimion Family/Black Swordsman Party",
+    "color": "black",
+    "cost": 4,
+    "power": 4000,
+    "counter": 2000,
+    "attribute": "wisdom",
+    "image": "../images/RB Guts by Mrki/BK01-012.jpg",
+    "aliases": ["Farnese"],
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "BK01-012-on-play-minus-cost",
+        "type": "onPlay",
+        "text": "On Play: Give up to 1 of your opponent's character cards -2 cost for this turn."
+      }
+    ]
+  },
+
+  "BK01-013": {
+    "id": "BK01-013",
+    "cardNumber": "BK01-013",
+    "name": "Guts",
+    "cardType": "character",
+    "type": "Former Band of the Hawk/Black Swordsman Party",
+    "color": "red",
+    "cost": 8,
+    "power": 8000,
+    "counter": 0,
+    "attribute": "slash",
+    "image": "../images/RB Guts by Mrki/BK01-013.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "BK01-013-guts-double-attack",
+        "type": "continuous",
+        "text": "If your leader is [Guts] this Character gains Double Attack."
+      },
+      {
+        "id": "BK01-013-on-play-give-don",
+        "type": "onPlay",
+        "text": "On Play: If your leader is [Guts] give your leader up to 1 rested DON!!"
+      }
+    ]
+  },
+
+  "BK01-014": {
+    "id": "BK01-014",
+    "cardNumber": "BK01-014",
+    "name": "Guts",
+    "cardType": "character",
+    "type": "Former Band of the Hawk/Black Swordsman Party",
+    "color": "black",
+    "cost": 10,
+    "power": 12000,
+    "counter": 0,
+    "attribute": "slash",
+    "image": "../images/RB Guts by Mrki/BK01-014.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "BK01-014-on-play-ko-each",
+        "type": "onPlay",
+        "text": "On Play: K.O. up to 1 of your Characters; K.O. up to 1 of your opponent's Characters."
+      }
+    ]
+  },
+
+  "BK01-016": {
+    "id": "BK01-016",
+    "cardNumber": "BK01-016",
+    "name": "Guts",
+    "cardType": "character",
+    "type": "Black Swordsman Party",
+    "color": "red",
+    "cost": 10,
+    "power": 12000,
+    "counter": 0,
+    "attribute": "slash",
+    "image": "../images/RB Guts by Mrki/BK01-016.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "BK01-016-guts-rush-leader-power",
+        "type": "continuous",
+        "text": "If your leader is [Guts] give your leader +1000 power and this Character gains Rush.",
+        "leaderPowerModifier": 1000
+      },
+      {
+        "id": "BK01-016-on-play-give-don",
+        "type": "onPlay",
+        "text": "On Play: If your leader is [Guts] give your leader up to 1 rested DON!!"
+      }
+    ]
   }
 }

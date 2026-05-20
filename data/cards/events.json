@@ -124,5 +124,64 @@
         "powerModifier": 3000
       }
     ]
+  },
+
+  "BK01-002": {
+    "id": "BK01-002",
+    "cardNumber": "BK01-002",
+    "name": "Get that... to the Black Swordsman",
+    "cardType": "event",
+    "type": "Black Swordsman Party/Fetish",
+    "color": "red",
+    "cost": 5,
+    "image": "../images/RB Guts by Mrki/BK01-002.jpg",
+    "effects": [
+      {
+        "id": "BK01-002-main",
+        "type": "main",
+        "text": "Main: Give up to 1 of your [Guts] or [Skull Knight] Characters +5000 power for this turn. When that Character attacks, your opponent cannot activate Blocker during this battle, then add the top of your Life cards to your hand."
+      },
+      {
+        "id": "BK01-002-trigger",
+        "type": "trigger",
+        "text": "Trigger: Give 1 of your leaders +1000 power until the end of the turn."
+      }
+    ]
+  },
+
+  "BK01-011": {
+    "id": "BK01-011",
+    "cardNumber": "BK01-011",
+    "name": "...Indeed It Was Like a Heap of Raw Iron.",
+    "cardType": "event",
+    "type": "Black Swordsman Party",
+    "color": "black",
+    "cost": 6,
+    "image": "../images/RB Guts by Mrki/BK01-011.jpg",
+    "effects": [
+      {
+        "id": "BK01-011-main",
+        "type": "main",
+        "text": "Main: Give up to 1 of your opponent's characters -2 cost until the end of this turn. Then, K.O. up to 1 of your opponent's Characters with a cost of 5 or less."
+      }
+    ]
+  },
+
+  "BK01-015": {
+    "id": "BK01-015",
+    "cardNumber": "BK01-015",
+    "name": "Artificial Arm Huh? It's Groovy.",
+    "cardType": "event",
+    "type": "Black Swordsman Party",
+    "color": "black",
+    "cost": 3,
+    "image": "../images/RB Guts by Mrki/BK01-015.jpg",
+    "effects": [
+      {
+        "id": "BK01-015-main",
+        "type": "main",
+        "text": "Main: If your leader is [Guts], give your leader up to 1 rested DON!! Then, K.O. one of your opponent's Characters with a cost of 3 or less."
+      }
+    ]
   }
 }

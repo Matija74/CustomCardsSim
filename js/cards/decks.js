@@ -27,6 +27,24 @@ const okarunDeckText = `
 3xDD01-017
 `;
 
+const rbGutsDeckText = `
+2xBK01-002
+4xBK01-003
+4xBK01-004
+4xBK01-005
+4xBK01-006
+4xBK01-007
+3xBK01-008
+3xBK01-009
+2xBK01-010
+2xBK01-011
+4xBK01-012
+2xBK01-013
+4xBK01-014
+3xBK01-015
+4xBK01-016
+`;
+
 const availableDecks = [
     {
         id: "test-deck",
@@ -39,6 +57,12 @@ const availableDecks = [
         name: "Okarun Deck",
         leaderKey: "DD01-001",
         deckText: okarunDeckText
+    },
+    {
+        id: "rb-guts-deck",
+        name: "RB Guts by Mrki",
+        leaderKey: "BK01-001",
+        deckText: rbGutsDeckText
     }
 ];
 

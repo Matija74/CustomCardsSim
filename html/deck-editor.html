@@ -6,7 +6,7 @@
     <title>Deck Editor - Custom Cards</title>
 
     <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="../css/deck-editor.css">
+    <link rel="stylesheet" href="../css/deck-editor.css?v=filters-1">
 </head>
 
 <body>
@@ -84,13 +84,13 @@
 
                     <div class="filter-row">
                         <div class="filter-group">
-                            <label for="typeFilter">Type</label>
-                            <select id="typeFilter">
-                                <option value="all">All Types</option>
+                            <label for="categoryFilter">Category</label>
+                            <select id="categoryFilter">
+                                <option value="all">All Categories</option>
                                 <option value="leader">Leader</option>
                                 <option value="character">Character</option>
-                                <option value="event">Event</option>
                                 <option value="stage">Stage</option>
+                                <option value="event">Event</option>
                             </select>
                         </div>
 
@@ -108,15 +108,37 @@
                         </div>
 
                         <div class="filter-group">
+                            <label for="typeFilter">Type</label>
+                            <select id="typeFilter">
+                                <option value="all">All Types</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
                             <label for="costFilter">Cost</label>
                             <select id="costFilter">
                                 <option value="all">All Costs</option>
-                                <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                                <option value="5">5+</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="powerFilter">Power</label>
+                            <select id="powerFilter">
+                                <option value="all">All Power</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="attributeFilter">Attribute</label>
+                            <select id="attributeFilter">
+                                <option value="all">All Attributes</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="counterFilter">Counter</label>
+                            <select id="counterFilter">
+                                <option value="all">All Counters</option>
                             </select>
                         </div>
                     </div>
@@ -151,7 +173,7 @@
         </div>
     </div>
 
-    <script src="../js/cards/cardDatabase.js"></script>
-    <script src="../js/pages/deck-editor.js"></script>
+    <script src="../js/cards/cardDatabase.js?v=rb-guts-1"></script>
+    <script src="../js/pages/deck-editor.js?v=rb-guts-1"></script>
 </body>
 </html>

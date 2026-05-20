@@ -58,6 +58,27 @@ window.CardEffects = {
         }
 
         const wantedKeyword = this.normalizeKeyword(keywordName);
+
+        if (card.cardNumber === "BK01-013" && wantedKeyword === "doubleattack") {
+            const owner = typeof getPlayerForBoardCard === "function"
+                ? getPlayerForBoardCard(card)
+                : null;
+
+            if (owner?.leader && this.hasCardName(owner.leader, "Guts")) {
+                return true;
+            }
+        }
+
+        if (card.cardNumber === "BK01-016" && wantedKeyword === "rush") {
+            const owner = typeof getPlayerForBoardCard === "function"
+                ? getPlayerForBoardCard(card)
+                : null;
+
+            if (owner?.leader && this.hasCardName(owner.leader, "Guts")) {
+                return true;
+            }
+        }
+
         const allKeywords = [
             ...(Array.isArray(card.keywords) ? card.keywords : []),
             ...(Array.isArray(card.temporaryKeywords) ? card.temporaryKeywords : []),
@@ -443,7 +464,11 @@ window.CardEffects = {
         this.markOncePerTurnEffectUsed(character, effectId, turnNumber);
 
         const blockerChoices = getOpponentCharacterChoices(player, card => {
-            return Number(card.cost ?? 0) <= 5 && this.hasKeyword(card, "blocker");
+            const cardCost = typeof getCardEffectiveCost === "function"
+                ? getCardEffectiveCost(card)
+                : Number(card.cost ?? 0);
+
+            return cardCost <= 5 && this.hasKeyword(card, "blocker");
         });
 
         if (blockerChoices.length === 0) {
