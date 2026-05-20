@@ -1021,6 +1021,7 @@ function renderLeader(player, areaId) {
             cardType: "leader"
         }
     );
+    renderBasePowerBadge(player.leader, leaderArea);
 
     setupCardPreview();
     setupBoardLeaderSelection();
@@ -1089,6 +1090,7 @@ function renderPlayerCharacters(player, playerKey) {
                 slotIndex: index
             }
         );
+        renderBasePowerBadge(card, slot);
     });
 
     setupCardPreview();
@@ -3750,6 +3752,21 @@ function renderPowerModifierBadge(card, player, container, boardCardData = null)
 
     badge.textContent = `${sign}${modifier}`;
     badge.title = `Current power: ${currentPower} (${printedPower} ${sign}${modifier})`;
+
+    container.appendChild(badge);
+}
+
+function renderBasePowerBadge(card, container) {
+    if (!card || !container || (card.cardType !== "leader" && card.cardType !== "character")) {
+        return;
+    }
+
+    const basePower = getPrintedPower(card);
+    const badge = document.createElement("div");
+
+    badge.className = "base-power-badge";
+    badge.textContent = `Base ${basePower}`;
+    badge.title = `Base power: ${basePower}`;
 
     container.appendChild(badge);
 }

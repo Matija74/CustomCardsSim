@@ -1133,9 +1133,7 @@ function copyOpponentBoardAbility(player, sourceCard, ui) {
                     return;
                 }
 
-                const message = resolveEffectAction(player, sourceCard, copiedEffect, ui, {
-                    skipActivationPrompt: true
-                });
+                const message = resolveCopiedBoardAbility(player, sourceCard, copiedEffect, ui, card);
 
                 addGameLog(
                     message ||
@@ -1162,6 +1160,67 @@ function copyOpponentBoardAbility(player, sourceCard, ui) {
         },
         skipMessage: `${player.name} did not copy an ability with ${sourceCard.name}.`,
         emptyMessage: `${sourceCard.name} found no opposing abilities to copy.`
+    });
+}
+
+function resolveCopiedBoardAbility(player, sourceCard, copiedEffect, ui, copiedFromCard) {
+    if (!copiedEffect) {
+        return "";
+    }
+
+    if (copiedEffect.id === "DD01-007-when-attacking-refresh-don") {
+        const refreshedDon = setRestedDonActive(player, 2, ui);
+
+        return refreshedDon > 0
+            ? `${sourceCard.name} copied ${copiedFromCard.name}'s ability and set ${refreshedDon} DON!! as active.`
+            : `${sourceCard.name} copied ${copiedFromCard.name}'s ability but found no rested DON!!.`;
+    }
+
+    if (copiedEffect.id === "DD01-010-when-attacking-unblockable") {
+        const returnedDon = returnDonToDeck(player, 1, ui);
+
+        if (returnedDon < 1) {
+            return `${sourceCard.name} copied ${copiedFromCard.name}'s ability but could not pay DON!! -1.`;
+        }
+
+        addTemporaryKeyword(sourceCard, "unblockable");
+
+        return `${sourceCard.name} copied ${copiedFromCard.name}'s ability, returned 1 DON!!, and gained Unblockable this turn.`;
+    }
+
+    if (copiedEffect.id === "DD01-017-when-attacking-ko-blocker") {
+        const returnedDon = returnDonToDeck(player, 1, ui);
+
+        if (returnedDon < 1) {
+            return `${sourceCard.name} copied ${copiedFromCard.name}'s ability but could not pay DON!! -1.`;
+        }
+
+        const message = chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing cost 5 or lower Blocker character to K.O.",
+            optional: true,
+            filter: card => getCardEffectiveCost(card) <= 5 && CardEffects.hasKeyword(card, "blocker"),
+            onSelect: ({ playerKey, slotIndex }) => {
+                addGameLog(removeCharacterByOpponentEffect(player, gameState[playerKey], slotIndex, sourceCard, ui));
+            },
+            skipMessage: `${player.name} did not K.O. a Blocker with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no opposing cost 5 or lower Blockers.`
+        });
+
+        return `${sourceCard.name} copied ${copiedFromCard.name}'s ability and returned 1 DON!!. ${message}`;
+    }
+
+    if (copiedEffect.id === "DD01-006-when-attacking-active") {
+        sourceCard.state = "active";
+
+        if (ui?.renderCharacters) {
+            ui.renderCharacters();
+        }
+
+        return `${sourceCard.name} copied ${copiedFromCard.name}'s ability and set itself active.`;
+    }
+
+    return resolveEffectAction(player, sourceCard, copiedEffect, ui, {
+        skipActivationPrompt: true
     });
 }
 
@@ -1827,8 +1886,54 @@ function removeCharacterByOpponentEffect(actingPlayer, targetPlayer, slotIndex, 
         return `${card.name} is protected from opponent effects.`;
     }
 
-    if (tryUseSageRemovalReplacement(targetPlayer, card, actingPlayer, sourceCard, ui)) {
+    const sage = getAvailableSageRemovalReplacement(targetPlayer, card, actingPlayer);
+
+    if (sage) {
+        if (ui?.chooseEffectActivation) {
+            ui.chooseEffectActivation({
+                player: targetPlayer,
+                sourceCard: sage,
+                effect: sage.effects?.find(cardEffect => cardEffect.id === "EGG1-013-opponents-turn-save") || {
+                    id: "EGG1-013-opponents-turn-save",
+                    type: "opponentsTurn",
+                    text: "Use Sage to trash 2 cards from hand instead?"
+                },
+                title: sage.name,
+                prompt: `${card.name} would be removed by ${sourceCard.name}. Trash 2 cards from hand to keep it on the field?`,
+                activateText: "Trash 2",
+                skipText: "Let Remove",
+                onComplete: (shouldActivate) => {
+                    if (!shouldActivate) {
+                        addGameLog(finishCharacterRemovalByOpponentEffect(actingPlayer, targetPlayer, slotIndex, sourceCard, ui));
+                        return;
+                    }
+
+                    chooseSageReplacementTrashCards(targetPlayer, card, sage, actingPlayer, sourceCard, ui, () => {
+                        addGameLog(finishCharacterRemovalByOpponentEffect(actingPlayer, targetPlayer, slotIndex, sourceCard, ui));
+                    });
+                }
+            });
+
+            return `${targetPlayer.name} is choosing whether to use Sage's replacement effect.`;
+        }
+
+        useSageReplacementWithCards(targetPlayer, card, sage, targetPlayer.hand.slice(0, 2), sourceCard, ui);
         return `${card.name} stayed on the field.`;
+    }
+
+    return finishCharacterRemovalByOpponentEffect(actingPlayer, targetPlayer, slotIndex, sourceCard, ui);
+}
+
+function finishCharacterRemovalByOpponentEffect(actingPlayer, targetPlayer, slotIndex, sourceCard, ui) {
+    const card = targetPlayer?.characters?.[slotIndex];
+    const targetPlayerKey = getPlayerKey(targetPlayer);
+
+    if (!card) {
+        return "No character was found in that slot.";
+    }
+
+    if (isProtectedFromOpponentEffects(card, targetPlayerKey, actingPlayer)) {
+        return `${card.name} is protected from opponent effects.`;
     }
 
     const result = KOCharacter(targetPlayer, slotIndex, ui);
@@ -1836,35 +1941,87 @@ function removeCharacterByOpponentEffect(actingPlayer, targetPlayer, slotIndex, 
     return `${sourceCard.name} K.O.'d ${card.name}. ${result.message}`;
 }
 
-function tryUseSageRemovalReplacement(targetPlayer, targetCard, actingPlayer, sourceCard, ui) {
+function getAvailableSageRemovalReplacement(targetPlayer, targetCard, actingPlayer) {
     if (!targetPlayer || !targetCard || !actingPlayer || targetPlayer === actingPlayer) {
-        return false;
+        return null;
     }
 
     if (!hasTypeText(targetCard, "Eggman Empire")) {
-        return false;
+        return null;
     }
 
     if (gameState.currentPlayer !== actingPlayer) {
-        return false;
+        return null;
     }
 
     if (targetPlayer.hand.length < 2) {
-        return false;
+        return null;
     }
 
     const sage = targetPlayer.characters.find(card => card?.cardNumber === "EGG1-013");
     const effectId = "EGG1-013-opponents-turn-save";
 
     if (!sage || CardEffects.hasUsedOncePerTurnEffect(sage, effectId, targetPlayer.turns)) {
+        return null;
+    }
+
+    return sage;
+}
+
+function chooseSageReplacementTrashCards(targetPlayer, targetCard, sage, actingPlayer, sourceCard, ui, onCancel) {
+    const chosenCards = [];
+
+    const chooseNext = () => {
+        if (chosenCards.length >= 2) {
+            useSageReplacementWithCards(targetPlayer, targetCard, sage, chosenCards, sourceCard, ui);
+            return;
+        }
+
+        const choices = getHandCardChoices(targetPlayer, card => !chosenCards.includes(card));
+
+        if (choices.length === 0) {
+            if (typeof onCancel === "function") {
+                onCancel();
+            }
+
+            return;
+        }
+
+        const message = chooseBoardCard(targetPlayer, sage, choices, {
+            prompt: `Choose card ${chosenCards.length + 1} of 2 to trash for Sage.`,
+            optional: true,
+            onSelect: ({ card }) => {
+                chosenCards.push(card);
+                chooseNext();
+            },
+            onSkip: onCancel,
+            skipMessage: `${targetPlayer.name} did not finish paying Sage's replacement cost.`,
+            emptyMessage: `${sage.name} found no cards in hand to trash.`
+        });
+
+        addGameLog(message);
+    };
+
+    chooseNext();
+}
+
+function useSageReplacementWithCards(targetPlayer, targetCard, sage, cardsToTrash, sourceCard, ui) {
+    const effectId = "EGG1-013-opponents-turn-save";
+
+    if (!Array.isArray(cardsToTrash) || cardsToTrash.length < 2) {
         return false;
     }
 
     CardEffects.markOncePerTurnEffectUsed(sage, effectId, targetPlayer.turns);
 
-    const trashedCards = targetPlayer.hand.splice(0, 2);
+    cardsToTrash.slice(0, 2).forEach(card => {
+        const handIndex = targetPlayer.hand.indexOf(card);
 
-    trashedCards.forEach(card => moveCardToTrash(targetPlayer, card, ui));
+        if (handIndex !== -1) {
+            const trashedCard = targetPlayer.hand.splice(handIndex, 1)[0];
+            moveCardToTrash(targetPlayer, trashedCard, ui);
+        }
+    });
 
     if (ui?.renderHands) {
         ui.renderHands();
@@ -1877,6 +2034,19 @@ function tryUseSageRemovalReplacement(targetPlayer, targetCard, actingPlayer, so
     addGameLog(`${sage.name} prevented ${targetCard.name} from being removed by ${sourceCard.name}; ${targetPlayer.name} trashed 2 cards from hand.`);
 
     return true;
+}
+
+function getHandCardChoices(player, filter) {
+    const playerKey = getPlayerKey(player);
+
+    return player.hand
+        .map((card, handIndex) => ({
+            playerKey,
+            cardType: "hand",
+            handIndex,
+            card
+        }))
+        .filter(choice => choice.card && (!filter || filter(choice.card, choice)));
 }
 
 function takeTopLifeToHand(player, ui) {

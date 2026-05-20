@@ -781,6 +781,31 @@ body {
     background: linear-gradient(135deg, #ff4b4b 0%, #a40000 100%);
 }
 
+.base-power-badge {
+    position: absolute;
+    right: -10px;
+    top: 18px;
+
+    min-width: 58px;
+    padding: 4px 8px;
+
+    border: 2px solid rgba(255, 255, 255, 0.95);
+    border-radius: 999px;
+
+    background: linear-gradient(135deg, #1d4ed8 0%, #0f172a 100%);
+    color: white;
+
+    font-size: 0.68rem;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+
+    z-index: 27;
+    pointer-events: none;
+
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+}
+
 .attached-don-badge {
     position: absolute;
     left: 50%;
@@ -1932,6 +1957,7 @@ body {
 
     .power-modifier-badge,
     .attached-don-badge,
+    .base-power-badge,
     .cost-modifier-badge {
         min-width: 50px;
         padding: 4px 6px;
@@ -2063,6 +2089,7 @@ body {
 
     .power-modifier-badge,
     .attached-don-badge,
+    .base-power-badge,
     .cost-modifier-badge {
         min-width: 44px;
         padding: 3px 5px;
