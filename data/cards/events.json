@@ -126,6 +126,49 @@
     ]
   },
 
+  "EGG1-007": {
+    "id": "EGG1-007",
+    "cardNumber": "EGG1-007",
+    "name": "Im Pissing On The Moon!!!",
+    "cardType": "event",
+    "type": "Eggman Empire",
+    "color": "red",
+    "cost": 1,
+    "image": "../images/R Eggman by MrJeremic/EGG1-007.png",
+    "effects": [
+      {
+        "id": "EGG1-007-counter",
+        "type": "counter",
+        "text": "Counter: Up to 1 of your {Eggman Empire} cards gets +4000 power during this battle.",
+        "powerModifier": 4000
+      }
+    ]
+  },
+
+  "EGG1-012": {
+    "id": "EGG1-012",
+    "cardNumber": "EGG1-012",
+    "name": "Get A Load Of This!",
+    "cardType": "event",
+    "type": "Eggman Empire",
+    "color": "red",
+    "cost": 0,
+    "image": "../images/R Eggman by MrJeremic/EGG1-012.png",
+    "effects": [
+      {
+        "id": "EGG1-012-main",
+        "type": "main",
+        "text": "Main: You may give your leader -5000 power during this turn: Activate your leader's When Attacking ability."
+      },
+      {
+        "id": "EGG1-012-counter",
+        "type": "counter",
+        "text": "Counter: One of your Leader or Character cards gains +2000 power during this battle.",
+        "powerModifier": 2000
+      }
+    ]
+  },
+
   "BK01-002": {
     "id": "BK01-002",
     "cardNumber": "BK01-002",

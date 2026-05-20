@@ -3489,7 +3489,7 @@ function getPowerModifier(card, player = null) {
         getSerpicoFarnesePowerModifier(card, player) +
         getGutsLeaderPowerModifier(card, player) +
         getOpponentTurnPowerModifier(card, player) +
-        getAttachedDonPowerModifier(card) +
+        getAttachedDonPowerModifier(card, player) +
         getTemporaryPowerModifier(card) +
         getDurationPowerModifier(card) +
         getTokenAttachedPowerModifier(card) +
@@ -3623,7 +3623,11 @@ function getGutsLeaderPowerModifier(card, player) {
         }, 0);
 }
 
-function getAttachedDonPowerModifier(card) {
+function getAttachedDonPowerModifier(card, player) {
+    if (gameState.currentPlayer !== player) {
+        return 0;
+    }
+
     return Number(card?.attachedDon ?? 0) * 1000;
 }
 

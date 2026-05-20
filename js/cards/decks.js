@@ -1,13 +1,5 @@
 // decks.js
 
-const testDeckText = `
-4xTEST-001
-4xTEST-002
-4xTEST-003
-4xTEST-004
-4xTEST-005
-`;
-
 const okarunDeckText = `
 2xDD01-002
 4xDD01-003
@@ -45,13 +37,23 @@ const rbGutsDeckText = `
 4xBK01-016
 `;
 
+const rEggmanDeckText = `
+4xEGG1-002
+4xEGG1-003
+4xEGG1-004
+4xEGG1-005
+4xEGG1-006
+4xEGG1-007
+4xEGG1-008
+4xEGG1-009
+4xEGG1-010
+4xEGG1-011
+4xEGG1-012
+2xEGG1-013
+4xEGG1-014
+`;
+
 const availableDecks = [
-    {
-        id: "test-deck",
-        name: "Test Deck",
-        leaderKey: "testLeader",
-        deckText: testDeckText
-    },
     {
         id: "okarun-deck",
         name: "Okarun Deck",
@@ -63,6 +65,12 @@ const availableDecks = [
         name: "RB Guts by Mrki",
         leaderKey: "BK01-001",
         deckText: rbGutsDeckText
+    },
+    {
+        id: "r-eggman-deck",
+        name: "R Eggman by MrJeremic",
+        leaderKey: "EGG1-001",
+        deckText: rEggmanDeckText
     }
 ];
 

@@ -30,6 +30,24 @@
     ]
   },
 
+  "EGG1-009": {
+    "id": "EGG1-009",
+    "cardNumber": "EGG1-009",
+    "name": "The Death Egg",
+    "cardType": "stage",
+    "type": "Eggman Empire",
+    "color": "red",
+    "cost": 9,
+    "image": "../images/R Eggman by MrJeremic/EGG1-009.png",
+    "effects": [
+      {
+        "id": "EGG1-009-on-play-bounce-ko",
+        "type": "onPlay",
+        "text": "On Play: You may return all of your characters to your hand: K.O. all of your opponent's characters."
+      }
+    ]
+  },
+
   "DD01-002": {
     "id": "DD01-002",
     "cardNumber": "DD01-002",

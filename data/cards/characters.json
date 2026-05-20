@@ -375,6 +375,221 @@
     ]
   },
 
+  "EGG1-002": {
+    "id": "EGG1-002",
+    "cardNumber": "EGG1-002",
+    "name": "Metal Sonic",
+    "cardType": "character",
+    "type": "Eggman Empire",
+    "color": "red",
+    "cost": 8,
+    "power": 10000,
+    "counter": 0,
+    "attribute": "unknown",
+    "image": "../images/R Eggman by MrJeremic/EGG1-002.png",
+    "keywords": ["rush"],
+    "effects": [
+      {
+        "id": "EGG1-002-activate-main-copy",
+        "type": "activateMain",
+        "oncePerTurn": true,
+        "text": "Activate: Main Once Per Turn: Use one of your opponent's character or leader abilities."
+      }
+    ]
+  },
+
+  "EGG1-003": {
+    "id": "EGG1-003",
+    "cardNumber": "EGG1-003",
+    "name": "Motobug",
+    "cardType": "character",
+    "type": "Eggman Empire",
+    "color": "red",
+    "cost": 1,
+    "power": 2000,
+    "counter": 1000,
+    "attribute": "strike",
+    "image": "../images/R Eggman by MrJeremic/EGG1-003.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "EGG1-003-on-play-draw",
+        "type": "onPlay",
+        "text": "On Play: Draw 1.",
+        "actionId": "drawOneCard"
+      }
+    ]
+  },
+
+  "EGG1-004": {
+    "id": "EGG1-004",
+    "cardNumber": "EGG1-004",
+    "name": "Crabmeat",
+    "cardType": "character",
+    "type": "Eggman Empire",
+    "color": "red",
+    "cost": 1,
+    "power": 2000,
+    "counter": 2000,
+    "attribute": "strike",
+    "image": "../images/R Eggman by MrJeremic/EGG1-004.png",
+    "keywords": [],
+    "effects": []
+  },
+
+  "EGG1-005": {
+    "id": "EGG1-005",
+    "cardNumber": "EGG1-005",
+    "name": "Eggman (Dr. Ivo Robotnik)",
+    "cardType": "character",
+    "type": "Eggman Empire",
+    "color": "red",
+    "cost": 5,
+    "power": 4000,
+    "counter": 1000,
+    "attribute": "wisdom",
+    "image": "../images/R Eggman by MrJeremic/EGG1-005.png",
+    "aliases": ["Eggman"],
+    "keywords": [],
+    "effects": [
+      {
+        "id": "EGG1-005-on-play-choice",
+        "type": "onPlay",
+        "text": "On Play: Choose: Play up to 1 {Eggman Empire} character with a cost of 5 or less from your trash and draw 1; or play up to 2 {Eggman Empire} characters with a cost of 2 or less from your trash and draw 1."
+      }
+    ]
+  },
+
+  "EGG1-006": {
+    "id": "EGG1-006",
+    "cardNumber": "EGG1-006",
+    "name": "Infinite",
+    "cardType": "character",
+    "type": "Eggman Empire",
+    "color": "red",
+    "cost": 5,
+    "power": 7000,
+    "counter": 0,
+    "attribute": "special",
+    "image": "../images/R Eggman by MrJeremic/EGG1-006.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "EGG1-006-activate-main-base-power",
+        "type": "activateMain",
+        "oncePerTurn": true,
+        "text": "Activate: Main Once Per Turn: One of your {Eggman Empire} type characters' base power becomes the same as one of your opponent's characters until the end of your opponent's next end phase."
+      }
+    ]
+  },
+
+  "EGG1-008": {
+    "id": "EGG1-008",
+    "cardNumber": "EGG1-008",
+    "name": "Metal Sonic",
+    "cardType": "character",
+    "type": "Eggman Empire",
+    "color": "red",
+    "cost": 4,
+    "power": 5000,
+    "counter": 1000,
+    "attribute": "strike",
+    "image": "../images/R Eggman by MrJeremic/EGG1-008.png",
+    "keywords": ["rush"],
+    "effects": [
+      {
+        "id": "EGG1-008-activate-main-trash-power",
+        "type": "activateMain",
+        "oncePerTurn": true,
+        "text": "Activate: Main Once Per Turn: You may trash 1 of your characters: This character gains +1000 power during this turn per 1 cost on the trashed character."
+      }
+    ]
+  },
+
+  "EGG1-010": {
+    "id": "EGG1-010",
+    "cardNumber": "EGG1-010",
+    "name": "Egg Fighter",
+    "cardType": "character",
+    "type": "Eggman Empire",
+    "color": "red",
+    "cost": 2,
+    "power": 2000,
+    "counter": 2000,
+    "attribute": "ranged",
+    "image": "../images/R Eggman by MrJeremic/EGG1-010.png",
+    "keywords": ["blocker"],
+    "effects": []
+  },
+
+  "EGG1-011": {
+    "id": "EGG1-011",
+    "cardNumber": "EGG1-011",
+    "name": "Eggrobo",
+    "cardType": "character",
+    "type": "Eggman Empire",
+    "color": "red",
+    "cost": 2,
+    "power": 2000,
+    "counter": 2000,
+    "attribute": "ranged",
+    "image": "../images/R Eggman by MrJeremic/EGG1-011.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "EGG1-011-on-play-draw",
+        "type": "onPlay",
+        "text": "On Play: Draw 1.",
+        "actionId": "drawOneCard"
+      }
+    ]
+  },
+
+  "EGG1-013": {
+    "id": "EGG1-013",
+    "cardNumber": "EGG1-013",
+    "name": "Sage",
+    "cardType": "character",
+    "type": "Eggman Empire",
+    "color": "red",
+    "cost": 3,
+    "power": 0,
+    "counter": 2000,
+    "attribute": "special",
+    "image": "../images/R Eggman by MrJeremic/EGG1-013.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "EGG1-013-opponents-turn-save",
+        "type": "opponentsTurn",
+        "oncePerTurn": true,
+        "text": "Opponent's turn Once Per Turn: If your {Eggman Empire} type character were to be removed from the field by your opponent's effects, you may trash 2 cards from your hand instead."
+      }
+    ]
+  },
+
+  "EGG1-014": {
+    "id": "EGG1-014",
+    "cardNumber": "EGG1-014",
+    "name": "Chaos",
+    "cardType": "character",
+    "type": "Eggman Empire",
+    "color": "red",
+    "cost": 8,
+    "power": 9000,
+    "counter": 1000,
+    "attribute": "strike/ranged",
+    "image": "../images/R Eggman by MrJeremic/EGG1-014.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "EGG1-014-on-play-freeze",
+        "type": "onPlay",
+        "text": "On Play: Up to 2 of your opponent's characters with a cost of 7 or less cannot attack until your opponent's next end phase."
+      }
+    ]
+  },
+
   "BK01-003": {
     "id": "BK01-003",
     "cardNumber": "BK01-003",
