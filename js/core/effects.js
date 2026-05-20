@@ -480,11 +480,51 @@ window.CardEffects = {
 
         const blockerChoice = blockerChoices[0];
         const defender = gameState[blockerChoice.playerKey];
-        const result = KOCharacter(defender, blockerChoice.slotIndex, ui);
+        const message = typeof removeCharacterByOpponentEffect === "function"
+            ? removeCharacterByOpponentEffect(player, defender, blockerChoice.slotIndex, character, ui)
+            : KOCharacter(defender, blockerChoice.slotIndex, ui).message;
 
         return {
             activated: true,
-            message: `${character.name}'s When Attacking effect returned 1 DON!! and K.O.'d ${blockerChoice.card.name}. ${result.message}`
+            message: `${character.name}'s When Attacking effect returned 1 DON!!. ${message}`
+        };
+    },
+
+    resolveEggmanLeaderWhenAttacking(player, attackerData, ui) {
+        const leader = attackerData?.cardType === "leader"
+            ? player?.leader
+            : null;
+
+        if (!leader || leader.cardNumber !== "EGG1-001") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        if (this.wasEffectSkippedForAttack(leader, "EGG1-001-when-attacking-power")) {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const effect = leader.effects?.find(cardEffect => cardEffect.id === "EGG1-001-when-attacking-power");
+
+        if (typeof resolveEffectAction === "function" && effect) {
+            const message = resolveEffectAction(player, leader, effect, ui, {
+                skipActivationPrompt: true
+            });
+
+            return {
+                activated: true,
+                message
+            };
+        }
+
+        return {
+            activated: false,
+            message: ""
         };
     },
 
@@ -561,7 +601,8 @@ window.CardEffects = {
             this.resolveTakakuraKenCharacterWhenAttacking(gameState, player, attackerData, ui),
             this.resolveRefreshDonWhenAttacking(player, attackerData, ui),
             this.resolveEvilEyeWhenAttacking(player, attackerData, ui),
-            this.resolveAiraWhenAttacking(player, attackerData, ui)
+            this.resolveAiraWhenAttacking(player, attackerData, ui),
+            this.resolveEggmanLeaderWhenAttacking(player, attackerData, ui)
         ];
 
         effectResults.forEach(result => {

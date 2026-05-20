@@ -266,6 +266,13 @@ function getCounterEffectPower(card, player) {
                 return total;
             }
 
+            if (
+                effect.actionId === "eggmanCounterPower" ||
+                effect.actionId === "leaderOrCharacterCounterPower"
+            ) {
+                return total;
+            }
+
             return total + Number(effect.powerModifier ?? 0);
         }, 0) ?? 0;
 }
@@ -700,6 +707,87 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
         });
     }
 
+    if (effect.actionId === "eggmanCounterPower") {
+        return chooseOwnBoardCard(player, sourceCard, {
+            prompt: "Choose up to 1 Eggman Empire leader or character to give +4000 power during this battle.",
+            optional: true,
+            includeLeader: true,
+            filter: card => (card.cardType === "leader" || card.cardType === "character") && hasTypeText(card, "Eggman Empire"),
+            onSelect: ({ card }) => {
+                addBattlePowerBonus(card, Number(effect.powerModifier ?? 4000));
+                ui.renderLeaders();
+                ui.renderCharacters();
+                addGameLog(`${sourceCard.name} gave ${card.name} +4000 power during this battle.`);
+            },
+            skipMessage: `${player.name} did not choose a card for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no Eggman Empire leader or character.`
+        });
+    }
+
+    if (effect.actionId === "leaderOrCharacterCounterPower") {
+        return chooseOwnBoardCard(player, sourceCard, {
+            prompt: "Choose one of your leaders or characters to give +2000 power during this battle.",
+            optional: false,
+            includeLeader: true,
+            filter: card => card.cardType === "leader" || card.cardType === "character",
+            onSelect: ({ card }) => {
+                addBattlePowerBonus(card, Number(effect.powerModifier ?? 2000));
+                ui.renderLeaders();
+                ui.renderCharacters();
+                addGameLog(`${sourceCard.name} gave ${card.name} +2000 power during this battle.`);
+            },
+            emptyMessage: `${sourceCard.name} found no leader or character.`
+        });
+    }
+
+    if (effect.id === "EGG1-001-when-attacking-power") {
+        return giveSmallEggmanCharacterPower(player, sourceCard, ui);
+    }
+
+    if (effect.id === "EGG1-005-on-play-choice") {
+        return playEggmanCharactersFromTrash(player, sourceCard, ui);
+    }
+
+    if (effect.id === "EGG1-009-on-play-bounce-ko") {
+        return resolveDeathEggOnPlay(player, sourceCard, ui);
+    }
+
+    if (effect.id === "EGG1-012-main") {
+        addTemporaryPowerBonus(player.leader, -5000);
+
+        if (ui?.renderLeaders) {
+            ui.renderLeaders();
+        }
+
+        const attackerData = {
+            playerKey: getPlayerKey(player),
+            cardType: "leader"
+        };
+        const results = CardEffects.resolveWhenAttackingEffects(gameState, player, attackerData, ui)
+            .map(result => result.message)
+            .filter(Boolean);
+
+        return results.length > 0
+            ? `${sourceCard.name} gave ${player.leader.name} -5000 power this turn and activated its When Attacking ability. ${results.join(" ")}`
+            : `${sourceCard.name} gave ${player.leader.name} -5000 power this turn.`;
+    }
+
+    if (effect.id === "EGG1-014-on-play-freeze") {
+        return lockOpponentCharactersFromAttacking(player, sourceCard, ui, 2, 7);
+    }
+
+    if (effect.id === "EGG1-002-activate-main-copy") {
+        return copyOpponentBoardAbility(player, sourceCard, ui);
+    }
+
+    if (effect.id === "EGG1-006-activate-main-base-power") {
+        return copyOpponentCharacterBasePower(player, sourceCard, ui);
+    }
+
+    if (effect.id === "EGG1-008-activate-main-trash-power") {
+        return trashOwnCharacterForMetalSonicPower(player, sourceCard, ui);
+    }
+
     if (effect.id === "DD01-008-on-play-add-don") {
         const addedDon = addRestedDon(player, 1, ui);
 
@@ -986,14 +1074,8 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
         const opponentMessage = chooseOpponentCharacter(player, sourceCard, {
             prompt: "Choose up to 1 opposing character to K.O.",
             optional: true,
-            onSelect: ({ playerKey, slotIndex, card }) => {
-                if (isProtectedFromOpponentEffects(card, playerKey, player)) {
-                    addGameLog(`${card.name} is protected from opponent effects.`);
-                    return;
-                }
-
-                const result = KOCharacter(gameState[playerKey], slotIndex, ui);
-                addGameLog(`${sourceCard.name} K.O.'d ${card.name}. ${result.message}`);
+            onSelect: ({ playerKey, slotIndex }) => {
+                addGameLog(removeCharacterByOpponentEffect(player, gameState[playerKey], slotIndex, sourceCard, ui));
             },
             skipMessage: `${player.name} did not K.O. an opposing character with ${sourceCard.name}.`,
             emptyMessage: `${sourceCard.name} found no opposing characters.`
@@ -1014,6 +1096,340 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
     }
 
     return "";
+}
+
+function giveSmallEggmanCharacterPower(player, sourceCard, ui) {
+    return chooseOwnBoardCard(player, sourceCard, {
+        prompt: "Choose one of your cost 2 or lower characters to give +3000 power this turn.",
+        optional: true,
+        includeLeader: false,
+        filter: card => card.cardType === "character" && getCardEffectiveCost(card) <= 2,
+        onSelect: ({ card }) => {
+            addTemporaryPowerBonus(card, 3000);
+            ui.renderCharacters();
+            addGameLog(`${sourceCard.name} gave ${card.name} +3000 power this turn.`);
+        },
+        skipMessage: `${player.name} did not choose a character for ${sourceCard.name}.`,
+        emptyMessage: `${sourceCard.name} found no cost 2 or lower characters.`
+    });
+}
+
+function copyOpponentBoardAbility(player, sourceCard, ui) {
+    const choices = getOpponentBoardChoices(player, {
+        includeLeader: true,
+        filter: card => getCopyableEffects(card).length > 0
+    });
+
+    return chooseBoardCard(player, sourceCard, choices, {
+        prompt: "Choose an opposing leader or character to copy one ability from.",
+        optional: true,
+        onSelect: ({ card }) => {
+            const effects = getCopyableEffects(card);
+            const useCopiedEffect = (effectId) => {
+                const copiedEffect = effects.find(effect => effect.id === effectId);
+
+                if (!copiedEffect) {
+                    addGameLog(`${sourceCard.name} could not copy that ability.`);
+                    return;
+                }
+
+                const message = resolveEffectAction(player, sourceCard, copiedEffect, ui, {
+                    skipActivationPrompt: true
+                });
+
+                addGameLog(
+                    message ||
+                    `${sourceCard.name} copied ${card.name}'s ability, but that ability has no implemented effect yet.`
+                );
+            };
+
+            if (effects.length === 1 || !ui?.chooseEffectOption) {
+                useCopiedEffect(effects[0].id);
+                return;
+            }
+
+            ui.chooseEffectOption({
+                player,
+                sourceCard,
+                title: sourceCard.name,
+                prompt: `Choose which ${card.name} ability to copy.`,
+                options: effects.map(effect => ({
+                    label: effect.text || getEffectLabel(effect),
+                    value: effect.id
+                })),
+                onComplete: useCopiedEffect
+            });
+        },
+        skipMessage: `${player.name} did not copy an ability with ${sourceCard.name}.`,
+        emptyMessage: `${sourceCard.name} found no opposing abilities to copy.`
+    });
+}
+
+function getCopyableEffects(card) {
+    return card?.effects
+        ?.filter(effect => effect.type !== "continuous" && effect.type !== "opponentsTurn")
+        .filter(effect => effect.id !== "EGG1-002-activate-main-copy") ?? [];
+}
+
+function copyOpponentCharacterBasePower(player, sourceCard, ui) {
+    const opponent = getOpponentPlayer(player);
+    const expiresAtPlayerKey = getPlayerKey(opponent);
+    const expiresAtEndOfTurns = Number(opponent?.turns || 0) + 1;
+    let ownTarget = null;
+
+    const chooseOpponentPower = () => {
+        const message = chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose an opposing character whose base power will be copied.",
+            optional: false,
+            onSelect: ({ card: opposingCard }) => {
+                const basePower = typeof getPrintedPower === "function"
+                    ? getPrintedPower(opposingCard)
+                    : Number(opposingCard.power ?? 0);
+
+                ownTarget.temporaryBasePower = {
+                    value: basePower,
+                    expiresAtPlayerKey,
+                    expiresAtEndOfTurns
+                };
+
+                ui.renderCharacters();
+                addGameLog(`${sourceCard.name} made ${ownTarget.name}'s base power ${basePower} until ${opponent.name}'s next end phase.`);
+            },
+            emptyMessage: `${sourceCard.name} found no opposing characters.`
+        });
+
+        addGameLog(message);
+    };
+
+    return chooseOwnBoardCard(player, sourceCard, {
+        prompt: "Choose one of your Eggman Empire characters to change its base power.",
+        optional: true,
+        includeLeader: false,
+        filter: card => card.cardType === "character" && hasTypeText(card, "Eggman Empire"),
+        onSelect: ({ card }) => {
+            ownTarget = card;
+            chooseOpponentPower();
+        },
+        skipMessage: `${player.name} did not choose a character for ${sourceCard.name}.`,
+        emptyMessage: `${sourceCard.name} found no Eggman Empire characters.`
+    });
+}
+
+function trashOwnCharacterForMetalSonicPower(player, sourceCard, ui) {
+    return chooseOwnBoardCard(player, sourceCard, {
+        prompt: "Choose one of your other characters to trash for Metal Sonic's power bonus.",
+        optional: true,
+        includeLeader: false,
+        filter: card => card.cardType === "character" && card !== sourceCard,
+        onSelect: ({ slotIndex, card }) => {
+            const bonus = getCardEffectiveCost(card) * 1000;
+
+            player.characters[slotIndex] = null;
+            moveCardToTrash(player, card, ui);
+            addTemporaryPowerBonus(sourceCard, bonus);
+
+            ui.renderCharacters();
+            ui.renderTrash();
+            addGameLog(`${sourceCard.name} trashed ${card.name} and gained +${bonus} power this turn.`);
+        },
+        skipMessage: `${player.name} did not trash a character for ${sourceCard.name}.`,
+        emptyMessage: `${sourceCard.name} found no other characters to trash.`
+    });
+}
+
+function playEggmanCharactersFromTrash(player, sourceCard, ui) {
+    const playOneCostFive = () => playEggmanCharactersFromTrashByCost(player, sourceCard, ui, 5, 1);
+    const playTwoCostTwo = () => playEggmanCharactersFromTrashByCost(player, sourceCard, ui, 2, 2);
+
+    if (ui?.chooseEffectOption) {
+        ui.chooseEffectOption({
+            player,
+            sourceCard,
+            title: sourceCard.name,
+            prompt: "Choose which Eggman characters to play from trash.",
+            options: [
+                {
+                    label: "1 cost 5 or less",
+                    value: "cost5"
+                },
+                {
+                    label: "Up to 2 cost 2 or less",
+                    value: "cost2"
+                }
+            ],
+            onComplete: value => {
+                if (value === "cost2") {
+                    addGameLog(playTwoCostTwo());
+                } else {
+                    addGameLog(playOneCostFive());
+                }
+            }
+        });
+
+        return `${player.name} is choosing how to resolve ${sourceCard.name}.`;
+    }
+
+    return playOneCostFive();
+}
+
+function playEggmanCharactersFromTrashByCost(player, sourceCard, ui, maxCost, maxAmount) {
+    const played = [];
+
+    const playNext = () => {
+        if (played.length >= maxAmount) {
+            drawCard(player, ui);
+            addGameLog(`${sourceCard.name} played ${played.length} character${played.length === 1 ? "" : "s"} from trash and drew 1 card.`);
+            return;
+        }
+
+        if (getFirstOpenCharacterSlotIndex(player) === -1) {
+            if (played.length > 0) {
+                drawCard(player, ui);
+            }
+
+            addGameLog(`${sourceCard.name} stopped because ${player.name}'s character area is full.`);
+            return;
+        }
+
+        const choices = getTrashCharacterChoices(player, card => {
+            return hasTypeText(card, "Eggman Empire") &&
+                getCardEffectiveCost(card) <= maxCost &&
+                !played.includes(card);
+        });
+
+        if (choices.length === 0) {
+            if (played.length > 0) {
+                drawCard(player, ui);
+            }
+
+            addGameLog(`${sourceCard.name} found no more eligible Eggman Empire characters in trash.`);
+            return;
+        }
+
+        chooseBoardCard(player, sourceCard, choices, {
+            prompt: `Choose ${maxAmount === 1 ? "up to 1" : "up to 2"} Eggman Empire character${maxAmount === 1 ? "" : "s"} with cost ${maxCost} or less from trash.`,
+            optional: true,
+            onSelect: ({ card }) => {
+                const trashIndex = player.trash.indexOf(card);
+                const slotIndex = getFirstOpenCharacterSlotIndex(player);
+
+                if (trashIndex === -1 || slotIndex === -1) {
+                    return;
+                }
+
+                const playedCard = player.trash.splice(trashIndex, 1)[0];
+
+                playedCard.state = "active";
+                playedCard.playedOnTurn = player.turns;
+                playedCard.uiAnimation = "played";
+                player.characters[slotIndex] = playedCard;
+                played.push(playedCard);
+
+                ui.renderCharacters();
+                ui.renderTrash();
+
+                if (played.length >= maxAmount) {
+                    drawCard(player, ui);
+                    addGameLog(`${sourceCard.name} played ${played.length} character${played.length === 1 ? "" : "s"} from trash and drew 1 card.`);
+                    return;
+                }
+
+                playNext();
+            },
+            onSkip: () => {
+                if (played.length > 0) {
+                    drawCard(player, ui);
+                    addGameLog(`${sourceCard.name} played ${played.length} character${played.length === 1 ? "" : "s"} from trash and drew 1 card.`);
+                }
+            },
+            skipMessage: `${player.name} stopped choosing characters for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no eligible Eggman Empire characters in trash.`
+        });
+    };
+
+    playNext();
+
+    return `${player.name} is choosing Eggman Empire characters from trash for ${sourceCard.name}.`;
+}
+
+function getTrashCharacterChoices(player, filter) {
+    const playerKey = getPlayerKey(player);
+
+    return player.trash
+        .map((card, trashIndex) => ({
+            playerKey,
+            cardType: "trash",
+            trashIndex,
+            card
+        }))
+        .filter(choice => choice.card?.cardType === "character" && (!filter || filter(choice.card, choice)));
+}
+
+function resolveDeathEggOnPlay(player, sourceCard, ui) {
+    const ownCharacters = player.characters.filter(Boolean);
+
+    ownCharacters.forEach(character => {
+        character.state = "active";
+        player.hand.push(character);
+    });
+
+    player.characters = player.characters.map(() => null);
+
+    const opponent = getOpponentPlayer(player);
+    const messages = [];
+
+    opponent?.characters.forEach((character, slotIndex) => {
+        if (!character) {
+            return;
+        }
+
+        messages.push(removeCharacterByOpponentEffect(player, opponent, slotIndex, sourceCard, ui));
+    });
+
+    ui.renderHands();
+    ui.renderCharacters();
+    ui.renderTrash();
+
+    return `${sourceCard.name} returned ${ownCharacters.length} character${ownCharacters.length === 1 ? "" : "s"} to ${player.name}'s hand. ${messages.filter(Boolean).join(" ")}`;
+}
+
+function lockOpponentCharactersFromAttacking(player, sourceCard, ui, maxTargets, maxCost) {
+    const opponent = getOpponentPlayer(player);
+    const opponentKey = getPlayerKey(opponent);
+    const expiresAtEndOfTurns = Number(opponent?.turns || 0) + 1;
+    const locked = [];
+
+    const chooseNext = () => {
+        if (locked.length >= maxTargets) {
+            return;
+        }
+
+        const message = chooseOpponentCharacter(player, sourceCard, {
+            prompt: `Choose up to ${maxTargets - locked.length} opposing cost ${maxCost} or lower character${maxTargets - locked.length === 1 ? "" : "s"} that cannot attack until opponent's next end phase.`,
+            optional: true,
+            filter: (card, choice) => {
+                return getCardEffectiveCost(card) <= maxCost &&
+                    !locked.some(entry => entry.slotIndex === choice.slotIndex);
+            },
+            onSelect: ({ card, slotIndex }) => {
+                card.cannotAttackUntil = {
+                    expiresAtPlayerKey: opponentKey,
+                    expiresAtEndOfTurns
+                };
+                locked.push({ card, slotIndex });
+                addGameLog(`${sourceCard.name} prevented ${card.name} from attacking until ${opponent.name}'s next end phase.`);
+                chooseNext();
+            },
+            skipMessage: `${player.name} stopped choosing attack locks for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no opposing cost ${maxCost} or lower characters.`
+        });
+
+        addGameLog(message);
+    };
+
+    chooseNext();
+
+    return `${player.name} is choosing characters for ${sourceCard.name}.`;
 }
 
 function lookTopCardsForType(player, sourceCard, amount, typeText, ui, options = {}) {
@@ -1186,6 +1602,18 @@ function getOwnBoardChoices(player, options = {}) {
     }
 
     return choices;
+}
+
+function getOpponentBoardChoices(player, options = {}) {
+    const opponent = getOpponentPlayer(player);
+
+    if (!opponent) {
+        return [];
+    }
+
+    return getOwnBoardChoices(opponent, options).filter(choice => {
+        return !options.filter || options.filter(choice.card, choice);
+    });
 }
 
 function getOpponentCharacterChoices(player, filter) {
@@ -1379,18 +1807,76 @@ function chooseOpponentCharacterToKO(player, sourceCard, ui, maxCost, optional =
         prompt: `Choose ${optional ? "up to 1" : "1"} opposing cost ${maxCost} or lower character to K.O.`,
         optional,
         filter: card => getCardEffectiveCost(card) <= maxCost,
-        onSelect: ({ playerKey, slotIndex, card }) => {
-            if (isProtectedFromOpponentEffects(card, playerKey, player)) {
-                addGameLog(`${card.name} is protected from opponent effects.`);
-                return;
-            }
-
-            const result = KOCharacter(gameState[playerKey], slotIndex, ui);
-            addGameLog(`${sourceCard.name} K.O.'d ${card.name}. ${result.message}`);
+        onSelect: ({ playerKey, slotIndex }) => {
+            addGameLog(removeCharacterByOpponentEffect(player, gameState[playerKey], slotIndex, sourceCard, ui));
         },
         skipMessage: `${player.name} did not K.O. a character with ${sourceCard.name}.`,
         emptyMessage: `${sourceCard.name} found no opposing cost ${maxCost} or lower characters.`
     });
+}
+
+function removeCharacterByOpponentEffect(actingPlayer, targetPlayer, slotIndex, sourceCard, ui) {
+    const card = targetPlayer?.characters?.[slotIndex];
+    const targetPlayerKey = getPlayerKey(targetPlayer);
+
+    if (!card) {
+        return "No character was found in that slot.";
+    }
+
+    if (isProtectedFromOpponentEffects(card, targetPlayerKey, actingPlayer)) {
+        return `${card.name} is protected from opponent effects.`;
+    }
+
+    if (tryUseSageRemovalReplacement(targetPlayer, card, actingPlayer, sourceCard, ui)) {
+        return `${card.name} stayed on the field.`;
+    }
+
+    const result = KOCharacter(targetPlayer, slotIndex, ui);
+
+    return `${sourceCard.name} K.O.'d ${card.name}. ${result.message}`;
+}
+
+function tryUseSageRemovalReplacement(targetPlayer, targetCard, actingPlayer, sourceCard, ui) {
+    if (!targetPlayer || !targetCard || !actingPlayer || targetPlayer === actingPlayer) {
+        return false;
+    }
+
+    if (!hasTypeText(targetCard, "Eggman Empire")) {
+        return false;
+    }
+
+    if (gameState.currentPlayer !== actingPlayer) {
+        return false;
+    }
+
+    if (targetPlayer.hand.length < 2) {
+        return false;
+    }
+
+    const sage = targetPlayer.characters.find(card => card?.cardNumber === "EGG1-013");
+    const effectId = "EGG1-013-opponents-turn-save";
+
+    if (!sage || CardEffects.hasUsedOncePerTurnEffect(sage, effectId, targetPlayer.turns)) {
+        return false;
+    }
+
+    CardEffects.markOncePerTurnEffectUsed(sage, effectId, targetPlayer.turns);
+
+    const trashedCards = targetPlayer.hand.splice(0, 2);
+
+    trashedCards.forEach(card => moveCardToTrash(targetPlayer, card, ui));
+
+    if (ui?.renderHands) {
+        ui.renderHands();
+    }
+
+    if (ui?.renderTrash) {
+        ui.renderTrash();
+    }
+
+    addGameLog(`${sage.name} prevented ${targetCard.name} from being removed by ${sourceCard.name}; ${targetPlayer.name} trashed 2 cards from hand.`);
+
+    return true;
 }
 
 function takeTopLifeToHand(player, ui) {
@@ -2115,6 +2601,8 @@ function resolveEndOfTurnEffects(player, ui) {
         });
     }
 
+    clearExpiredEndPhaseEffects(player);
+
     if (ui?.renderLeaders) {
         ui.renderLeaders();
     }
@@ -2124,6 +2612,38 @@ function resolveEndOfTurnEffects(player, ui) {
     }
 
     return results;
+}
+
+function clearExpiredEndPhaseEffects(expiringPlayer) {
+    const expiringPlayerKey = getPlayerKey(expiringPlayer);
+
+    if (!expiringPlayerKey) {
+        return;
+    }
+
+    [gameState.player1, gameState.player2].forEach(player => {
+        const cards = [
+            player.leader,
+            ...player.characters.filter(Boolean),
+            player.stage
+        ].filter(Boolean);
+
+        cards.forEach(card => {
+            if (
+                card.cannotAttackUntil?.expiresAtPlayerKey === expiringPlayerKey &&
+                Number(card.cannotAttackUntil.expiresAtEndOfTurns ?? 0) <= Number(expiringPlayer.turns || 0)
+            ) {
+                card.cannotAttackUntil = null;
+            }
+
+            if (
+                card.temporaryBasePower?.expiresAtPlayerKey === expiringPlayerKey &&
+                Number(card.temporaryBasePower.expiresAtEndOfTurns ?? 0) <= Number(expiringPlayer.turns || 0)
+            ) {
+                card.temporaryBasePower = null;
+            }
+        });
+    });
 }
 
 function returnAttachedDonToCostArea(player, ui, options = {}) {

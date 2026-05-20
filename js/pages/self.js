@@ -1718,6 +1718,9 @@ function showSelectedBoardActions() {
         } else if (selectedBoardCardData.cardType === "character" && isCharacterPlayedThisTurn(player, card) && !CardEffects.canAttackOnTurnPlayed(card) && !CardEffects.canAttackCharactersOnTurnPlayed(card)) {
             attackButton.textContent = "New";
             attackButton.title = `${card.name} cannot attack on the turn it was played.`;
+        } else if (selectedBoardCardData.cardType === "character" && isCharacterAttackLocked(card, player)) {
+            attackButton.textContent = "Locked";
+            attackButton.title = `${card.name} cannot attack due to an effect.`;
         } else {
             attackButton.textContent = "Rested";
             attackButton.title = `${card.name} is not active and cannot attack.`;
@@ -2001,6 +2004,21 @@ function resolveBoardActionEffect(player, card, effect) {
         return {
             success: true,
             message
+        };
+    }
+
+    if (
+        effect.id === "EGG1-002-activate-main-copy" ||
+        effect.id === "EGG1-006-activate-main-base-power" ||
+        effect.id === "EGG1-008-activate-main-trash-power"
+    ) {
+        const message = resolveEffectAction(player, card, effect, ui, {
+            skipActivationPrompt: true
+        });
+
+        return {
+            success: Boolean(message),
+            message: message || `${card.name}'s effect is not implemented yet.`
         };
     }
 
@@ -2827,7 +2845,14 @@ function resolveCurrentAttack() {
 }
 
 function clearBattleOnlyEffectsForCurrentAttack(attackerCard, targetCard) {
-    [attackerCard, targetCard].filter(Boolean).forEach(card => {
+    [
+        gameState.player1.leader,
+        ...gameState.player1.characters.filter(Boolean),
+        gameState.player2.leader,
+        ...gameState.player2.characters.filter(Boolean),
+        attackerCard,
+        targetCard
+    ].filter(Boolean).forEach(card => {
         card.battlePowerBonus = 0;
         card.battleKeywords = [];
         card.skippedEffectIdsThisAttack = [];
@@ -3430,7 +3455,25 @@ function canSelectedBoardCardAttack() {
         return false;
     }
 
+    if (selectedBoardCardData.cardType === "character" && isCharacterAttackLocked(card, player)) {
+        return false;
+    }
+
     return true;
+}
+
+function isCharacterAttackLocked(card, player) {
+    if (!card?.cannotAttackUntil || !player) {
+        return false;
+    }
+
+    const playerKey = getPlayerKey(player);
+
+    if (card.cannotAttackUntil.expiresAtPlayerKey !== playerKey) {
+        return false;
+    }
+
+    return Number(player.turns || 0) <= Number(card.cannotAttackUntil.expiresAtEndOfTurns ?? 0);
 }
 
 function getBoardActionButtonContainer() {
@@ -3468,6 +3511,10 @@ function getCardBattlePower(card, player = null) {
 }
 
 function getPrintedPower(card) {
+    if (card?.temporaryBasePower && !isTemporaryBasePowerExpired(card.temporaryBasePower)) {
+        return Number(card.temporaryBasePower.value ?? card.power ?? 0);
+    }
+
     if (card?.cardNumber === "BK01-007") {
         const player = getPlayerForBoardCard(card);
 
@@ -3477,6 +3524,13 @@ function getPrintedPower(card) {
     }
 
     return Number(card?.power ?? 0);
+}
+
+function isTemporaryBasePowerExpired(basePowerEntry) {
+    const playerKey = basePowerEntry?.expiresAtPlayerKey;
+    const player = playerKey ? gameState?.[playerKey] : null;
+
+    return Boolean(player && Number(player.turns || 0) > Number(basePowerEntry.expiresAtEndOfTurns ?? 0));
 }
 
 function getPowerModifier(card, player = null) {

@@ -140,6 +140,7 @@
         "id": "EGG1-007-counter",
         "type": "counter",
         "text": "Counter: Up to 1 of your {Eggman Empire} cards gets +4000 power during this battle.",
+        "actionId": "eggmanCounterPower",
         "powerModifier": 4000
       }
     ]
@@ -164,6 +165,7 @@
         "id": "EGG1-012-counter",
         "type": "counter",
         "text": "Counter: One of your Leader or Character cards gains +2000 power during this battle.",
+        "actionId": "leaderOrCharacterCounterPower",
         "powerModifier": 2000
       }
     ]
