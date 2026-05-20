@@ -46,6 +46,20 @@
                 <p id="roomCodeDisplay"></p>
             </div>
 
+            <div id="deckPicker" class="deck-picker hidden">
+                <label for="deckSelect">Choose Deck</label>
+                <select id="deckSelect"></select>
+
+                <button id="readyBtn" class="secondary-btn">
+                    Ready
+                </button>
+
+                <div class="ready-status">
+                    <span id="player1ReadyStatus">Player 1: Not ready</span>
+                    <span id="player2ReadyStatus">Player 2: Not ready</span>
+                </div>
+            </div>
+
             <button id="startMatchBtn" class="primary-btn hidden">
                 Start Match
             </button>
@@ -54,6 +68,9 @@
         </section>
     </main>
 
+    <script src="../js/cards/cardDatabase.js"></script>
+    <script src="../js/cards/decks.js"></script>
+    <script src="../js/core/deckParser.js"></script>
     <script type="module" src="../js/pages/multiplayer.js"></script>
 </body>
 </html>

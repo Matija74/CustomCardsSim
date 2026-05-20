@@ -25,9 +25,14 @@ const onlinePlayerLabels = {
 };
 
 let onlineMultiplayerService = null;
+let onlineFirebaseApp = null;
 let onlineMatchUnsubscribe = null;
+let onlinePrivateUnsubscribe = null;
+let onlineUser = null;
 let onlinePublicState = null;
+let onlinePrivateState = null;
 let lastOnlineTurnKey = null;
+let onlineProcessedTurnKey = null;
 
 if (isOnlineMatch) {
     console.log("Online match loaded.");
@@ -50,6 +55,91 @@ function getPlayerKeyFromOnlineSlot(slot) {
 
 function isCurrentOnlinePlayer() {
     return Boolean(onlinePublicState?.currentPlayer && onlinePublicState.currentPlayer === playerSlot);
+}
+
+function getOwnOnlinePlayerKey() {
+    return getPlayerKeyFromOnlineSlot(playerSlot);
+}
+
+function getOnlinePublicPlayerKey(playerKey) {
+    return playerKey === "player1" ? "player1" : "player2";
+}
+
+function createHiddenCards(count) {
+    return Array.from({ length: Number(count || 0) }, (_, index) => ({
+        instanceId: `hidden-${index}`,
+        hidden: true
+    }));
+}
+
+function getOnlinePlayerSnapshot(playerKey) {
+    return onlinePublicState?.[getOnlinePublicPlayerKey(playerKey)] || null;
+}
+
+function applyOnlinePlayerState(playerKey) {
+    const publicPlayer = getOnlinePlayerSnapshot(playerKey);
+    const player = gameState?.[playerKey];
+
+    if (!publicPlayer || !player) return;
+
+    const isOwnPlayer = playerKey === getOwnOnlinePlayerKey();
+
+    player.name = playerKey === "player1" ? "Player 1" : "Player 2";
+    player.leader = publicPlayer.leader;
+    player.characters = publicPlayer.characters || [];
+    player.stage = publicPlayer.stage || null;
+    player.trash = publicPlayer.trash || [];
+    player.don = Number(publicPlayer.activeTokens || 0);
+    player.restedDon = Number(publicPlayer.restedTokens || 0);
+    player.donDeck = Number(publicPlayer.tokenDeckCount ?? 10);
+    player.turns = Number(publicPlayer.turns || 0);
+
+    if (isOwnPlayer && onlinePrivateState) {
+        player.hand = onlinePrivateState.hand || [];
+        player.deck = onlinePrivateState.deck || [];
+        player.life = onlinePrivateState.life || [];
+    } else {
+        player.hand = createHiddenCards(publicPlayer.handCount);
+        player.deck = createHiddenCards(publicPlayer.deckCount);
+        player.life = createHiddenCards(publicPlayer.lifeCount);
+    }
+}
+
+function renderOnlineGameState() {
+    if (!gameState) return;
+
+    clearHandSelection();
+    clearBoardSelection();
+    clearSelectedCardActions();
+    clearSelectedBoardActions();
+
+    updateDonDisplay();
+    renderDecks();
+    renderDonDecks();
+    renderLifeCards();
+    renderLeaders();
+    renderHands();
+    renderCharacters();
+    renderTrash();
+    renderStages();
+}
+
+function applyOnlineStateToGame() {
+    if (!isOnlineMatch || !gameState || !onlinePublicState?.player1 || !onlinePublicState?.player2) {
+        return;
+    }
+
+    const currentPlayerKey = getPlayerKeyFromOnlineSlot(onlinePublicState.currentPlayer);
+
+    applyOnlinePlayerState("player1");
+    applyOnlinePlayerState("player2");
+
+    gameState.currentPlayer = currentPlayerKey ? gameState[currentPlayerKey] : null;
+    gameState.currentPhase = onlinePublicState.phase || "main";
+    gameState.turnNumber = Number(onlinePublicState.turnNumber || 1);
+
+    renderOnlineGameState();
+    updateOnlinePhaseButton();
 }
 
 function updateOnlineMatchInfo() {
@@ -84,7 +174,13 @@ function updateOnlinePhaseButton() {
     const currentPlayerText = currentPlayer
         ? onlinePlayerLabels[currentPlayer] || currentPlayer.toUpperCase()
         : "Waiting";
-    const canPass = Boolean(onlineMultiplayerService && roomCode && isCurrentOnlinePlayer());
+    const canPass = Boolean(
+        onlineMultiplayerService &&
+        roomCode &&
+        onlinePrivateState &&
+        isCurrentOnlinePlayer() &&
+        onlinePublicState?.phase === "main"
+    );
 
     phaseButton.style.display = "block";
     phaseButton.disabled = !canPass;
@@ -103,18 +199,10 @@ function applyOnlinePublicState(publicState = {}) {
         phase: publicState.phase || "main",
         currentPlayer: publicState.currentPlayer || null,
         turnNumber: Number(publicState.turnNumber || 1),
-        winner: publicState.winner || null
+        winner: publicState.winner || null,
+        player1: publicState.player1 || null,
+        player2: publicState.player2 || null
     };
-
-    if (gameState) {
-        const currentPlayerKey = getPlayerKeyFromOnlineSlot(onlinePublicState.currentPlayer);
-
-        gameState.currentPlayer = currentPlayerKey ? gameState[currentPlayerKey] : null;
-        gameState.onlinePhase = onlinePublicState.phase;
-        // Keep the local rules engine out of main-phase actions during this online MVP.
-        gameState.currentPhase = "online";
-        gameState.turnNumber = onlinePublicState.turnNumber;
-    }
 
     const turnKey = `${onlinePublicState.currentPlayer}:${onlinePublicState.turnNumber}:${onlinePublicState.phase}`;
 
@@ -127,7 +215,121 @@ function applyOnlinePublicState(publicState = {}) {
 
     lastOnlineTurnKey = turnKey;
 
+    applyOnlineStateToGame();
     updateOnlineMatchInfo();
+    updateOnlinePhaseButton();
+    maybeRunOnlineTurnStart(turnKey);
+}
+
+function applyOnlinePrivateState(privateState = {}) {
+    if (!isOnlineMatch) return;
+
+    onlinePrivateState = {
+        selectedDeck: privateState.selectedDeck || null,
+        hand: privateState.hand || [],
+        deck: privateState.deck || [],
+        life: privateState.life || []
+    };
+
+    applyOnlineStateToGame();
+    updateOnlinePhaseButton();
+
+    if (onlinePublicState) {
+        maybeRunOnlineTurnStart(
+            `${onlinePublicState.currentPlayer}:${onlinePublicState.turnNumber}:${onlinePublicState.phase}`
+        );
+    }
+}
+
+function createPublicPlayerStateFromLocal(player) {
+    return {
+        leader: player.leader,
+        characters: player.characters || [],
+        stage: player.stage || null,
+        trash: player.trash || [],
+        handCount: player.hand?.length || 0,
+        deckCount: player.deck?.length || 0,
+        lifeCount: player.life?.length || 0,
+        activeTokens: Number(player.don || 0),
+        restedTokens: Number(player.restedDon || 0),
+        tokenDeckCount: Number(player.donDeck ?? 10),
+        turns: Number(player.turns || 0)
+    };
+}
+
+function createOwnPrivateStateFromLocal(player) {
+    return {
+        selectedDeck: onlinePrivateState?.selectedDeck || null,
+        hand: player.hand || [],
+        deck: player.deck || [],
+        life: player.life || []
+    };
+}
+
+async function syncOnlineStateFromLocal() {
+    if (!isOnlineMatch || !onlineMultiplayerService || !onlineUser || !gameState) return;
+
+    const ownPlayerKey = getOwnOnlinePlayerKey();
+    const ownPlayer = ownPlayerKey ? gameState[ownPlayerKey] : null;
+
+    if (!ownPlayer) return;
+
+    const publicKey = getOnlinePublicPlayerKey(ownPlayerKey);
+
+    await onlineMultiplayerService.sendMultiplayerAction(
+        roomCode,
+        onlineUser,
+        "updateState",
+        {
+            publicState: {
+                phase: gameState.currentPhase,
+                currentPlayer: onlinePublicState?.currentPlayer || playerSlot,
+                turnNumber: Number(gameState.turnNumber || onlinePublicState?.turnNumber || 1),
+                winner: onlinePublicState?.winner || null,
+                [publicKey]: createPublicPlayerStateFromLocal(ownPlayer)
+            },
+            privateState: createOwnPrivateStateFromLocal(ownPlayer)
+        }
+    );
+}
+
+async function maybeRunOnlineTurnStart(turnKey) {
+    if (!isOnlineMatch || !onlinePrivateState || !gameState || !isCurrentOnlinePlayer()) {
+        return;
+    }
+
+    if (!onlineProcessedTurnKey) {
+        onlineProcessedTurnKey = turnKey;
+        return;
+    }
+
+    if (onlineProcessedTurnKey === turnKey) {
+        return;
+    }
+
+    onlineProcessedTurnKey = turnKey;
+
+    const player = gameState[getOwnOnlinePlayerKey()];
+    const phaseInfo = createPhaseLogProxy();
+
+    if (!player) return;
+
+    player.turns++;
+    player.leaderAttacksThisTurn = 0;
+
+    runRefreshPhase(player, phaseInfo);
+    const drawResult = runDrawPhase(player, phaseInfo);
+
+    if (drawResult?.deckOut || gameState.currentPhase === "gameOver") {
+        await syncOnlineStateFromLocal();
+        return;
+    }
+
+    runDonPhase(player, 2, phaseInfo);
+
+    gameState.currentPhase = "main";
+
+    await syncOnlineStateFromLocal();
     updateOnlinePhaseButton();
 }
 
@@ -148,16 +350,20 @@ async function initializeOnlineMultiplayer() {
 
     try {
         onlineMultiplayerService = await import("../firebase/multiplayerService.js");
+        onlineFirebaseApp = await import("../firebase/firebaseApp.js");
+        await onlineFirebaseApp.signInGuest();
+        onlineUser = await onlineFirebaseApp.waitForUser();
 
-        // Multiplayer MVP: subscribe only to public match state. No hand/deck/life data is read here.
-        onlineMatchUnsubscribe = onlineMultiplayerService.subscribeToMatch(roomCode, (match) => {
-            if (!match) {
-                addGameLog("Online match room was not found.");
-                return;
-            }
-
-            applyOnlinePublicState(match.public || {});
-        });
+        // Multiplayer code reads public board/count state plus this user's private zones only.
+        onlineMatchUnsubscribe = onlineMultiplayerService.subscribeToPublicState(
+            roomCode,
+            (publicState) => applyOnlinePublicState(publicState || {})
+        );
+        onlinePrivateUnsubscribe = onlineMultiplayerService.subscribeToPrivateState(
+            roomCode,
+            onlineUser.uid,
+            (privateState) => applyOnlinePrivateState(privateState || {})
+        );
 
         addGameLog(`Connected to online room ${roomCode} as ${playerSlot.toUpperCase()}.`);
         updateOnlinePhaseButton();
@@ -190,7 +396,17 @@ async function handleOnlinePassTurn() {
             phaseButton.disabled = true;
         }
 
-        // Multiplayer MVP: sync only public turn fields; card movement and private zones stay local.
+        const ownPlayer = gameState[getOwnOnlinePlayerKey()];
+        const phaseInfo = createPhaseLogProxy();
+
+        if (ownPlayer) {
+            const endOfTurnResults = resolveEndOfTurnEffects(ownPlayer, ui);
+
+            endOfTurnResults.forEach(result => addGameLog(result.message));
+            await syncOnlineStateFromLocal();
+        }
+
+        // Multiplayer turn owner writes private/public snapshot, then flips public turn pointer.
         const result = await onlineMultiplayerService.passTurn(roomCode, onlinePublicState.currentPlayer);
 
         if (!result?.committed) {
@@ -1076,6 +1292,12 @@ function renderDeck(player, deckAreaId) {
 // =========================
 
 function renderHands() {
+    if (isOnlineMatch) {
+        renderPlayerHand(gameState.player1, "player1Hand", playerSlot !== "p1");
+        renderPlayerHand(gameState.player2, "player2Hand", playerSlot !== "p2");
+        return;
+    }
+
     renderPlayerHand(gameState.player1, "player1Hand", false);
     renderPlayerHand(gameState.player2, "player2Hand", false);
 }
@@ -1650,7 +1872,7 @@ function showSelectedCardActions() {
         playButton.textContent = `Play ${cardCost}`;
     }
 
-    playButton.addEventListener("click", (event) => {
+    playButton.addEventListener("click", async (event) => {
         event.stopPropagation();
 
         if (playButton.disabled) return;
@@ -1697,6 +1919,8 @@ function showSelectedCardActions() {
         clearReplaceTargets();
 
         pendingReplacePlay = null;
+
+        await syncOnlineStateFromLocal();
     });
 
     selectedHandCard.appendChild(playButton);
@@ -1909,7 +2133,11 @@ function showSelectedBoardActions() {
     attackButton.className = "board-action-button-on-card attack-action-button";
     attackButton.textContent = "Attack";
 
-    if (!canSelectedBoardCardAttack()) {
+    if (isOnlineMatch) {
+        attackButton.disabled = true;
+        attackButton.textContent = "TODO";
+        attackButton.title = "Online attack/damage flow needs private defender choices and is not enabled yet.";
+    } else if (!canSelectedBoardCardAttack()) {
         attackButton.disabled = true;
 
         if (gameState.currentPhase !== "main") {
@@ -1949,7 +2177,7 @@ function showSelectedBoardActions() {
         actionButtons.push(createAttachDonButton(player, card));
     }
 
-    if (activateMainEffect) {
+    if (activateMainEffect && !isOnlineMatch) {
         const activateMainButton = createActivateMainButton(
             player,
             card,
@@ -2000,7 +2228,7 @@ function createAttachDonButton(player, card) {
     attachDonButton.textContent = "Attach DON";
     attachDonButton.title = `Attach 1 active DON!! to ${card.name}.`;
 
-    attachDonButton.addEventListener("click", (event) => {
+    attachDonButton.addEventListener("click", async (event) => {
         event.stopPropagation();
 
         if (!canAttachDonToBoardCard(player, card)) {
@@ -2019,6 +2247,8 @@ function createAttachDonButton(player, card) {
         } else {
             clearBoardSelection();
         }
+
+        await syncOnlineStateFromLocal();
     });
 
     return attachDonButton;
@@ -2323,7 +2553,7 @@ function enterReplaceMode(playerKey, cardInstanceId) {
 
 function setupCharacterSlotInteractions() {
     document.querySelectorAll(".character-slot").forEach(slot => {
-        slot.onclick = () => {
+        slot.onclick = async () => {
             if (!pendingReplacePlay) return;
 
             const slotPlayerKey = slot.getAttribute("data-player");
@@ -2375,6 +2605,8 @@ function setupCharacterSlotInteractions() {
 
             clearReplaceTargets();
             clearHandSelection();
+
+            await syncOnlineStateFromLocal();
         };
     });
 }

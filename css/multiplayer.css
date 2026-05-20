@@ -41,6 +41,38 @@
     gap: 1rem;
 }
 
+.deck-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin: 1rem 0;
+    padding: 1rem;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.08);
+    text-align: left;
+}
+
+.deck-picker label {
+    font-weight: 700;
+}
+
+.deck-picker select {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: #0f172a;
+    color: white;
+    font-size: 1rem;
+}
+
+.ready-status {
+    display: grid;
+    gap: 0.35rem;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.95rem;
+}
+
 .join-box {
     display: flex;
     gap: 0.75rem;

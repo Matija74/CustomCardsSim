@@ -18,6 +18,86 @@ function cleanRoomCode(roomCode) {
     return String(roomCode || "").trim().toUpperCase();
 }
 
+function cloneData(value) {
+    if (typeof structuredClone === "function") {
+        return structuredClone(value);
+    }
+
+    return JSON.parse(JSON.stringify(value));
+}
+
+function createMultiplayerCard(card) {
+    return {
+        ...cloneData(card),
+        aliases: card.aliases ? [...card.aliases] : [],
+        keywords: card.keywords ? [...card.keywords] : [],
+        effects: card.effects ? cloneData(card.effects) : [],
+        instanceId: crypto.randomUUID(),
+        state: card.state || "active",
+        attachedDon: Number(card.attachedDon || 0)
+    };
+}
+
+function requireDeckTools() {
+    if (
+        typeof globalThis.getCardById !== "function" ||
+        typeof globalThis.parseDeckText !== "function" ||
+        typeof globalThis.shuffleDeck !== "function" ||
+        !globalThis.leaders
+    ) {
+        throw new Error("Card database and deck parser must be loaded before initializing multiplayer.");
+    }
+}
+
+function createInitialPrivateState(selectedDeck) {
+    requireDeckTools();
+
+    const leaderDefinition = globalThis.leaders[selectedDeck.leaderKey];
+
+    if (!leaderDefinition) {
+        throw new Error(`Leader not found for deck: ${selectedDeck.name}`);
+    }
+
+    const deck = globalThis.shuffleDeck(globalThis.parseDeckText(selectedDeck.deckText))
+        .map(card => createMultiplayerCard(card));
+    const hand = deck.splice(0, 5);
+    const leader = createMultiplayerCard(leaderDefinition);
+    const life = [];
+    const lifeAmount = Number(leader.life || 0);
+
+    for (let i = 0; i < lifeAmount; i++) {
+        const lifeCard = deck.shift();
+
+        if (lifeCard) {
+            life.push(lifeCard);
+        }
+    }
+
+    return {
+        selectedDeck,
+        hand,
+        deck,
+        life,
+        leader
+    };
+}
+
+function createInitialPublicPlayerState(privateState) {
+    return {
+        leader: privateState.leader,
+        characters: [],
+        stage: null,
+        trash: [],
+        handCount: privateState.hand.length,
+        deckCount: privateState.deck.length,
+        lifeCount: privateState.life.length,
+        activeTokens: 0,
+        restedTokens: 0,
+        tokenDeckCount: 10,
+        turns: 0
+    };
+}
+
 export async function createRoom(user) {
     console.log("createRoom() called with user:", user);
 
@@ -40,7 +120,8 @@ export async function createRoom(user) {
             p1: {
                 uid: user.uid,
                 name: "Player 1",
-                connected: true
+                connected: true,
+                ready: false
             }
         },
 
@@ -48,11 +129,14 @@ export async function createRoom(user) {
             phase: "waiting",
             currentPlayer: null,
             turnNumber: 0,
-            winner: null
+            winner: null,
+            player1: null,
+            player2: null
         },
 
         private: {
             [user.uid]: {
+                selectedDeck: null,
                 hand: [],
                 deck: [],
                 life: []
@@ -87,10 +171,12 @@ export async function joinRoom(roomCode, user) {
         "players/p2": {
             uid: user.uid,
             name: "Player 2",
-            connected: true
+            connected: true,
+            ready: false
         },
 
         [`private/${user.uid}`]: {
+            selectedDeck: null,
             hand: [],
             deck: [],
             life: []
@@ -104,6 +190,31 @@ export function subscribeToMatch(roomCode, callback) {
     const matchRef = ref(database, `matches/${cleanRoomCode(roomCode)}`);
 
     return onValue(matchRef, (snapshot) => {
+        const match = snapshot.val();
+
+        if (!match) {
+            callback(null);
+            return;
+        }
+
+        const { private: _private, ...publicMatch } = match;
+
+        callback(publicMatch);
+    });
+}
+
+export function subscribeToPublicState(roomCode, callback) {
+    const publicRef = ref(database, `matches/${cleanRoomCode(roomCode)}/public`);
+
+    return onValue(publicRef, (snapshot) => {
+        callback(snapshot.val());
+    });
+}
+
+export function subscribeToPrivateState(roomCode, uid, callback) {
+    const privateRef = ref(database, `matches/${cleanRoomCode(roomCode)}/private/${uid}`);
+
+    return onValue(privateRef, (snapshot) => {
         callback(snapshot.val());
     });
 }
@@ -119,6 +230,109 @@ export async function updatePublicState(roomCode, partialState) {
     const publicRef = ref(database, `matches/${cleanRoomCode(roomCode)}/public`);
 
     await update(publicRef, partialState);
+}
+
+export async function updatePrivateState(roomCode, uid, partialState) {
+    const privateRef = ref(database, `matches/${cleanRoomCode(roomCode)}/private/${uid}`);
+
+    await update(privateRef, partialState);
+}
+
+export async function setPlayerDeck(roomCode, uid, deckData) {
+    await updatePrivateState(roomCode, uid, {
+        selectedDeck: deckData
+    });
+}
+
+export async function setPlayerReady(roomCode, uid, ready) {
+    const match = await getMatch(roomCode);
+    const playerEntry = Object.entries(match?.players || {})
+        .find(([, player]) => player.uid === uid);
+
+    if (!playerEntry) {
+        throw new Error("Player is not in this room.");
+    }
+
+    await update(ref(database, `matches/${cleanRoomCode(roomCode)}`), {
+        [`players/${playerEntry[0]}/ready`]: Boolean(ready)
+    });
+}
+
+export async function initializeMultiplayerGame(roomCode) {
+    const matchRef = ref(database, `matches/${cleanRoomCode(roomCode)}`);
+    const snapshot = await get(matchRef);
+
+    if (!snapshot.exists()) {
+        throw new Error("Room does not exist.");
+    }
+
+    const match = snapshot.val();
+    const player1 = match.players?.p1;
+    const player2 = match.players?.p2;
+
+    if (!player1 || !player2) {
+        throw new Error("Both players must be connected.");
+    }
+
+    if (!player1.ready || !player2.ready) {
+        throw new Error("Both players must be ready before starting.");
+    }
+
+    const player1Deck = match.private?.[player1.uid]?.selectedDeck;
+    const player2Deck = match.private?.[player2.uid]?.selectedDeck;
+
+    if (!player1Deck || !player2Deck) {
+        throw new Error("Both players must choose decks before starting.");
+    }
+
+    const p1Private = createInitialPrivateState(player1Deck);
+    const p2Private = createInitialPrivateState(player2Deck);
+
+    await update(matchRef, {
+        status: "started",
+        "public/phase": "main",
+        "public/currentPlayer": "p1",
+        "public/turnNumber": 1,
+        "public/winner": null,
+        "public/player1": {
+            ...createInitialPublicPlayerState(p1Private),
+            activeTokens: 1,
+            tokenDeckCount: 9,
+            turns: 1
+        },
+        "public/player2": createInitialPublicPlayerState(p2Private),
+        [`private/${player1.uid}`]: p1Private,
+        [`private/${player2.uid}`]: p2Private
+    });
+}
+
+export async function sendMultiplayerAction(roomCode, user, actionType, payload) {
+    if (!user?.uid) {
+        throw new Error("User is required for multiplayer actions.");
+    }
+
+    return applyMultiplayerAction(roomCode, user, actionType, payload);
+}
+
+export async function applyMultiplayerAction(roomCode, user, actionType, payload) {
+    if (!user?.uid) {
+        throw new Error("User is required for multiplayer actions.");
+    }
+
+    if (actionType === "updateState") {
+        await Promise.all([
+            updatePublicState(roomCode, payload.publicState),
+            updatePrivateState(roomCode, user.uid, payload.privateState)
+        ]);
+
+        return;
+    }
+
+    if (actionType === "passTurn") {
+        return passTurn(roomCode, payload.currentPlayer);
+    }
+
+    throw new Error(`Unsupported multiplayer action: ${actionType}`);
 }
 
 export async function passTurn(roomCode, currentPlayer) {
@@ -147,12 +361,5 @@ export async function passTurn(roomCode, currentPlayer) {
 }
 
 export async function startMatch(roomCode) {
-    const matchRef = ref(database, `matches/${cleanRoomCode(roomCode)}`);
-
-    await update(matchRef, {
-        status: "started",
-        "public/phase": "setup",
-        "public/currentPlayer": "p1",
-        "public/turnNumber": 1
-    });
+    await initializeMultiplayerGame(roomCode);
 }
