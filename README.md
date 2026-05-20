@@ -8,6 +8,8 @@ interactions, and run self-play games without installing a full game client.
 
 - **Deck editor** with leader selection, card search, filters, copy limits, and
   image previews.
+- **Preset Decks** page, where you can see the currently available decks.
+  These can be played in the VS Self for now.
 - **Self-play simulator** for testing two decks side by side in the browser.
 - **Rule-flow helpers** for dice rolls, mulligans, life setup, refresh, draw,
   DON!!, main phase, counters, attacks, and turn passing.
