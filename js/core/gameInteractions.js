@@ -155,7 +155,10 @@ function drawCard(player, uiInstance = ui) {
         return loseByDeckOut(player, `${player.name} tried to draw from an empty deck.`);
     }
 
-    player.hand.push(assignCardInstance(card));
+    const drawnCard = assignCardInstance(card);
+
+    drawnCard.uiAnimation = "drawn";
+    player.hand.push(drawnCard);
 
     if (uiInstance) {
         uiInstance.renderHands();
@@ -418,6 +421,7 @@ function playCharacterCard(player, handIndex, ui, targetSlotIndex = null) {
 
     playedCard.state = "active";
     playedCard.playedOnTurn = player.turns;
+    playedCard.uiAnimation = "played";
 
     player.characters[slotIndex] = playedCard;
 
@@ -487,6 +491,7 @@ function playStageCard(player, handIndex, ui) {
     const playedStage = player.hand.splice(handIndex, 1)[0];
 
     playedStage.state = "active";
+    playedStage.uiAnimation = "played";
     player.stage = playedStage;
 
     if (oldStage) {
@@ -1197,6 +1202,7 @@ function playEventCard(player, handIndex, ui) {
 
     const effectMessages = resolveMainEffects(player, playedEvent, ui);
 
+    playedEvent.uiAnimation = "played";
     moveCardToTrash(player, playedEvent, ui);
 
     ui.renderHands();
@@ -1221,6 +1227,7 @@ function restBoardCard(boardCardData) {
 
     if (!card) return false;
 
+    card.uiAnimation = "rested";
     card.state = "rested";
 
     ui.renderLeaders();
@@ -1235,6 +1242,7 @@ function setBoardCardActive(boardCardData) {
 
     if (!card) return false;
 
+    card.uiAnimation = "readied";
     card.state = "active";
 
     ui.renderLeaders();
@@ -1699,6 +1707,7 @@ function clearEndOfTurnTemporaryEffects(player) {
 function moveCardToTrash(player, card, ui) {
     if (!card) return;
 
+    card.uiAnimation = card.uiAnimation || "trashed";
     player.trash.push(card);
 
     if (ui.renderTrash) {

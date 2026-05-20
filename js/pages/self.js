@@ -24,6 +24,8 @@ let currentAttack = null;
 let pendingBlock = null;
 let pendingTrashChoice = null;
 
+const renderedBoardCardStates = new Map();
+
 // =========================
 // Game State
 // =========================
@@ -110,6 +112,59 @@ function createUiBridge() {
         chooseEffectActivation,
         chooseEffectOption
     };
+}
+
+// =========================
+// Animation Helpers
+// =========================
+
+function takeCardAnimationClass(card) {
+    const animation = card?.uiAnimation;
+
+    if (!animation) {
+        return "";
+    }
+
+    delete card.uiAnimation;
+
+    return `card-${animation}-animation`;
+}
+
+function getBoardCardRenderKey(playerKey, cardType, slotIndex = "") {
+    return `${playerKey}:${cardType}:${slotIndex}`;
+}
+
+function getBoardStateAnimationClass(card, renderKey) {
+    if (!card || !renderKey) {
+        return "";
+    }
+
+    const currentState = card.state || "active";
+    const previousState = renderedBoardCardStates.get(renderKey);
+
+    renderedBoardCardStates.set(renderKey, currentState);
+
+    if (!previousState || previousState === currentState) {
+        return "";
+    }
+
+    if (previousState === "active" && currentState === "rested") {
+        return "card-rest-transition";
+    }
+
+    if (previousState === "rested" && currentState === "active") {
+        return "card-ready-transition";
+    }
+
+    return "";
+}
+
+function applyCardAnimationClass(element, animationClass) {
+    if (!element || !animationClass) {
+        return;
+    }
+
+    element.classList.add(animationClass);
 }
 
 async function initializeGamePage() {
@@ -524,6 +579,101 @@ function createTurnOrderButtons(phaseButton, phaseInfo) {
     });
 }
 
+function showDiceRollAnimation(player1Roll, player2Roll, winner) {
+    const phaseControls = document.querySelector(".phase-controls");
+
+    if (!phaseControls) return;
+
+    removeDiceRollDisplay();
+
+    const display = document.createElement("div");
+    display.className = "dice-roll-display";
+    display.id = "diceRollDisplay";
+
+    const player1Die = createD20Die({
+        playerLabel: "Player 1",
+        colorClass: "blue-d20",
+        finalValue: player1Roll
+    });
+
+    const player2Die = createD20Die({
+        playerLabel: "Player 2",
+        colorClass: "red-d20",
+        finalValue: player2Roll
+    });
+
+    const center = document.createElement("div");
+    center.className = "dice-roll-center";
+    center.textContent = "D20";
+
+    const result = document.createElement("div");
+    result.className = "dice-roll-result";
+    result.textContent = `${winner.name} wins`;
+
+    display.appendChild(player1Die.root);
+    display.appendChild(center);
+    display.appendChild(player2Die.root);
+    display.appendChild(result);
+
+    phaseControls.insertBefore(display, phaseControls.querySelector(".choice-buttons"));
+
+    animateD20(player1Die.valueElement, player1Roll);
+    animateD20(player2Die.valueElement, player2Roll);
+}
+
+function createD20Die({ playerLabel, colorClass, finalValue }) {
+    const root = document.createElement("div");
+    root.className = `d20-roll ${colorClass}`;
+
+    const die = document.createElement("div");
+    die.className = "d20-die rolling";
+
+    const value = document.createElement("span");
+    value.className = "d20-value";
+    value.textContent = finalValue;
+
+    const label = document.createElement("span");
+    label.className = "d20-label";
+    label.textContent = playerLabel;
+
+    die.appendChild(value);
+    root.appendChild(die);
+    root.appendChild(label);
+
+    return {
+        root,
+        valueElement: value
+    };
+}
+
+function animateD20(valueElement, finalValue) {
+    let ticks = 0;
+    const die = valueElement.closest(".d20-die");
+
+    const intervalId = window.setInterval(() => {
+        ticks++;
+        valueElement.textContent = Math.floor(Math.random() * 20) + 1;
+
+        if (ticks >= 12) {
+            window.clearInterval(intervalId);
+            valueElement.textContent = finalValue;
+            die?.classList.remove("rolling");
+            die?.classList.add("rolled");
+        }
+    }, 55);
+}
+
+function removeDiceRollDisplay() {
+    const oldDisplay = document.getElementById("diceRollDisplay");
+
+    if (oldDisplay) {
+        oldDisplay.remove();
+    }
+}
+
+window.showDiceRollAnimation = showDiceRollAnimation;
+window.removeDiceRollDisplay = removeDiceRollDisplay;
+
 function createMulliganButtons(player, phaseButton, phaseInfo) {
     removeChoiceButtons();
 
@@ -750,6 +900,7 @@ function renderPlayerHand(player, handElementId, hidden) {
             cardElement.setAttribute("data-player", player === gameState.player1 ? "player1" : "player2");
             cardElement.setAttribute("data-card-instance-id", card.instanceId);
             cardElement.classList.add("selectable-card");
+            applyCardAnimationClass(cardElement, takeCardAnimationClass(card));
 
             const img = document.createElement("img");
 
@@ -836,6 +987,7 @@ function renderLeader(player, areaId) {
     }
 
     const playerKey = player === gameState.player1 ? "player1" : "player2";
+    const renderKey = getBoardCardRenderKey(playerKey, "leader");
 
     const img = document.createElement("img");
 
@@ -854,6 +1006,9 @@ function renderLeader(player, areaId) {
     if (leaderState === "rested") {
         img.classList.add("board-card-rested");
     }
+
+    applyCardAnimationClass(img, takeCardAnimationClass(player.leader));
+    applyCardAnimationClass(img, getBoardStateAnimationClass(player.leader, renderKey));
 
     leaderArea.appendChild(img);
     renderPowerModifierBadge(
@@ -891,9 +1046,11 @@ function renderPlayerCharacters(player, playerKey) {
         if (!card) {
             slot.dataset.state = "empty";
             slot.classList.remove("occupied-slot");
+            renderedBoardCardStates.delete(getBoardCardRenderKey(playerKey, "character", index));
             return;
         }
 
+        const renderKey = getBoardCardRenderKey(playerKey, "character", index);
         slot.dataset.state = "occupied";
         slot.classList.add("occupied-slot");
 
@@ -914,6 +1071,9 @@ function renderPlayerCharacters(player, playerKey) {
         if (cardState === "rested") {
             img.classList.add("board-card-rested");
         }
+
+        applyCardAnimationClass(img, takeCardAnimationClass(card));
+        applyCardAnimationClass(img, getBoardStateAnimationClass(card, renderKey));
 
         slot.appendChild(img);
         renderPowerModifierBadge(
@@ -952,10 +1112,16 @@ function renderPlayerStage(player, stageAreaId) {
     if (!player.stage) {
         stageArea.textContent = "Stage Card";
         stageArea.dataset.state = "empty";
+        renderedBoardCardStates.delete(getBoardCardRenderKey(
+            player === gameState.player1 ? "player1" : "player2",
+            "stage"
+        ));
         return;
     }
 
     stageArea.dataset.state = "occupied";
+    const playerKey = player === gameState.player1 ? "player1" : "player2";
+    const renderKey = getBoardCardRenderKey(playerKey, "stage");
 
     const img = document.createElement("img");
 
@@ -972,6 +1138,9 @@ function renderPlayerStage(player, stageAreaId) {
     if (stageState === "rested") {
         img.classList.add("board-card-rested");
     }
+
+    applyCardAnimationClass(img, takeCardAnimationClass(player.stage));
+    applyCardAnimationClass(img, getBoardStateAnimationClass(player.stage, renderKey));
 
     stageArea.appendChild(img);
 
@@ -1009,6 +1178,7 @@ function renderPlayerTrash(player, trashAreaId) {
         img.alt = topCard.name;
         img.className = "deck-card-img board-card-img";
         img.setAttribute("data-card-image", topCard.image);
+        applyCardAnimationClass(img, takeCardAnimationClass(topCard));
 
         trashArea.appendChild(img);
     } else {

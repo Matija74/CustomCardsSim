@@ -34,6 +34,10 @@ function runDiceRollPhase(phaseButton, phaseInfo) {
         Choose turn order:
     `;
 
+    if (typeof window.showDiceRollAnimation === "function") {
+        window.showDiceRollAnimation(player1Roll, player2Roll, gameState.diceWinner);
+    }
+
     phaseButton.disabled = true;
 
     createTurnOrderButtons(phaseButton, phaseInfo);
@@ -60,6 +64,10 @@ function selectTurnOrder(choice, phaseButton, phaseInfo) {
     drawStartingHand(gameState.player2);
 
     removeChoiceButtons();
+
+    if (typeof window.removeDiceRollDisplay === "function") {
+        window.removeDiceRollDisplay();
+    }
 
     phaseInfo.innerHTML = `
         ${winner.name} chose to go ${choice}.<br><br>
