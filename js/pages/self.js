@@ -1077,6 +1077,7 @@ function renderPlayerCharacters(player, playerKey) {
         applyCardAnimationClass(img, getBoardStateAnimationClass(card, renderKey));
 
         slot.appendChild(img);
+        renderCostModifierBadge(card, slot);
         renderAttachedDonBadge(card, slot);
         renderPowerModifierBadge(
             card,
@@ -3637,6 +3638,35 @@ function getDurationPowerModifier(card) {
 
 function getBattlePowerModifier(card) {
     return Number(card?.battlePowerBonus ?? 0);
+}
+
+function getCostModifier(card) {
+    return card?.costModifiers
+        ?.reduce((total, entry) => total + Number(entry.amount ?? 0), 0) ?? 0;
+}
+
+function renderCostModifierBadge(card, container) {
+    if (!card || !container || card.cardType !== "character") {
+        return;
+    }
+
+    const modifier = getCostModifier(card);
+
+    if (modifier === 0) {
+        return;
+    }
+
+    const printedCost = Number(card.cost ?? card.playCost ?? 0);
+    const sign = modifier > 0 ? "+" : "";
+    const badge = document.createElement("div");
+
+    badge.className = modifier < 0
+        ? "cost-modifier-badge cost-modifier-negative"
+        : "cost-modifier-badge cost-modifier-positive";
+    badge.textContent = `${sign}${modifier} Cost`;
+    badge.title = `Cost modifier: ${sign}${modifier} (${printedCost} printed cost)`;
+
+    container.appendChild(badge);
 }
 
 function renderPowerModifierBadge(card, player, container, boardCardData = null) {

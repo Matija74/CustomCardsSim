@@ -186,6 +186,7 @@ function runRefreshPhase(player, phaseInfo) {
     phaseInfo.innerHTML += `
         ${player.name}'s Refresh Phase:<br>
         ${refreshResult.refreshedDon} rested DON!! became active.<br>
+        ${refreshResult.returnedAttachedDon || 0} attached DON!! returned to the cost area.<br>
         ${refreshResult.refreshedLeader} leader became active.<br>
         ${skippedLeaderText}${refreshResult.refreshedCharacters} character${refreshResult.refreshedCharacters === 1 ? "" : "s"} became active.<br>
         ${refreshResult.refreshedStage} stage became active.

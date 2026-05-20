@@ -721,10 +721,8 @@ body {
 
 .power-modifier-badge {
     position: absolute;
-    left: 50%;
-    bottom: -13px;
-
-    transform: translateX(-50%);
+    right: -10px;
+    top: -14px;
 
     min-width: 58px;
     padding: 4px 8px;
@@ -744,6 +742,37 @@ body {
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
 }
 
+.cost-modifier-badge {
+    position: absolute;
+    left: -10px;
+    top: -14px;
+
+    min-width: 58px;
+    padding: 4px 8px;
+
+    border: 2px solid rgba(255, 255, 255, 0.95);
+    border-radius: 999px;
+
+    color: white;
+    font-size: 0.72rem;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+
+    z-index: 29;
+    pointer-events: none;
+
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+}
+
+.cost-modifier-negative {
+    background: linear-gradient(135deg, #333 0%, #111 46%, #c0891f 100%);
+}
+
+.cost-modifier-positive {
+    background: linear-gradient(135deg, #2f3544 0%, #6b7280 100%);
+}
+
 .power-modifier-positive {
     background: linear-gradient(135deg, #21c45d 0%, #12813e 100%);
 }
@@ -754,8 +783,9 @@ body {
 
 .attached-don-badge {
     position: absolute;
-    right: -10px;
-    top: -10px;
+    left: 50%;
+    bottom: -17px;
+    transform: translateX(-50%);
 
     min-width: 58px;
     padding: 5px 8px;
@@ -1900,6 +1930,14 @@ body {
         height: 126px;
     }
 
+    .power-modifier-badge,
+    .attached-don-badge,
+    .cost-modifier-badge {
+        min-width: 50px;
+        padding: 4px 6px;
+        font-size: 0.64rem;
+    }
+
     .life-card {
         width: 90px;
         height: 126px;
@@ -2021,6 +2059,15 @@ body {
     .character-slot {
         width: 75px;
         height: 105px;
+    }
+
+    .power-modifier-badge,
+    .attached-don-badge,
+    .cost-modifier-badge {
+        min-width: 44px;
+        padding: 3px 5px;
+        font-size: 0.58rem;
+        border-width: 1px;
     }
 
     .life-card {

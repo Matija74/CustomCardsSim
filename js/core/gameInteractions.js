@@ -921,20 +921,29 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
     }
 
     if (effect.id === "BK01-011-main") {
+        const chooseKOTarget = () => {
+            const koMessage = chooseOpponentCharacterToKO(player, sourceCard, ui, 5);
+
+            if (koMessage) {
+                addGameLog(koMessage);
+            }
+        };
+
         const costMessage = chooseOpponentCharacter(player, sourceCard, {
             prompt: "Choose up to 1 opposing character to give -2 cost this turn.",
             optional: true,
             onSelect: ({ card }) => {
                 addCostModifier(card, -2);
                 addGameLog(`${sourceCard.name} gave ${card.name} -2 cost this turn.`);
+                chooseKOTarget();
             },
+            onSkip: chooseKOTarget,
+            onEmpty: chooseKOTarget,
             skipMessage: `${player.name} did not reduce a character's cost with ${sourceCard.name}.`,
             emptyMessage: `${sourceCard.name} found no opposing characters for cost reduction.`
         });
 
-        const koMessage = chooseOpponentCharacterToKO(player, sourceCard, ui, 5);
-
-        return `${costMessage} ${koMessage}`;
+        return `${costMessage} Then ${player.name} will choose a cost 5 or lower character to K.O.`;
     }
 
     if (effect.id === "BK01-012-on-play-minus-cost") {
@@ -2006,6 +2015,7 @@ function checkDeckOut(player, reasonText = "") {
 
 function refreshPlayerCards(player, ui) {
     const refreshedDon = player.restedDon;
+    let returnedAttachedDon = 0;
     let refreshedLeader = 0;
     let refreshedCharacters = 0;
     let refreshedStage = 0;
@@ -2013,6 +2023,7 @@ function refreshPlayerCards(player, ui) {
 
     player.don += player.restedDon;
     player.restedDon = 0;
+    returnedAttachedDon = returnAttachedDonToCostArea(player, ui, { rested: false });
 
     if (player.leader && player.leader.state === "rested") {
         if (player.skipLeaderRefresh) {
@@ -2054,6 +2065,7 @@ function refreshPlayerCards(player, ui) {
 
     return {
         refreshedDon,
+        returnedAttachedDon,
         refreshedLeader,
         refreshedCharacters,
         refreshedStage,
@@ -2093,15 +2105,6 @@ function resolveEndOfTurnEffects(player, ui) {
             });
     });
 
-    const returnedDon = returnAttachedDonToCostArea(player, ui);
-
-    if (returnedDon > 0) {
-        results.push({
-            activated: true,
-            message: `${returnedDon} attached DON!! returned to ${player.name}'s cost area rested.`
-        });
-    }
-
     clearEndOfTurnTemporaryEffects(player);
 
     const opponent = getOpponentOfPlayer(player);
@@ -2123,7 +2126,7 @@ function resolveEndOfTurnEffects(player, ui) {
     return results;
 }
 
-function returnAttachedDonToCostArea(player, ui) {
+function returnAttachedDonToCostArea(player, ui, options = {}) {
     if (!player) {
         return 0;
     }
@@ -2139,7 +2142,11 @@ function returnAttachedDonToCostArea(player, ui) {
         card.attachedDon = 0;
     });
 
-    player.restedDon += returnedDon;
+    if (options.rested === false) {
+        player.don += returnedDon;
+    } else {
+        player.restedDon += returnedDon;
+    }
 
     if (returnedDon > 0) {
         ui.updateDonDisplay();
@@ -2209,7 +2216,9 @@ function clearEndOfTurnTemporaryEffects(player, options = {}) {
 function moveCardToTrash(player, card, ui) {
     if (!card) return;
 
-    const returnedDon = detachAttachedDonToCostArea(player, card, ui);
+    const returnedDon = card.cardType === "character"
+        ? detachAttachedDonToCostArea(player, card, ui)
+        : 0;
 
     if (returnedDon > 0) {
         addGameLog(`${returnedDon} attached DON!! returned to ${player.name}'s cost area rested.`);
