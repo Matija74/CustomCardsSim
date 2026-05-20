@@ -155,6 +155,49 @@ function setRestedDonActive(player, amount, ui) {
     return donToRefresh;
 }
 
+function attachActiveDonToCard(player, targetCard, ui) {
+    if (!player || !targetCard) {
+        return {
+            success: false,
+            message: "No card was selected for DON!! attachment."
+        };
+    }
+
+    if (targetCard.cardType !== "leader" && targetCard.cardType !== "character") {
+        return {
+            success: false,
+            message: "DON!! can only be attached to leaders and characters."
+        };
+    }
+
+    if (player.don < 1) {
+        return {
+            success: false,
+            message: `${player.name} has no active DON!! to attach.`
+        };
+    }
+
+    player.don -= 1;
+    targetCard.attachedDon = Number(targetCard.attachedDon || 0) + 1;
+
+    if (ui?.updateDonDisplay) {
+        ui.updateDonDisplay();
+    }
+
+    if (ui?.renderLeaders) {
+        ui.renderLeaders();
+    }
+
+    if (ui?.renderCharacters) {
+        ui.renderCharacters();
+    }
+
+    return {
+        success: true,
+        message: `${player.name} attached 1 DON!! to ${targetCard.name}.`
+    };
+}
+
 // =========================
 // Deck / Draw Actions
 // =========================
@@ -2050,7 +2093,15 @@ function resolveEndOfTurnEffects(player, ui) {
             });
     });
 
-    returnAttachedDonToCostArea(player, ui);
+    const returnedDon = returnAttachedDonToCostArea(player, ui);
+
+    if (returnedDon > 0) {
+        results.push({
+            activated: true,
+            message: `${returnedDon} attached DON!! returned to ${player.name}'s cost area rested.`
+        });
+    }
+
     clearEndOfTurnTemporaryEffects(player);
 
     const opponent = getOpponentOfPlayer(player);
@@ -2099,6 +2150,35 @@ function returnAttachedDonToCostArea(player, ui) {
     return returnedDon;
 }
 
+function detachAttachedDonToCostArea(player, card, ui) {
+    if (!player || !card) {
+        return 0;
+    }
+
+    const returnedDon = Number(card.attachedDon || 0);
+
+    if (returnedDon <= 0) {
+        return 0;
+    }
+
+    card.attachedDon = 0;
+    player.restedDon += returnedDon;
+
+    if (ui?.updateDonDisplay) {
+        ui.updateDonDisplay();
+    }
+
+    if (ui?.renderLeaders) {
+        ui.renderLeaders();
+    }
+
+    if (ui?.renderCharacters) {
+        ui.renderCharacters();
+    }
+
+    return returnedDon;
+}
+
 function clearEndOfTurnTemporaryEffects(player, options = {}) {
     const cards = [
         player.leader,
@@ -2128,6 +2208,12 @@ function clearEndOfTurnTemporaryEffects(player, options = {}) {
 
 function moveCardToTrash(player, card, ui) {
     if (!card) return;
+
+    const returnedDon = detachAttachedDonToCostArea(player, card, ui);
+
+    if (returnedDon > 0) {
+        addGameLog(`${returnedDon} attached DON!! returned to ${player.name}'s cost area rested.`);
+    }
 
     card.uiAnimation = card.uiAnimation || "trashed";
     player.trash.push(card);

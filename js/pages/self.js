@@ -1011,6 +1011,7 @@ function renderLeader(player, areaId) {
     applyCardAnimationClass(img, getBoardStateAnimationClass(player.leader, renderKey));
 
     leaderArea.appendChild(img);
+    renderAttachedDonBadge(player.leader, leaderArea);
     renderPowerModifierBadge(
         player.leader,
         player,
@@ -1076,6 +1077,7 @@ function renderPlayerCharacters(player, playerKey) {
         applyCardAnimationClass(img, getBoardStateAnimationClass(card, renderKey));
 
         slot.appendChild(img);
+        renderAttachedDonBadge(card, slot);
         renderPowerModifierBadge(
             card,
             player,
@@ -1693,12 +1695,11 @@ function showSelectedBoardActions() {
 
     if (!player || !card) return;
 
+    const actionButtons = [];
     const attackButton = document.createElement("button");
     const activateMainEffect = getActivateMainEffect(card);
 
-    attackButton.className = activateMainEffect
-        ? "board-action-button-on-card attack-action-button has-activate-main"
-        : "board-action-button-on-card attack-action-button";
+    attackButton.className = "board-action-button-on-card attack-action-button";
     attackButton.textContent = "Attack";
 
     if (!canSelectedBoardCardAttack()) {
@@ -1732,11 +1733,11 @@ function showSelectedBoardActions() {
         enterAttackTargetSelection({ ...selectedBoardCardData });
     });
 
-    const buttonContainer = getBoardActionButtonContainer();
+    actionButtons.push(attackButton);
 
-    if (!buttonContainer) return;
-
-    buttonContainer.appendChild(attackButton);
+    if (canAttachDonToBoardCard(player, card)) {
+        actionButtons.push(createAttachDonButton(player, card));
+    }
 
     if (activateMainEffect) {
         const activateMainButton = createActivateMainButton(
@@ -1745,8 +1746,101 @@ function showSelectedBoardActions() {
             activateMainEffect
         );
 
-        buttonContainer.appendChild(activateMainButton);
+        actionButtons.push(activateMainButton);
     }
+
+    const buttonContainer = getBoardActionButtonContainer();
+
+    if (!buttonContainer) return;
+
+    actionButtons.forEach((button, index) => {
+        button.style.bottom = `${8 + (index * 35)}px`;
+        buttonContainer.appendChild(button);
+    });
+}
+
+function canAttachDonToBoardCard(player, card) {
+    if (!player || !card) {
+        return false;
+    }
+
+    if (pendingAttack || currentAttack) {
+        return false;
+    }
+
+    if (gameState.currentPhase !== "main") {
+        return false;
+    }
+
+    if (gameState.currentPlayer !== player) {
+        return false;
+    }
+
+    if (card.cardType !== "leader" && card.cardType !== "character") {
+        return false;
+    }
+
+    return player.don > 0;
+}
+
+function createAttachDonButton(player, card) {
+    const attachDonButton = document.createElement("button");
+
+    attachDonButton.className = "board-action-button-on-card attach-don-button";
+    attachDonButton.textContent = "Attach DON";
+    attachDonButton.title = `Attach 1 active DON!! to ${card.name}.`;
+
+    attachDonButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+
+        if (!canAttachDonToBoardCard(player, card)) {
+            addGameLog(`${player.name} cannot attach DON!! right now.`);
+            return;
+        }
+
+        const result = attachActiveDonToCard(player, card, ui);
+
+        addGameLog(result.message);
+
+        if (!result.success) return;
+
+        if (refreshSelectedBoardCardElement()) {
+            showSelectedBoardActions();
+        } else {
+            clearBoardSelection();
+        }
+    });
+
+    return attachDonButton;
+}
+
+function refreshSelectedBoardCardElement() {
+    if (!selectedBoardCardData) {
+        return false;
+    }
+
+    let cardElement = null;
+
+    if (selectedBoardCardData.cardType === "leader") {
+        cardElement = document.querySelector(
+            `.board-leader-card[data-player="${selectedBoardCardData.playerKey}"]`
+        );
+    }
+
+    if (selectedBoardCardData.cardType === "character") {
+        cardElement = document.querySelector(
+            `.board-character-card[data-player="${selectedBoardCardData.playerKey}"][data-character-slot="${selectedBoardCardData.slotIndex}"]`
+        );
+    }
+
+    if (!cardElement) {
+        return false;
+    }
+
+    selectedBoardCard = cardElement;
+    selectedBoardCard.classList.add("selected-board-card");
+
+    return true;
 }
 
 function getActivateMainEffect(card) {
@@ -3568,6 +3662,25 @@ function renderPowerModifierBadge(card, player, container, boardCardData = null)
 
     badge.textContent = `${sign}${modifier}`;
     badge.title = `Current power: ${currentPower} (${printedPower} ${sign}${modifier})`;
+
+    container.appendChild(badge);
+}
+
+function renderAttachedDonBadge(card, container) {
+    if (!card || !container) {
+        return;
+    }
+
+    const attachedDon = Number(card.attachedDon ?? 0);
+
+    const badge = document.createElement("div");
+    badge.className = attachedDon > 0
+        ? "attached-don-badge"
+        : "attached-don-badge attached-don-empty";
+    badge.textContent = `DON!! x${attachedDon}`;
+    badge.title = attachedDon > 0
+        ? `${attachedDon} attached DON!!: +${attachedDon * 1000} power`
+        : "No attached DON!!";
 
     container.appendChild(badge);
 }

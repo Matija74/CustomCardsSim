@@ -215,6 +215,19 @@ body {
     background: linear-gradient(135deg, #43a5ff 0%, #1e66f0 100%);
 }
 
+.attach-don-button {
+    background:
+        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.35), transparent 34%),
+        linear-gradient(135deg, #2d2d2d 0%, #080808 100%);
+    border: 1px solid rgba(255, 214, 102, 0.75);
+}
+
+.attach-don-button:hover:not(:disabled) {
+    background:
+        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.44), transparent 34%),
+        linear-gradient(135deg, #424242 0%, #101010 100%);
+}
+
 .board-action-button-on-card:disabled {
     background: #555;
     color: #aaa;
@@ -737,6 +750,43 @@ body {
 
 .power-modifier-negative {
     background: linear-gradient(135deg, #ff4b4b 0%, #a40000 100%);
+}
+
+.attached-don-badge {
+    position: absolute;
+    right: -10px;
+    top: -10px;
+
+    min-width: 58px;
+    padding: 5px 8px;
+
+    border: 2px solid rgba(255, 255, 255, 0.95);
+    border-radius: 999px;
+
+    background:
+        radial-gradient(circle at 22% 20%, rgba(255, 255, 255, 0.36), transparent 34%),
+        linear-gradient(135deg, #111 0%, #303030 52%, #050505 100%);
+    color: white;
+
+    font-size: 0.7rem;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+
+    z-index: 29;
+    pointer-events: none;
+
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.55),
+        inset 0 0 0 1px rgba(255, 214, 102, 0.4);
+}
+
+.attached-don-empty {
+    opacity: 0.58;
+    background:
+        linear-gradient(135deg, rgba(25, 25, 25, 0.82), rgba(55, 55, 55, 0.82));
+    border-color: rgba(255, 255, 255, 0.58);
+    box-shadow: 0 3px 9px rgba(0, 0, 0, 0.38);
 }
 
 .deck-area {
