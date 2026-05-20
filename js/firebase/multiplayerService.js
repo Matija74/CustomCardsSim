@@ -290,19 +290,128 @@ export async function initializeMultiplayerGame(roomCode) {
 
     await update(matchRef, {
         status: "started",
-        "public/phase": "main",
-        "public/currentPlayer": "p1",
-        "public/turnNumber": 1,
+        "public/phase": "diceRoll",
+        "public/currentPlayer": null,
+        "public/turnNumber": 0,
         "public/winner": null,
+        "public/firstPlayer": null,
+        "public/secondPlayer": null,
+        "public/playerTurns": {
+            p1: 0,
+            p2: 0
+        },
+        "public/revealedCards": [],
+        "public/setup": {
+            dice: {
+                p1Roll: null,
+                p2Roll: null,
+                winner: null,
+                tie: false
+            },
+            turnChoice: {
+                chooser: null,
+                firstPlayer: null,
+                secondPlayer: null
+            }
+        },
         "public/player1": {
-            ...createInitialPublicPlayerState(p1Private),
-            activeTokens: 1,
-            tokenDeckCount: 9,
-            turns: 1
+            ...createInitialPublicPlayerState(p1Private)
         },
         "public/player2": createInitialPublicPlayerState(p2Private),
         [`private/${player1.uid}`]: p1Private,
         [`private/${player2.uid}`]: p2Private
+    });
+}
+
+export async function rollMultiplayerDice(roomCode, playerSlot) {
+    if (playerSlot !== "p1" && playerSlot !== "p2") {
+        throw new Error("Invalid player slot.");
+    }
+
+    const diceRef = ref(database, `matches/${cleanRoomCode(roomCode)}/public/setup/dice`);
+    const roll = Math.floor(Math.random() * 20) + 1;
+
+    return runTransaction(diceRef, (dice = {}) => {
+        const ownKey = `${playerSlot}Roll`;
+        const otherKey = playerSlot === "p1" ? "p2Roll" : "p1Roll";
+
+        if (dice.winner && !dice.tie) {
+            return;
+        }
+
+        if (dice[ownKey] && !dice.tie) {
+            return;
+        }
+
+        const nextDice = dice.tie
+            ? { p1Roll: null, p2Roll: null, winner: null, tie: false }
+            : { ...dice };
+
+        nextDice[ownKey] = roll;
+
+        if (nextDice[otherKey]) {
+            if (nextDice.p1Roll === nextDice.p2Roll) {
+                nextDice.tie = true;
+                nextDice.winner = null;
+            } else {
+                nextDice.tie = false;
+                nextDice.winner = nextDice.p1Roll > nextDice.p2Roll ? "p1" : "p2";
+            }
+        }
+
+        return nextDice;
+    });
+}
+
+export async function chooseMultiplayerTurnOrder(roomCode, chooserSlot, choice) {
+    if (chooserSlot !== "p1" && chooserSlot !== "p2") {
+        throw new Error("Invalid player slot.");
+    }
+
+    if (choice !== "first" && choice !== "second") {
+        throw new Error("Invalid turn choice.");
+    }
+
+    const publicRef = ref(database, `matches/${cleanRoomCode(roomCode)}/public`);
+
+    return runTransaction(publicRef, (publicState) => {
+        const diceWinner = publicState?.setup?.dice?.winner;
+
+        if (!publicState || publicState.phase !== "diceRoll" || diceWinner !== chooserSlot) {
+            return;
+        }
+
+        const otherSlot = chooserSlot === "p1" ? "p2" : "p1";
+        const firstPlayer = choice === "first" ? chooserSlot : otherSlot;
+        const secondPlayer = firstPlayer === "p1" ? "p2" : "p1";
+        const firstPublicKey = firstPlayer === "p1" ? "player1" : "player2";
+
+        return {
+            ...publicState,
+            phase: "main",
+            currentPlayer: firstPlayer,
+            turnNumber: 1,
+            firstPlayer,
+            secondPlayer,
+            playerTurns: {
+                p1: firstPlayer === "p1" ? 1 : 0,
+                p2: firstPlayer === "p2" ? 1 : 0
+            },
+            setup: {
+                ...publicState.setup,
+                turnChoice: {
+                    chooser: chooserSlot,
+                    firstPlayer,
+                    secondPlayer
+                }
+            },
+            [firstPublicKey]: {
+                ...publicState[firstPublicKey],
+                activeTokens: 1,
+                tokenDeckCount: Math.max(0, Number(publicState[firstPublicKey]?.tokenDeckCount ?? 10) - 1),
+                turns: 1
+            }
+        };
     });
 }
 
@@ -349,11 +458,13 @@ export async function passTurn(roomCode, currentPlayer) {
 
         const nextPlayer = currentPlayer === "p1" ? "p2" : "p1";
         const currentTurnNumber = Number(publicState.turnNumber || 1);
+        const secondPlayer = publicState.secondPlayer || "p2";
 
         return {
             ...publicState,
             currentPlayer: nextPlayer,
-            turnNumber: currentPlayer === "p2"
+            phase: "main",
+            turnNumber: currentPlayer === secondPlayer
                 ? currentTurnNumber + 1
                 : currentTurnNumber
         };
