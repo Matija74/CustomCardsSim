@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Cards Simulator - Multiplayer</title>
+
+    <link rel="stylesheet" href="../CSS/style.css">
+    <link rel="stylesheet" href="../CSS/multiplayer.css">
+</head>
+<body>
+    <main class="multiplayer-page">
+        <section class="multiplayer-card">
+            <h1>Multiplayer</h1>
+            <p class="subtitle">Create a room or join a friend using a room code.</p>
+
+            <div class="connection-box">
+                <p id="connectionStatus">Connecting...</p>
+            </div>
+
+            <div class="room-actions">
+                <button id="createRoomBtn" class="primary-btn">
+                    Create Room
+                </button>
+
+                <div class="divider">
+                    <span>or</span>
+                </div>
+
+                <div class="join-box">
+                    <input 
+                        id="roomCodeInput" 
+                        type="text" 
+                        placeholder="Enter room code"
+                        maxlength="6"
+                    >
+
+                    <button id="joinRoomBtn" class="secondary-btn">
+                        Join Room
+                    </button>
+                </div>
+            </div>
+
+            <div class="room-info">
+                <p id="roomStatus">No room created yet.</p>
+                <p id="roomCodeDisplay"></p>
+            </div>
+
+            <button id="startMatchBtn" class="primary-btn hidden">
+                Start Match
+            </button>
+
+            <a href="../index.html" class="back-link">Back to Main Menu</a>
+        </section>
+    </main>
+
+    <script type="module" src="../JS/pages/multiplayer.js"></script>
+</body>
+</html>

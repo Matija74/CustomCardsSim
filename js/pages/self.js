@@ -9,6 +9,31 @@ const donBackImage = "../images/basic/card-back-don.webp";
 const donImage = "../images/basic/card-front-don.webp";
 
 // =========================
+// Online Stuff
+// =========================
+
+const urlParams = new URLSearchParams(window.location.search);
+
+const gameMode = urlParams.get("mode") || "local";
+const roomCode = urlParams.get("room");
+const playerSlot = urlParams.get("player");
+
+const isOnlineMatch = gameMode === "online";
+
+if (isOnlineMatch) {
+    console.log("Online match loaded.");
+    console.log("Room code:", roomCode);
+    console.log("Player slot:", playerSlot);
+}
+
+const onlineMatchInfo = document.getElementById("onlineMatchInfo");
+
+if (isOnlineMatch && onlineMatchInfo) {
+    onlineMatchInfo.classList.remove("hidden");
+    onlineMatchInfo.textContent = `Online Room: ${roomCode} | You are ${playerSlot.toUpperCase()}`;
+}
+
+// =========================
 // Selected Card State
 // =========================
 
