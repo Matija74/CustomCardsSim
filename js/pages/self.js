@@ -19,6 +19,15 @@ const roomCode = urlParams.get("room");
 const playerSlot = urlParams.get("player");
 
 const isOnlineMatch = gameMode === "online";
+const onlinePlayerLabels = {
+    p1: "Player 1",
+    p2: "Player 2"
+};
+
+let onlineMultiplayerService = null;
+let onlineMatchUnsubscribe = null;
+let onlinePublicState = null;
+let lastOnlineTurnKey = null;
 
 if (isOnlineMatch) {
     console.log("Online match loaded.");
@@ -28,9 +37,171 @@ if (isOnlineMatch) {
 
 const onlineMatchInfo = document.getElementById("onlineMatchInfo");
 
-if (isOnlineMatch && onlineMatchInfo) {
+if (isOnlineMatch) {
+    updateOnlineMatchInfo();
+}
+
+function getPlayerKeyFromOnlineSlot(slot) {
+    if (slot === "p1") return "player1";
+    if (slot === "p2") return "player2";
+
+    return null;
+}
+
+function isCurrentOnlinePlayer() {
+    return Boolean(onlinePublicState?.currentPlayer && onlinePublicState.currentPlayer === playerSlot);
+}
+
+function updateOnlineMatchInfo() {
+    if (!onlineMatchInfo) return;
+
     onlineMatchInfo.classList.remove("hidden");
-    onlineMatchInfo.textContent = `Online Room: ${roomCode} | You are ${playerSlot.toUpperCase()}`;
+
+    const currentPlayer = onlinePublicState?.currentPlayer;
+    const currentPlayerText = currentPlayer
+        ? onlinePlayerLabels[currentPlayer] || currentPlayer.toUpperCase()
+        : "Waiting";
+    const phaseText = onlinePublicState?.phase || "Waiting";
+    const turnText = onlinePublicState?.turnNumber ?? "-";
+
+    onlineMatchInfo.textContent = [
+        `Online Room: ${roomCode || "Unknown"}`,
+        `You are ${(playerSlot || "unknown").toUpperCase()}`,
+        `Turn: ${currentPlayerText}`,
+        `Phase: ${phaseText}`,
+        `Turn #: ${turnText}`
+    ].join(" | ");
+}
+
+function updateOnlinePhaseButton() {
+    if (!isOnlineMatch) return;
+
+    const phaseButton = document.getElementById("phaseButton");
+
+    if (!phaseButton) return;
+
+    const currentPlayer = onlinePublicState?.currentPlayer;
+    const currentPlayerText = currentPlayer
+        ? onlinePlayerLabels[currentPlayer] || currentPlayer.toUpperCase()
+        : "Waiting";
+    const canPass = Boolean(onlineMultiplayerService && roomCode && isCurrentOnlinePlayer());
+
+    phaseButton.style.display = "block";
+    phaseButton.disabled = !canPass;
+    phaseButton.textContent = canPass
+        ? `End Turn (${onlinePlayerLabels[playerSlot] || playerSlot?.toUpperCase()})`
+        : `Waiting for ${currentPlayerText}`;
+    phaseButton.title = canPass
+        ? "End your synced online turn."
+        : "Only the current online player can end the turn.";
+}
+
+function applyOnlinePublicState(publicState = {}) {
+    if (!isOnlineMatch) return;
+
+    onlinePublicState = {
+        phase: publicState.phase || "main",
+        currentPlayer: publicState.currentPlayer || null,
+        turnNumber: Number(publicState.turnNumber || 1),
+        winner: publicState.winner || null
+    };
+
+    if (gameState) {
+        const currentPlayerKey = getPlayerKeyFromOnlineSlot(onlinePublicState.currentPlayer);
+
+        gameState.currentPlayer = currentPlayerKey ? gameState[currentPlayerKey] : null;
+        gameState.onlinePhase = onlinePublicState.phase;
+        // Keep the local rules engine out of main-phase actions during this online MVP.
+        gameState.currentPhase = "online";
+        gameState.turnNumber = onlinePublicState.turnNumber;
+    }
+
+    const turnKey = `${onlinePublicState.currentPlayer}:${onlinePublicState.turnNumber}:${onlinePublicState.phase}`;
+
+    if (lastOnlineTurnKey && turnKey !== lastOnlineTurnKey) {
+        addGameLog(
+            `Online state updated: ${onlinePlayerLabels[onlinePublicState.currentPlayer] || "Waiting"} ` +
+            `- ${onlinePublicState.phase}, turn ${onlinePublicState.turnNumber}.`
+        );
+    }
+
+    lastOnlineTurnKey = turnKey;
+
+    updateOnlineMatchInfo();
+    updateOnlinePhaseButton();
+}
+
+async function initializeOnlineMultiplayer() {
+    if (!isOnlineMatch) return;
+
+    if (!roomCode || !playerSlot) {
+        addGameLog("Online match URL is missing room or player slot.");
+        updateOnlinePhaseButton();
+        return;
+    }
+
+    if (playerSlot !== "p1" && playerSlot !== "p2") {
+        addGameLog("Online match URL has an invalid player slot.");
+        updateOnlinePhaseButton();
+        return;
+    }
+
+    try {
+        onlineMultiplayerService = await import("../firebase/multiplayerService.js");
+
+        // Multiplayer MVP: subscribe only to public match state. No hand/deck/life data is read here.
+        onlineMatchUnsubscribe = onlineMultiplayerService.subscribeToMatch(roomCode, (match) => {
+            if (!match) {
+                addGameLog("Online match room was not found.");
+                return;
+            }
+
+            applyOnlinePublicState(match.public || {});
+        });
+
+        addGameLog(`Connected to online room ${roomCode} as ${playerSlot.toUpperCase()}.`);
+        updateOnlinePhaseButton();
+    } catch (error) {
+        console.error(error);
+        addGameLog(`Failed to connect online match: ${error.message}`);
+        updateOnlinePhaseButton();
+    }
+}
+
+async function handleOnlinePassTurn() {
+    if (!isOnlineMatch) return;
+
+    if (!onlineMultiplayerService || !onlinePublicState?.currentPlayer) {
+        addGameLog("Online match is still connecting.");
+        updateOnlinePhaseButton();
+        return;
+    }
+
+    if (!isCurrentOnlinePlayer()) {
+        addGameLog("Only the current online player can end the turn.");
+        updateOnlinePhaseButton();
+        return;
+    }
+
+    const phaseButton = document.getElementById("phaseButton");
+
+    try {
+        if (phaseButton) {
+            phaseButton.disabled = true;
+        }
+
+        // Multiplayer MVP: sync only public turn fields; card movement and private zones stay local.
+        const result = await onlineMultiplayerService.passTurn(roomCode, onlinePublicState.currentPlayer);
+
+        if (!result?.committed) {
+            addGameLog("Online turn was already updated.");
+            updateOnlinePhaseButton();
+        }
+    } catch (error) {
+        console.error(error);
+        addGameLog(`Failed to end online turn: ${error.message}`);
+        updateOnlinePhaseButton();
+    }
 }
 
 // =========================
@@ -222,6 +393,8 @@ async function initializeGamePage() {
             Player 1: ${gameState.player1.deckName}<br>
             Player 2: ${gameState.player2.deckName}
         `);
+
+        initializeOnlineMultiplayer();
     } catch (error) {
         console.error(error);
         addGameLog(`Failed to load card database: ${error.message}`);
@@ -557,6 +730,12 @@ function setupPhaseControls() {
 
     phaseButton.addEventListener("click", () => {
         if (!gameState) {
+            return;
+        }
+
+        // Multiplayer MVP: online matches use Firebase public turn state only.
+        if (isOnlineMatch) {
+            handleOnlinePassTurn();
             return;
         }
 

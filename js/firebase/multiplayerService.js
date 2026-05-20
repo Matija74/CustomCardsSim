@@ -4,6 +4,7 @@ import {
     get,
     update,
     onValue,
+    runTransaction,
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -11,6 +12,10 @@ import { database } from "./firebaseApp.js";
 
 function generateRoomCode() {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+function cleanRoomCode(roomCode) {
+    return String(roomCode || "").trim().toUpperCase();
 }
 
 export async function createRoom(user) {
@@ -96,15 +101,53 @@ export async function joinRoom(roomCode, user) {
 }
 
 export function subscribeToMatch(roomCode, callback) {
-    const matchRef = ref(database, `matches/${roomCode}`);
+    const matchRef = ref(database, `matches/${cleanRoomCode(roomCode)}`);
 
     return onValue(matchRef, (snapshot) => {
         callback(snapshot.val());
     });
 }
 
+export async function getMatch(roomCode) {
+    const matchRef = ref(database, `matches/${cleanRoomCode(roomCode)}`);
+    const snapshot = await get(matchRef);
+
+    return snapshot.val();
+}
+
+export async function updatePublicState(roomCode, partialState) {
+    const publicRef = ref(database, `matches/${cleanRoomCode(roomCode)}/public`);
+
+    await update(publicRef, partialState);
+}
+
+export async function passTurn(roomCode, currentPlayer) {
+    if (currentPlayer !== "p1" && currentPlayer !== "p2") {
+        throw new Error("Invalid current player.");
+    }
+
+    const publicRef = ref(database, `matches/${cleanRoomCode(roomCode)}/public`);
+
+    return runTransaction(publicRef, (publicState) => {
+        if (!publicState || publicState.currentPlayer !== currentPlayer) {
+            return;
+        }
+
+        const nextPlayer = currentPlayer === "p1" ? "p2" : "p1";
+        const currentTurnNumber = Number(publicState.turnNumber || 1);
+
+        return {
+            ...publicState,
+            currentPlayer: nextPlayer,
+            turnNumber: currentPlayer === "p2"
+                ? currentTurnNumber + 1
+                : currentTurnNumber
+        };
+    });
+}
+
 export async function startMatch(roomCode) {
-    const matchRef = ref(database, `matches/${roomCode}`);
+    const matchRef = ref(database, `matches/${cleanRoomCode(roomCode)}`);
 
     await update(matchRef, {
         status: "started",
