@@ -490,7 +490,11 @@ function applyOnlineCurrentAttack() {
         }
 
         const battleControls = document.getElementById("battleControls");
-        if (!battleControls?.children.length) {
+        const isWaitingForDefenderEffects = Boolean(
+            battleControls?.querySelector("[data-online-waiting-defender-effects='true']")
+        );
+
+        if (!battleControls?.children.length || (attack.defenderEffectsResolved && isWaitingForDefenderEffects)) {
             renderOnlineAttackControls(attack);
         }
 
@@ -556,12 +560,15 @@ function showWaitingForOnlineDefenderEffects(defenderPlayerKey) {
 
     const defenderName = gameState[defenderPlayerKey]?.name ?? "Defender";
 
-    battleControls.appendChild(createBattleButton(
+    const waitingButton = createBattleButton(
         `${defenderName}: response effects`,
         () => {},
         true,
         "counter-phase"
-    ));
+    );
+
+    waitingButton.dataset.onlineWaitingDefenderEffects = "true";
+    battleControls.appendChild(waitingButton);
 }
 
 function maybeRunOnlineDefenderAttackEffects(attack) {

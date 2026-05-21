@@ -92,17 +92,39 @@ function applyStartingZangetsuStage(privateState) {
         return;
     }
 
-    const stageIndex = privateState.deck.findIndex(card => {
-        return card.cardType === "stage" &&
-            Number(card.cost || 0) === 1 &&
-            (String(card.name || "").includes("Zangetsu") || String(card.type || "").includes("Zanpakto"));
-    });
+    const zones = [
+        { name: "deck", cards: privateState.deck || [] },
+        { name: "hand", cards: privateState.hand || [] },
+        { name: "life", cards: privateState.life || [] }
+    ];
+    let stageLocation = null;
 
-    if (stageIndex === -1) {
+    for (const zone of zones) {
+        const index = zone.cards.findIndex(card => {
+            return card.cardType === "stage" &&
+                Number(card.cost || 0) === 1 &&
+                (String(card.name || "").includes("Zangetsu") || String(card.type || "").includes("Zanpakto"));
+        });
+
+        if (index !== -1) {
+            stageLocation = { zone, index };
+            break;
+        }
+    }
+
+    if (!stageLocation) {
         return;
     }
 
-    const stage = privateState.deck.splice(stageIndex, 1)[0];
+    const stage = stageLocation.zone.cards.splice(stageLocation.index, 1)[0];
+
+    if (stageLocation.zone.name === "hand" && privateState.deck.length) {
+        privateState.hand.push(privateState.deck.shift());
+    }
+
+    if (stageLocation.zone.name === "life" && privateState.deck.length) {
+        privateState.life.push(privateState.deck.shift());
+    }
 
     stage.state = "active";
     privateState.stage = stage;

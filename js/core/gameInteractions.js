@@ -2123,16 +2123,34 @@ function getCurrentZangetsuStageCost(player) {
         : 0;
 }
 
+function findZangetsuStageForGameStart(player, targetCost) {
+    const zones = [
+        { name: "deck", cards: player?.deck || [] },
+        { name: "hand", cards: player?.hand || [] },
+        { name: "life", cards: player?.life || [] }
+    ];
+
+    for (const zone of zones) {
+        const index = zone.cards.findIndex(card => {
+            return isZangetsuStage(card) && Number(card.cost ?? 0) === Number(targetCost || 0);
+        });
+
+        if (index !== -1) {
+            return { zone, index };
+        }
+    }
+
+    return null;
+}
+
 function playZangetsuStageFromDeck(player, sourceCard, ui, targetCost) {
     if (!player) {
         return "";
     }
 
-    const stageIndex = player.deck.findIndex(card => {
-        return isZangetsuStage(card) && Number(card.cost ?? 0) === Number(targetCost || 0);
-    });
+    const stageLocation = findZangetsuStageForGameStart(player, targetCost);
 
-    if (stageIndex === -1) {
+    if (!stageLocation) {
         shuffleDeck(player.deck);
 
         if (ui?.renderDecks) {
@@ -2143,7 +2161,15 @@ function playZangetsuStageFromDeck(player, sourceCard, ui, targetCost) {
     }
 
     const oldStage = player.stage;
-    const stage = player.deck.splice(stageIndex, 1)[0];
+    const stage = stageLocation.zone.cards.splice(stageLocation.index, 1)[0];
+
+    if (stageLocation.zone.name === "hand" && player.deck.length) {
+        player.hand.push(assignCardInstance(player.deck.shift()));
+    }
+
+    if (stageLocation.zone.name === "life" && player.deck.length) {
+        player.life.push(assignCardInstance(player.deck.shift()));
+    }
 
     stage.state = "active";
     stage.uiAnimation = "played";
@@ -2161,6 +2187,14 @@ function playZangetsuStageFromDeck(player, sourceCard, ui, targetCost) {
 
     if (ui?.renderStages) {
         ui.renderStages();
+    }
+
+    if (ui?.renderHands) {
+        ui.renderHands();
+    }
+
+    if (ui?.renderLifeCards) {
+        ui.renderLifeCards();
     }
 
     if (ui?.renderTrash) {
