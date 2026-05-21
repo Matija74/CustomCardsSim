@@ -54,7 +54,7 @@ body {
 .menu-logo {
     display: block;
 
-    width: min(620px, 88vw);
+    width: min(600px, 80%);
     max-height: 220px;
     margin: 0 auto 12px;
 
