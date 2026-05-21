@@ -700,21 +700,31 @@ export async function passTurn(roomCode, currentPlayer) {
     const publicRef = ref(database, `matches/${cleanRoomCode(roomCode)}/public`);
 
     return runTransaction(publicRef, (publicState) => {
-        if (!publicState || publicState.currentPlayer !== currentPlayer) {
+        if (
+            !publicState ||
+            publicState.currentPlayer !== currentPlayer ||
+            publicState.phase !== "main" ||
+            publicState.currentAttack
+        ) {
             return;
         }
 
         const nextPlayer = currentPlayer === "p1" ? "p2" : "p1";
         const currentTurnNumber = Number(publicState.turnNumber || 1);
         const secondPlayer = publicState.secondPlayer || "p2";
+        const nextTurnNumber = currentPlayer === secondPlayer
+            ? currentTurnNumber + 1
+            : currentTurnNumber;
 
         return {
             ...publicState,
             currentPlayer: nextPlayer,
             phase: "main",
-            turnNumber: currentPlayer === secondPlayer
-                ? currentTurnNumber + 1
-                : currentTurnNumber
+            currentAttack: null,
+            turnNumber: nextTurnNumber,
+            playerTurns: {
+                ...(publicState.playerTurns || {})
+            }
         };
     });
 }

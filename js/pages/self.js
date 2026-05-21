@@ -798,21 +798,23 @@ async function maybeRunOnlineTurnStart(turnKey) {
 
     if (!player) return;
 
-    if (!onlineProcessedTurnKey) {
-        onlineProcessedTurnKey = turnKey;
+    const expectedTurns = Number(onlinePublicState?.turnNumber || 1);
+    const publicTurns = Number(
+        onlinePublicState?.playerTurns?.[playerSlot] ??
+        onlinePublicState?.[getOnlinePublicPlayerKey(getOwnOnlinePlayerKey())]?.turns ??
+        player.turns ??
+        0
+    );
 
-        if (Number(player.turns || 0) > 0) {
-            return;
-        }
-    } else if (onlineProcessedTurnKey === turnKey) {
+    if (publicTurns >= expectedTurns || onlineProcessedTurnKey === turnKey) {
         return;
-    } else {
-        onlineProcessedTurnKey = turnKey;
     }
+
+    onlineProcessedTurnKey = turnKey;
 
     const phaseInfo = createPhaseLogProxy();
 
-    player.turns++;
+    player.turns = expectedTurns;
     player.leaderAttacksThisTurn = 0;
 
     runRefreshPhase(player, phaseInfo);
@@ -2562,6 +2564,8 @@ function showSelectedCounterActions() {
 
     const defenderPlayerKey = currentAttack.defenderPlayerKey;
     const isDefender = selectedHandCardData.playerKey === defenderPlayerKey;
+    const isOnlineOwnDefender = !isOnlineMatch ||
+        (isDefender && selectedHandCardData.playerKey === getOwnOnlinePlayerKey());
     const counterValue = typeof getCounterPowerForUse === "function"
         ? getCounterPowerForUse(card, player)
         : getCardCounterValue(card, player);
@@ -2570,10 +2574,10 @@ function showSelectedCounterActions() {
 
     counterButton.className = "card-action-button-on-card";
 
-    if (!isDefender) {
+    if (!isOnlineOwnDefender) {
         counterButton.disabled = true;
         counterButton.textContent = "Not Def.";
-        counterButton.title = "Only the defending player can counter.";
+        counterButton.title = "Only the defending player can counter with their own hand.";
     } else if (!canCardBeUsedAsCounter(card, player)) {
         counterButton.disabled = true;
         counterButton.textContent = "No Counter";
@@ -3891,6 +3895,12 @@ async function resolveCurrentAttack() {
     if (!currentAttack) {
         clearBattleControls();
         gameState.currentPhase = "main";
+        return;
+    }
+
+    if (isOnlineMatch && currentAttack.defenderPlayerKey !== getOwnOnlinePlayerKey()) {
+        addGameLog("Only the defending player can resolve this online attack.");
+        renderOnlineAttackControls(onlinePublicState?.currentAttack);
         return;
     }
 
