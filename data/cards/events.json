@@ -38,7 +38,7 @@
     "type": "Dandadan",
     "color": "purple",
     "cost": 3,
-    "image": "../images/Okarun Deck/DD01-004.png",
+    "image": "../images/GP Okarun by Matija/DD01-004.png",
     "effects": [
       {
         "id": "DD01-004-main",
@@ -62,7 +62,7 @@
     "type": "Dandadan/Curse",
     "color": "green",
     "cost": 1,
-    "image": "../images/Okarun Deck/DD01-005.png",
+    "image": "../images/GP Okarun by Matija/DD01-005.png",
     "effects": [
       {
         "id": "DD01-005-main",
@@ -87,7 +87,7 @@
     "type": "Dandadan/The Cursed",
     "color": "green",
     "cost": 3,
-    "image": "../images/Okarun Deck/DD01-011.png",
+    "image": "../images/GP Okarun by Matija/DD01-011.png",
     "effects": [
       {
         "id": "DD01-011-main",
@@ -110,7 +110,7 @@
     "type": "Dandadan",
     "color": "green",
     "cost": 1,
-    "image": "../images/Okarun Deck/DD01-013.png",
+    "image": "../images/GP Okarun by Matija/DD01-013.png",
     "effects": [
       {
         "id": "DD01-013-main",

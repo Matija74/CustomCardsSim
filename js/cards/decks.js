@@ -56,7 +56,7 @@ const rEggmanDeckText = `
 const availableDecks = [
     {
         id: "okarun-deck",
-        name: "Okarun Deck",
+        name: "GP Okarun by Matija",
         leaderKey: "DD01-001",
         deckText: okarunDeckText
     },

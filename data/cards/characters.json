@@ -45,7 +45,7 @@
     "power": 2000,
     "counter": 1000,
     "attribute": "wisdom",
-    "image": "../images/Okarun Deck/DD01-003.png",
+    "image": "../images/GP Okarun by Matija/DD01-003.png",
     "keywords": [],
     "effects": [
       {
@@ -68,7 +68,7 @@
     "power": 7000,
     "counter": 1000,
     "attribute": "strike",
-    "image": "../images/Okarun Deck/DD01-006.png",
+    "image": "../images/GP Okarun by Matija/DD01-006.png",
     "keywords": ["rush"],
     "effects": [
       {
@@ -96,7 +96,7 @@
     "power": 9000,
     "counter": 0,
     "attribute": "strike",
-    "image": "../images/Okarun Deck/DD01-007.png",
+    "image": "../images/GP Okarun by Matija/DD01-007.png",
     "keywords": ["doubleAttack"],
     "effects": [
       {
@@ -118,7 +118,7 @@
     "power": 5000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/Okarun Deck/DD01-008.png",
+    "image": "../images/GP Okarun by Matija/DD01-008.png",
     "keywords": [],
     "effects": [
       {
@@ -146,7 +146,7 @@
     "power": 3000,
     "counter": 2000,
     "attribute": "strike",
-    "image": "../images/Okarun Deck/DD01-009.png",
+    "image": "../images/GP Okarun by Matija/DD01-009.png",
     "keywords": [],
     "effects": [
       {
@@ -168,7 +168,7 @@
     "power": 10000,
     "counter": 0,
     "attribute": "strike",
-    "image": "../images/Okarun Deck/DD01-010.png",
+    "image": "../images/GP Okarun by Matija/DD01-010.png",
     "keywords": ["rush"],
     "effects": [
       {
@@ -190,7 +190,7 @@
     "power": 6000,
     "counter": 1000,
     "attribute": "strike",
-    "image": "../images/Okarun Deck/DD01-012.png",
+    "image": "../images/GP Okarun by Matija/DD01-012.png",
     "keywords": [],
     "effects": [
       {
@@ -217,7 +217,7 @@
     "power": 2000,
     "counter": 2000,
     "attribute": "ranged",
-    "image": "../images/Okarun Deck/DD01-0014.png",
+    "image": "../images/GP Okarun by Matija/DD01-0014.png",
     "keywords": [],
     "effects": []
   },
@@ -233,7 +233,7 @@
     "power": 0,
     "counter": 2000,
     "attribute": "unknown",
-    "image": "../images/Okarun Deck/DD01-015.png",
+    "image": "../images/GP Okarun by Matija/DD01-015.png",
     "keywords": [],
     "effects": [
       {
@@ -257,7 +257,7 @@
     "power": 7000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/Okarun Deck/DD01-016.png",
+    "image": "../images/GP Okarun by Matija/DD01-016.png",
     "keywords": [],
     "effects": [
       {
@@ -286,7 +286,7 @@
     "power": 7000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/Okarun Deck/DD01-017.png",
+    "image": "../images/GP Okarun by Matija/DD01-017.png",
     "keywords": [],
     "effects": [
       {

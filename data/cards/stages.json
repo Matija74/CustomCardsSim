@@ -56,7 +56,7 @@
     "type": "Dandadan/Curse",
     "color": "green",
     "cost": 5,
-    "image": "../images/Okarun Deck/DD01-002.png",
+    "image": "../images/GP Okarun by Matija/DD01-002.png",
     "effects": [
       {
         "id": "DD01-002-your-turn-power",
