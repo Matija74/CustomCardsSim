@@ -29,8 +29,8 @@ function findHandCardIndexByInstanceId(player, cardInstanceId) {
     return player.hand.findIndex(card => card.instanceId === cardInstanceId);
 }
 
-function getCardPlayCost(card) {
-    return Number(card.cost ?? card.playCost ?? 0);
+function getCardPlayCost(card, player = null) {
+    return Math.max(0, Number(card.cost ?? card.playCost ?? 0) + getRimuruPlayCostModifier(card, player));
 }
 
 function getCardEffectiveCost(card) {
@@ -42,13 +42,81 @@ function getCardEffectiveCost(card) {
     const modifier = card.costModifiers
         ?.reduce((total, entry) => total + Number(entry.amount ?? 0), 0) ?? 0;
 
-    return Math.max(0, printedCost + modifier);
+    const owner = typeof getPlayerForBoardCard === "function"
+        ? getPlayerForBoardCard(card)
+        : null;
+
+    return Math.max(0, printedCost + modifier + getRimuruBoardCostModifier(card, owner));
 }
 
 function canPlayerAffordCard(player, card) {
-    const cardCost = getCardPlayCost(card);
+    const cardCost = getCardPlayCost(card, player);
 
     return player.don >= cardCost;
+}
+
+function getRimuruPlayCostModifier(card, player) {
+    if (!card || !player || !isRimuruTempestLeader(player)) {
+        return 0;
+    }
+
+    if (card.cardNumber === "RIM1-011" && playerHasLessDonThanOpponent(player)) {
+        return -1;
+    }
+
+    return 0;
+}
+
+function getRimuruBoardCostModifier(card, player) {
+    if (!card || !player || !isRimuruTempestLeader(player)) {
+        return 0;
+    }
+
+    if (card.cardNumber === "RIM1-007") {
+        return 2;
+    }
+
+    if (card.cardNumber === "RIM1-002") {
+        return getTwelveGuardianLordNamesOnField(player).size;
+    }
+
+    return 0;
+}
+
+function isRimuruTempestLeader(player) {
+    return Boolean(player?.leader && CardEffects.hasCardName(player.leader, "Rimuru Tempest"));
+}
+
+function isTwelveGuardianLordType(card) {
+    return hasTypeText(card, "Twelve Guardian Lords") ||
+        card?.effects?.some(effect => {
+            return effect.type === "continuous" &&
+                String(effect.text || "").toLowerCase().includes("also considered a {twelve guardian lords} type");
+        });
+}
+
+function getTwelveGuardianLordNamesOnField(player) {
+    const names = new Set();
+
+    player?.characters?.forEach(card => {
+        if (card && isTwelveGuardianLordType(card)) {
+            names.add(CardEffects.normalizeCardName(card.name));
+        }
+    });
+
+    return names;
+}
+
+function playerHasLessDonThanOpponent(player) {
+    const opponent = typeof getOpponentPlayer === "function"
+        ? getOpponentPlayer(player)
+        : null;
+
+    if (!opponent) {
+        return false;
+    }
+
+    return getTotalDonInPlay(player) < getTotalDonInPlay(opponent);
 }
 
 function getFirstOpenCharacterSlotIndex(player) {
@@ -448,7 +516,7 @@ function playCharacterCard(player, handIndex, ui, targetSlotIndex = null) {
         };
     }
 
-    const cost = getCardPlayCost(card);
+    const cost = getCardPlayCost(card, player);
 
     if (player.don < cost) {
         return {
@@ -712,6 +780,35 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
 
     if (effect.actionId === "lookTopFiveHuman") {
         return lookTopCardsForType(player, sourceCard, 5, "Human", ui);
+    }
+
+    if (effect.id === "RIM1-004-on-play") {
+        return resolveDiabloOnPlay(player, sourceCard, ui);
+    }
+
+    if (effect.id === "RIM1-008-on-play-search") {
+        const returnedDon = returnDonToDeck(player, 1, ui);
+
+        if (returnedDon < 1) {
+            return `${sourceCard.name}'s On Play effect could not pay DON!! -1.`;
+        }
+
+        return lookTopCardsForType(player, sourceCard, 5, "Twelve Guardian Lords", ui, {
+            excludeNames: ["Shion"],
+            isSelectable: card => isTwelveGuardianLordType(card) && !CardEffects.hasCardName(card, "Shion")
+        });
+    }
+
+    if (effect.id === "RIM1-003-on-play") {
+        return resolveCarreraOnPlay(player, sourceCard, ui);
+    }
+
+    if (effect.id === "RIM1-009-on-play") {
+        return resolveTestarosaOnPlay(player, sourceCard, ui);
+    }
+
+    if (effect.id === "RIM1-010-on-play") {
+        return resolveUltimaOnPlay(player, sourceCard, ui);
     }
 
     if (effect.actionId === "eggmanCounterPower") {
@@ -1494,6 +1591,246 @@ function getTrashCharacterChoices(player, filter) {
         .filter(choice => choice.card?.cardType === "character" && (!filter || filter(choice.card, choice)));
 }
 
+function chooseCardsFromHandToTrash(player, sourceCard, ui, amount, onComplete) {
+    const chosenCards = [];
+
+    const chooseNext = () => {
+        if (chosenCards.length >= amount) {
+            if (typeof onComplete === "function") {
+                onComplete(chosenCards);
+            }
+
+            return;
+        }
+
+        const choices = getHandCardChoices(player, card => !chosenCards.includes(card));
+
+        if (choices.length === 0) {
+            addGameLog(`${sourceCard.name} found no more cards in ${player.name}'s hand to trash.`);
+
+            if (typeof onComplete === "function") {
+                onComplete(chosenCards);
+            }
+
+            return;
+        }
+
+        const message = chooseBoardCard(player, sourceCard, choices, {
+            prompt: `Choose card ${chosenCards.length + 1} of ${amount} from hand to trash for ${sourceCard.name}.`,
+            optional: false,
+            onSelect: ({ card }) => {
+                const handIndex = player.hand.indexOf(card);
+
+                if (handIndex !== -1) {
+                    const trashedCard = player.hand.splice(handIndex, 1)[0];
+                    moveCardToTrash(player, trashedCard, ui);
+                    chosenCards.push(trashedCard);
+                    ui.renderHands();
+                    ui.renderTrash();
+                    addGameLog(`${player.name} trashed ${trashedCard.name} for ${sourceCard.name}.`);
+                }
+
+                chooseNext();
+            },
+            emptyMessage: `${sourceCard.name} found no cards in hand to trash.`
+        });
+
+        addGameLog(message);
+    };
+
+    chooseNext();
+}
+
+function resolveDiabloOnPlay(player, sourceCard, ui) {
+    if (!restDonForCost(player, 1, ui)) {
+        return `${sourceCard.name}'s On Play effect could not rest 1 DON!!.`;
+    }
+
+    if (!isRimuruTempestLeader(player)) {
+        return `${sourceCard.name}'s On Play effect rested 1 DON!!, but ${player.name}'s leader is not Rimuru Tempest.`;
+    }
+
+    const addLifeIfNeeded = () => {
+        if (player.life.length > 1) {
+            return;
+        }
+
+        const topCard = player.deck.shift();
+
+        if (!topCard) {
+            addGameLog(`${sourceCard.name} could not add life because ${player.name}'s deck is empty.`);
+            return;
+        }
+
+        player.life.unshift(assignCardInstance(topCard));
+        ui.renderDecks();
+        ui.renderLifeCards();
+        addGameLog(`${sourceCard.name} added the top card of ${player.name}'s deck to life.`);
+    };
+
+    const choices = getTrashCharacterChoices(player, card => {
+        return CardEffects.hasCardName(card, "Testarosa") ||
+            CardEffects.hasCardName(card, "Ultima") ||
+            CardEffects.hasCardName(card, "Carrera");
+    });
+
+    if (choices.length === 0 || getFirstOpenCharacterSlotIndex(player) === -1) {
+        addLifeIfNeeded();
+
+        return choices.length === 0
+            ? `${sourceCard.name} found no Testarosa, Ultima, or Carrera in trash.`
+            : `${sourceCard.name} found no open character slot.`;
+    }
+
+    const message = chooseBoardCard(player, sourceCard, choices, {
+        prompt: "Choose up to 1 Testarosa, Ultima, or Carrera from trash to play.",
+        optional: true,
+        onSelect: ({ card }) => {
+            const trashIndex = player.trash.indexOf(card);
+            const slotIndex = getFirstOpenCharacterSlotIndex(player);
+
+            if (trashIndex === -1 || slotIndex === -1) {
+                addLifeIfNeeded();
+                return;
+            }
+
+            const playedCard = player.trash.splice(trashIndex, 1)[0];
+
+            playedCard.state = "active";
+            playedCard.playedOnTurn = player.turns;
+            playedCard.uiAnimation = "played";
+            player.characters[slotIndex] = playedCard;
+
+            ui.renderCharacters();
+            ui.renderTrash();
+            addGameLog(`${sourceCard.name} played ${playedCard.name} from trash.`);
+            addLifeIfNeeded();
+        },
+        onSkip: addLifeIfNeeded,
+        skipMessage: `${player.name} did not play a character from trash for ${sourceCard.name}.`,
+        emptyMessage: `${sourceCard.name} found no valid character in trash.`
+    });
+
+    return `${sourceCard.name} rested 1 DON!!. ${message}`;
+}
+
+function resolveCarreraOnPlay(player, sourceCard, ui) {
+    if (player.hand.length < 2) {
+        return `${sourceCard.name}'s On Play effect needs 2 cards in hand to trash.`;
+    }
+
+    const opponent = getOpponentPlayer(player);
+
+    chooseCardsFromHandToTrash(player, sourceCard, ui, 2, () => {
+        if (!opponent || opponent.hand.length < 5) {
+            addGameLog(`${sourceCard.name} found no opponent hand to reduce.`);
+            return;
+        }
+
+        if (typeof isOnlineMatch !== "undefined" && isOnlineMatch && opponent.hand.some(card => card.hidden)) {
+            addGameLog(`${sourceCard.name}'s opponent hand trash needs opponent-side private choice in multiplayer.`);
+            return;
+        }
+
+        const targetHandSize = Math.max(player.hand.length, 4);
+
+        const trimNext = () => {
+            if (opponent.hand.length <= targetHandSize) {
+                addGameLog(`${sourceCard.name} reduced ${opponent.name}'s hand to ${opponent.hand.length} card${opponent.hand.length === 1 ? "" : "s"}.`);
+                return;
+            }
+
+            const choices = getHandCardChoices(opponent);
+            const message = chooseBoardCard(opponent, sourceCard, choices, {
+                prompt: `Choose a card from ${opponent.name}'s hand to trash for ${sourceCard.name}.`,
+                optional: false,
+                onSelect: ({ card }) => {
+                    const handIndex = opponent.hand.indexOf(card);
+
+                    if (handIndex !== -1) {
+                        moveCardToTrash(opponent, opponent.hand.splice(handIndex, 1)[0], ui);
+                        ui.renderHands();
+                        ui.renderTrash();
+                    }
+
+                    trimNext();
+                },
+                emptyMessage: `${sourceCard.name} found no cards in ${opponent.name}'s hand.`
+            });
+
+            addGameLog(message);
+        };
+
+        trimNext();
+    });
+
+    return `${player.name} is trashing 2 cards from hand for ${sourceCard.name}.`;
+}
+
+function resolveTestarosaOnPlay(player, sourceCard, ui) {
+    if (player.hand.length < 2) {
+        return `${sourceCard.name}'s On Play effect needs 2 cards in hand to trash.`;
+    }
+
+    chooseCardsFromHandToTrash(player, sourceCard, ui, 2, () => {
+        const message = chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing character with a different current cost than its base cost to K.O.",
+            optional: true,
+            filter: card => getCardEffectiveCost(card) !== Number(card.cost ?? 0),
+            onSelect: ({ playerKey, slotIndex }) => {
+                addGameLog(removeCharacterByOpponentEffect(player, gameState[playerKey], slotIndex, sourceCard, ui));
+            },
+            skipMessage: `${player.name} did not K.O. a character with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no opposing characters with modified cost.`
+        });
+
+        addGameLog(message);
+    });
+
+    return `${player.name} is trashing 2 cards from hand for ${sourceCard.name}.`;
+}
+
+function resolveUltimaOnPlay(player, sourceCard, ui) {
+    if (player.hand.length < 2) {
+        return `${sourceCard.name}'s On Play effect needs 2 cards in hand to trash.`;
+    }
+
+    const chooseKOTarget = () => {
+        const koMessage = chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing cost 1 or lower character to K.O.",
+            optional: true,
+            filter: card => getCardEffectiveCost(card) <= 1,
+            onSelect: ({ playerKey, slotIndex }) => {
+                addGameLog(removeCharacterByOpponentEffect(player, gameState[playerKey], slotIndex, sourceCard, ui));
+            },
+            skipMessage: `${player.name} did not K.O. a character with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no cost 1 or lower opposing characters.`
+        });
+
+        addGameLog(koMessage);
+    };
+
+    chooseCardsFromHandToTrash(player, sourceCard, ui, 2, () => {
+        const costMessage = chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing character to give -3 cost this turn.",
+            optional: true,
+            onSelect: ({ card }) => {
+                addCostModifier(card, -3);
+                addGameLog(`${sourceCard.name} gave ${card.name} -3 cost this turn.`);
+                chooseKOTarget();
+            },
+            onSkip: chooseKOTarget,
+            onEmpty: chooseKOTarget,
+            skipMessage: `${player.name} did not reduce a character's cost with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no opposing characters for cost reduction.`
+        });
+
+        addGameLog(costMessage);
+    });
+
+    return `${player.name} is trashing 2 cards from hand for ${sourceCard.name}.`;
+}
+
 function resolveDeathEggOnPlay(player, sourceCard, ui) {
     const ownCharacters = player.characters.filter(Boolean);
 
@@ -1572,7 +1909,7 @@ function lookTopCardsForType(player, sourceCard, amount, typeText, ui, options =
         return `${sourceCard.name}'s effect found no cards because ${player.name}'s deck is empty.`;
     }
 
-    const isSelectable = (card) => {
+    const isSelectable = options.isSelectable || ((card) => {
         const matchesType = String(card.type || "")
             .toLowerCase()
             .includes(String(typeText).toLowerCase());
@@ -1580,7 +1917,7 @@ function lookTopCardsForType(player, sourceCard, amount, typeText, ui, options =
             .some(name => CardEffects.hasCardName(card, name));
 
         return matchesType && !isExcludedName;
-    };
+    });
 
     const finishSelection = (selection) => {
         const originalCardsToLookAt = [...cardsToLookAt];
@@ -1646,6 +1983,118 @@ function lookTopCardsForType(player, sourceCard, amount, typeText, ui, options =
     finishSelection(firstValidIndex === -1 ? null : firstValidIndex);
 
     return `${sourceCard.name}'s look top effect resolved.`;
+}
+
+function resolveRimuruTurnStartSearch(player, ui) {
+    const leader = player?.leader;
+
+    if (!leader || !isRimuruTempestLeader(player)) {
+        return { activated: false, message: "" };
+    }
+
+    const effect = leader.effects?.find(cardEffect => cardEffect.id === "RIM1-001-turn-start-search");
+
+    if (!effect) {
+        return { activated: false, message: "" };
+    }
+
+    const shouldActivate = typeof window !== "undefined" && typeof window.confirm === "function"
+        ? window.confirm(`${leader.name}: use start-of-turn search and skip your draw this turn?`)
+        : false;
+
+    if (!shouldActivate) {
+        return {
+            activated: false,
+            message: `${player.name} skipped ${leader.name}'s start-of-turn search.`
+        };
+    }
+
+    const message = lookTopCardsForRimuruLeader(player, leader, 5, ui);
+
+    return {
+        activated: true,
+        message
+    };
+}
+
+function lookTopCardsForRimuruLeader(player, sourceCard, amount, ui) {
+    const cardsToLookAt = player.deck.splice(0, amount);
+
+    if (cardsToLookAt.length === 0) {
+        return `${sourceCard.name}'s effect found no cards because ${player.name}'s deck is empty.`;
+    }
+
+    const addedNames = Array.isArray(sourceCard.rimuruAddedNames)
+        ? sourceCard.rimuruAddedNames
+        : [];
+    const usedNameSet = new Set(addedNames.map(name => CardEffects.normalizeCardName(name)));
+    const isSelectable = card => {
+        return card?.cardType === "character" &&
+            isTwelveGuardianLordType(card) &&
+            !usedNameSet.has(CardEffects.normalizeCardName(card.name));
+    };
+
+    const finishSelection = (selection) => {
+        const selectedIndex = typeof selection === "object" && selection !== null
+            ? selection.selectedIndex
+            : selection;
+        let selectedCard = null;
+
+        if (
+            selectedIndex !== null &&
+            selectedIndex >= 0 &&
+            selectedIndex < cardsToLookAt.length &&
+            isSelectable(cardsToLookAt[selectedIndex])
+        ) {
+            selectedCard = cardsToLookAt.splice(selectedIndex, 1)[0];
+            player.hand.push(assignCardInstance(selectedCard));
+            sourceCard.rimuruAddedNames = [
+                ...addedNames,
+                selectedCard.name
+            ];
+            addGameLog(`${player.name} added a card to hand with ${sourceCard.name}.`);
+        } else {
+            addGameLog(`${player.name} did not add a card with ${sourceCard.name}'s effect.`);
+        }
+
+        cardsToLookAt.forEach(card => {
+            moveCardToTrash(player, assignCardInstance(card), ui);
+        });
+
+        if (ui?.renderHands) {
+            ui.renderHands();
+        }
+
+        if (ui?.renderDecks) {
+            ui.renderDecks();
+        }
+
+        if (ui?.renderTrash) {
+            ui.renderTrash();
+        }
+
+        addGameLog(`${player.name} trashed the remaining card${cardsToLookAt.length === 1 ? "" : "s"} from ${sourceCard.name}'s effect.`);
+    };
+
+    if (ui && typeof ui.lookTopCardsAddToHand === "function") {
+        ui.lookTopCardsAddToHand({
+            player,
+            sourceCard,
+            cards: cardsToLookAt,
+            isSelectable,
+            revealSelected: false,
+            descriptionText: `Choose up to 1 new Twelve Guardian Lords character to add to ${player.name}'s hand. The rest go to trash.`,
+            onComplete: finishSelection
+        });
+
+        return `${player.name} is resolving ${sourceCard.name}'s start-of-turn search and will skip the draw.`;
+    }
+
+    const firstValidIndex = cardsToLookAt.findIndex(isSelectable);
+
+    finishSelection(firstValidIndex === -1 ? null : firstValidIndex);
+
+    return `${sourceCard.name}'s start-of-turn search resolved.`;
 }
 
 function isKurosakiIchigoLeader(player) {
@@ -2309,7 +2758,11 @@ function finishCharacterRemovalByOpponentEffect(actingPlayer, targetPlayer, slot
         return `${card.name} is protected from opponent effects.`;
     }
 
-    const result = KOCharacter(targetPlayer, slotIndex, ui);
+    const result = KOCharacter(targetPlayer, slotIndex, ui, {
+        byEffect: true,
+        actingPlayer,
+        sourceCard
+    });
 
     return `${sourceCard.name} K.O.'d ${card.name}. ${result.message}`;
 }
@@ -2816,13 +3269,20 @@ function setBoardCardActive(boardCardData) {
     return true;
 }
 
-function KOCharacter(player, slotIndex, ui) {
+function KOCharacter(player, slotIndex, ui, options = {}) {
     const character = player.characters[slotIndex];
 
     if (!character) {
         return {
             success: false,
             message: "No character was found in that slot."
+        };
+    }
+
+    if (isProtectedByDiabloRimuruEffect(character, player, options)) {
+        return {
+            success: false,
+            message: `${character.name} is protected by its Diablo condition.`
         };
     }
 
@@ -2845,6 +3305,22 @@ function KOCharacter(player, slotIndex, ui) {
         success: true,
         message: `${character.name} was K.O.'d and placed in the trash.${effectText}`
     };
+}
+
+function isProtectedByDiabloRimuruEffect(character, player, options = {}) {
+    if (!character || !player || !player.characters?.some(card => CardEffects.hasCardName(card, "Diablo"))) {
+        return false;
+    }
+
+    if (options.byBattle && character.cardNumber === "RIM1-009") {
+        return true;
+    }
+
+    if (options.byEffect && character.cardNumber === "RIM1-010") {
+        return true;
+    }
+
+    return false;
 }
 
 // =========================
@@ -3241,6 +3717,72 @@ function resolveEndOfTurnEffects(player, ui) {
         character.effects
             ?.filter(effect => effect.type === "endOfYourTurn")
             .forEach(effect => {
+                if (effect.id === "RIM1-008-end-turn-don") {
+                    const totalDon = getTotalDonInPlay(player);
+
+                    if (totalDon === 0) {
+                        const addedDon = addRestedDon(player, 2, ui);
+
+                        results.push({
+                            activated: addedDon > 0,
+                            message: addedDon > 0
+                                ? `${character.name}'s End of Your Turn effect added ${addedDon} rested DON!!.`
+                                : `${character.name}'s End of Your Turn effect found no DON!! cards to add.`
+                        });
+                    }
+
+                    return;
+                }
+
+                if (effect.id === "RIM1-011-end-turn") {
+                    const otherZegion = player.characters.some(other => {
+                        return other &&
+                            other !== character &&
+                            CardEffects.hasCardName(other, "Zegion");
+                    });
+
+                    if (otherZegion) {
+                        return;
+                    }
+
+                    const finishDrawTrash = () => {
+                        const drawResult = drawCards(player, 2, ui);
+
+                        if (drawResult?.deckOut) {
+                            addGameLog(`${character.name}'s End of Your Turn effect caused deck out.`);
+                            return;
+                        }
+
+                        chooseCardsFromHandToTrash(player, character, ui, 1, () => {
+                            addGameLog(`${character.name}'s End of Your Turn effect drew 2 cards and trashed 1 card.`);
+                        });
+                    };
+
+                    const message = chooseOwnBoardCard(player, character, {
+                        prompt: "Choose up to 1 of your Twelve Guardian Lords type characters to set active.",
+                        optional: true,
+                        includeLeader: false,
+                        filter: card => card.cardType === "character" && isTwelveGuardianLordType(card),
+                        onSelect: ({ card }) => {
+                            card.state = "active";
+                            ui.renderCharacters();
+                            addGameLog(`${character.name} set ${card.name} active.`);
+                            finishDrawTrash();
+                        },
+                        onSkip: finishDrawTrash,
+                        onEmpty: finishDrawTrash,
+                        skipMessage: `${player.name} did not set a character active with ${character.name}.`,
+                        emptyMessage: `${character.name} found no Twelve Guardian Lords characters.`
+                    });
+
+                    results.push({
+                        activated: true,
+                        message
+                    });
+
+                    return;
+                }
+
                 if (effect.actionId !== "setThisCardActive") {
                     return;
                 }

@@ -72,6 +72,19 @@ const ryIchigoDeckText = `
 4xBL01-017
 `;
 
+const pbRimuruDeckText = `
+5xRIM1-002
+5xRIM1-003
+5xRIM1-004
+5xRIM1-005
+5xRIM1-006
+5xRIM1-007
+5xRIM1-008
+5xRIM1-009
+5xRIM1-010
+5xRIM1-011
+`;
+
 const availableDecks = [
     {
         id: "okarun-deck",
@@ -96,6 +109,12 @@ const availableDecks = [
         name: "RY Ichigo by Mrki",
         leaderKey: "BL01-001",
         deckText: ryIchigoDeckText
+    },
+    {
+        id: "pb-rimuru-deck",
+        name: "PB Rimuru by Alex",
+        leaderKey: "RIM1-001",
+        deckText: pbRimuruDeckText
     }
 ];
 

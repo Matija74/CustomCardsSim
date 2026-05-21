@@ -1102,5 +1102,275 @@
         "actionId": "playThisCardFromTrigger"
       }
     ]
+  },
+
+  "RIM1-002": {
+    "id": "RIM1-002",
+    "cardNumber": "RIM1-002",
+    "name": "Adalmann",
+    "cardType": "character",
+    "type": "Twelve Guardian Lords/Gehennan Lord",
+    "color": "black",
+    "cost": 6,
+    "power": 8000,
+    "counter": 0,
+    "attribute": "special",
+    "image": "../images/PB Rimuru by Alex/RIM1-002.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "RIM1-002-rimuru-cost",
+        "type": "continuous",
+        "text": "If your Leader is [Rimuru Tempest] this character gains +1 cost for each of your {Twelve Guardian Lords} with different names on field."
+      },
+      {
+        "id": "RIM1-002-on-play",
+        "type": "manualReview",
+        "text": "TODO: Manual implementation needed. On Play: Return any number of DON!! to your DON!! deck. Play up to 2 {Twelve Guardian Lords} type characters from your trash with a combined cost equal to the DON!! returned."
+      }
+    ]
+  },
+
+  "RIM1-003": {
+    "id": "RIM1-003",
+    "cardNumber": "RIM1-003",
+    "name": "Carrera",
+    "cardType": "character",
+    "type": "Twelve Guardian Lords/Menace Lord",
+    "color": "black",
+    "cost": 6,
+    "power": 6000,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/PB Rimuru by Alex/RIM1-003.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "RIM1-003-diablo-removal",
+        "type": "continuous",
+        "text": "If you control [Diablo] this character can only be removed by K.O."
+      },
+      {
+        "id": "RIM1-003-on-play",
+        "type": "onPlay",
+        "text": "On Play: Trash 2 cards from your hand. If your opponent has 5 or more cards in their hand, your opponent trashes cards from their hand until they have the same number as you (minimum of 4)."
+      }
+    ]
+  },
+
+  "RIM1-004": {
+    "id": "RIM1-004",
+    "cardNumber": "RIM1-004",
+    "name": "Diablo",
+    "cardType": "character",
+    "type": "Twelve Guardian Lords/Demon Lord",
+    "color": "black/yellow",
+    "cost": 9,
+    "power": 10000,
+    "counter": 0,
+    "attribute": "special",
+    "image": "../images/PB Rimuru by Alex/RIM1-004.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "RIM1-004-rimuru-power",
+        "type": "continuous",
+        "text": "If your Leader is [Rimuru Tempest] this character gains +1000 power."
+      },
+      {
+        "id": "RIM1-004-on-play",
+        "type": "onPlay",
+        "text": "On Play: Rest 1 DON!!. If your leader is [Rimuru Tempest], play up to 1 [Testarosa], [Ultima], or [Carrera] from your trash. Then if you have 1 or less life, add the top card of your deck to your life."
+      }
+    ]
+  },
+
+  "RIM1-005": {
+    "id": "RIM1-005",
+    "cardNumber": "RIM1-005",
+    "name": "Kumara",
+    "cardType": "character",
+    "type": "Twelve Guardian Lords/Chimera Lord",
+    "color": "black",
+    "cost": 6,
+    "power": 7000,
+    "counter": 0,
+    "attribute": "wisdom",
+    "image": "../images/PB Rimuru by Alex/RIM1-005.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "RIM1-005-rimuru-trash-cost",
+        "type": "continuous",
+        "text": "If your Leader is [Rimuru Tempest] this card has -1 cost in trash."
+      },
+      {
+        "id": "RIM1-005-main",
+        "type": "manualReview",
+        "text": "TODO: Manual review needed. Activate: Main DON!! -1: Trash this active Character. You may play up to 1 [Kumara] from your hand or trash with a cost of 4 or less."
+      }
+    ]
+  },
+
+  "RIM1-006": {
+    "id": "RIM1-006",
+    "cardNumber": "RIM1-006",
+    "name": "Milim Nava",
+    "cardType": "character",
+    "type": "Destroyer/Dragon Princess",
+    "color": "black/yellow",
+    "cost": 9,
+    "power": 11000,
+    "counter": 0,
+    "attribute": "special",
+    "image": "../images/PB Rimuru by Alex/RIM1-006.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "RIM1-006-twelve-guardian-lords-type",
+        "type": "continuous",
+        "text": "This character is also considered a {Twelve Guardian Lords} type."
+      },
+      {
+        "id": "RIM1-006-on-play",
+        "type": "manualReview",
+        "text": "TODO: Manual review needed for target cost meaning. On Play: Rest 1 DON!! and trash the top card of your life. If your leader is [Rimuru Tempest], K.O. up to 3 of your opponent's characters with the same cost."
+      }
+    ]
+  },
+
+  "RIM1-007": {
+    "id": "RIM1-007",
+    "cardNumber": "RIM1-007",
+    "name": "Ranga",
+    "cardType": "character",
+    "type": "Twelve Guardian Lords/Star Lord",
+    "color": "black",
+    "cost": 7,
+    "power": 8000,
+    "counter": 0,
+    "attribute": "slash",
+    "image": "../images/PB Rimuru by Alex/RIM1-007.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "RIM1-007-rimuru-cost",
+        "type": "continuous",
+        "text": "If your Leader is [Rimuru Tempest] this character gains +2 to its base cost on field."
+      },
+      {
+        "id": "RIM1-007-on-play",
+        "type": "manualReview",
+        "text": "TODO: Manual implementation needed. On Play: Place 2 {Twelve Guardian Lords} type characters from your trash on the bottom of your deck. K.O. up to 1 of your opponent's characters with a cost equal to or less than the number of {Twelve Guardian Lords} type characters in your trash with different names."
+      }
+    ]
+  },
+
+  "RIM1-008": {
+    "id": "RIM1-008",
+    "cardNumber": "RIM1-008",
+    "name": "Shion",
+    "cardType": "character",
+    "type": "Twelve Guardian Lords/War Lord",
+    "color": "purple",
+    "cost": 1,
+    "power": 0,
+    "counter": 2000,
+    "attribute": "slash",
+    "image": "../images/PB Rimuru by Alex/RIM1-008.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "RIM1-008-on-play-search",
+        "type": "onPlay",
+        "text": "On Play DON!! -1: Look at the top 5 cards of your deck. Reveal up to 1 {Twelve Guardian Lords} except [Shion] and add it to your hand. Place the rest on the bottom of your deck in any order."
+      },
+      {
+        "id": "RIM1-008-end-turn-don",
+        "type": "endOfYourTurn",
+        "text": "End of Your Turn: If you have 0 DON!!, add up to 2 DON!! cards from your DON!! deck and rest them."
+      }
+    ]
+  },
+
+  "RIM1-009": {
+    "id": "RIM1-009",
+    "cardNumber": "RIM1-009",
+    "name": "Testarosa",
+    "cardType": "character",
+    "type": "Twelve Guardian Lords/Killer Lord",
+    "color": "black",
+    "cost": 5,
+    "power": 6000,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/PB Rimuru by Alex/RIM1-009.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "RIM1-009-diablo-battle-ko",
+        "type": "continuous",
+        "text": "If you control [Diablo] this character cannot be K.O.'d by battle."
+      },
+      {
+        "id": "RIM1-009-on-play",
+        "type": "onPlay",
+        "text": "On Play: Trash 2 cards from your hand. K.O. up to 1 of your opponent's characters with a different cost than its base cost."
+      }
+    ]
+  },
+
+  "RIM1-010": {
+    "id": "RIM1-010",
+    "cardNumber": "RIM1-010",
+    "name": "Ultima",
+    "cardType": "character",
+    "type": "Twelve Guardian Lords/Pain Lord",
+    "color": "black",
+    "cost": 4,
+    "power": 5000,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/PB Rimuru by Alex/RIM1-010.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "RIM1-010-diablo-effect-ko",
+        "type": "continuous",
+        "text": "If you control [Diablo] this character cannot be K.O.'d by effects."
+      },
+      {
+        "id": "RIM1-010-on-play",
+        "type": "onPlay",
+        "text": "On Play: Trash 2 cards from your hand. Give up to 1 of your opponent's characters -3 cost during this turn. Then you may K.O. up to 1 of your opponent's characters with a cost of 1 or less."
+      }
+    ]
+  },
+
+  "RIM1-011": {
+    "id": "RIM1-011",
+    "cardNumber": "RIM1-011",
+    "name": "Zegion",
+    "cardType": "character",
+    "type": "Twelve Guardian Lords/Myst Lord",
+    "color": "purple",
+    "cost": 6,
+    "power": 8000,
+    "counter": 0,
+    "attribute": "strike",
+    "image": "../images/PB Rimuru by Alex/RIM1-011.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "RIM1-011-hand-cost",
+        "type": "continuous",
+        "text": "If your Leader is [Rimuru Tempest] and you have less DON!! than your opponent, this character has -1 cost in hand."
+      },
+      {
+        "id": "RIM1-011-end-turn",
+        "type": "endOfYourTurn",
+        "text": "End of Your Turn: If you control no other [Zegion] characters, set up to 1 of your {Twelve Guardian Lords} type characters active. Then draw 2 cards and trash 1 from your hand."
+      }
+    ]
   }
 }

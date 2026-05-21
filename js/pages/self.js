@@ -2441,7 +2441,7 @@ function showSelectedCardActions() {
     playButton.className = "card-action-button-on-card";
     playButton.textContent = "Play";
 
-    const cardCost = getCardPlayCost(card);
+    const cardCost = getCardPlayCost(card, player);
     const canAfford = canPlayerAffordCard(player, card);
     const openSlotIndex = getFirstOpenCharacterSlotIndex(player);
     const canPlayNow = canPlayerPlayCards(player);
@@ -3934,7 +3934,8 @@ async function resolveCurrentAttack() {
         const koResult = KOCharacter(
             defenderPlayer,
             currentAttack.target.slotIndex,
-            ui
+            ui,
+            { byBattle: true }
         );
 
         battleResultText += `<br>${koResult.message}`;
@@ -4112,7 +4113,9 @@ function lookTopCardsAddToHand({
     sourceCard,
     cards,
     isSelectable,
-    onComplete
+    onComplete,
+    revealSelected = true,
+    descriptionText = null
 }) {
     removeLookTopOverlay();
 
@@ -4129,7 +4132,8 @@ function lookTopCardsAddToHand({
         : "Look at cards";
 
     const description = document.createElement("p");
-    description.textContent = `Choose up to 1 valid card to add to ${player.name}'s hand. The rest go to the bottom of the deck.`;
+    description.textContent = descriptionText ||
+        `Choose up to 1 valid card to add to ${player.name}'s hand. The rest go to the bottom of the deck.`;
 
     const cardGrid = document.createElement("div");
     cardGrid.className = "look-top-card-grid";
@@ -4148,7 +4152,7 @@ function lookTopCardsAddToHand({
 
         // Multiplayer search pools stay local/private; only explicitly revealed chosen cards go public.
         if (isOnlineMatch && player === gameState[getOwnOnlinePlayerKey()]) {
-            if (selectedCard && isSelectable(selectedCard)) {
+            if (revealSelected && selectedCard && isSelectable(selectedCard)) {
                 await publishOnlineReveal([selectedCard]);
             }
 
@@ -4873,6 +4877,7 @@ function getPowerModifier(card, player = null) {
         getSerpicoFarnesePowerModifier(card, player) +
         getGutsLeaderPowerModifier(card, player) +
         getKurosakiIchigoPowerModifier(card, player) +
+        getRimuruTempestPowerModifier(card, player) +
         getOpponentTurnPowerModifier(card, player) +
         getAttachedDonPowerModifier(card, player) +
         getTemporaryPowerModifier(card) +
@@ -5006,6 +5011,18 @@ function getGutsLeaderPowerModifier(card, player) {
             const effect = character.effects?.find(cardEffect => cardEffect.id === "BK01-016-guts-rush-leader-power");
             return total + Number(effect?.leaderPowerModifier ?? 0);
         }, 0);
+}
+
+function getRimuruTempestPowerModifier(card, player) {
+    if (!card || !player || !player.leader || !CardEffects.hasCardName(player.leader, "Rimuru Tempest")) {
+        return 0;
+    }
+
+    if (card.cardNumber === "RIM1-004") {
+        return 1000;
+    }
+
+    return 0;
 }
 
 function getKurosakiIchigoPowerModifier(card, player) {

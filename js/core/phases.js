@@ -207,6 +207,25 @@ function runRefreshPhase(player, phaseInfo) {
 // =========================
 
 function runDrawPhase(player, phaseInfo) {
+    if (typeof resolveRimuruTurnStartSearch === "function") {
+        const rimuruResult = resolveRimuruTurnStartSearch(player, ui);
+
+        if (rimuruResult?.activated) {
+            phaseInfo.innerHTML += `
+                <br><br>
+                ${player.name}'s Draw Phase:<br>
+                ${rimuruResult.message}<br>
+                ${player.name} did not draw because ${player.leader.name}'s effect was activated.
+            `;
+
+            return { deckOut: false, skippedDraw: true };
+        }
+
+        if (rimuruResult?.message) {
+            addGameLog(rimuruResult.message);
+        }
+    }
+
     const drawResult = drawCard(player, ui);
 
     if (drawResult?.deckOut) {
