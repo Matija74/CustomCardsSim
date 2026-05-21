@@ -94,13 +94,20 @@ function handleMulliganChoice(player, tookMulligan, phaseButton, phaseInfo) {
 
     setupLifeCards(player);
 
+    const gameStartMessage = typeof resolveKurosakiIchigoGameStart === "function"
+        ? resolveKurosakiIchigoGameStart(player, ui)
+        : "";
+
     const actionText = tookMulligan
         ? `${player.name} took a mulligan and placed life cards.`
         : `${player.name} kept their starting hand and placed life cards.`;
+    const gameStartText = gameStartMessage
+        ? `<br>${gameStartMessage}`
+        : "";
 
     if (player === gameState.player1) {
         phaseInfo.innerHTML = `
-            ${actionText}<br><br>
+            ${actionText}${gameStartText}<br><br>
             ${gameState.player2.name}: Keep hand or mulligan?
         `;
 
@@ -109,7 +116,7 @@ function handleMulliganChoice(player, tookMulligan, phaseButton, phaseInfo) {
     }
 
     phaseInfo.innerHTML = `
-        ${actionText}<br><br>
+        ${actionText}${gameStartText}<br><br>
         Both players are ready.<br>
         Starting Turn 1.
     `;
@@ -264,6 +271,16 @@ function passTurn(phaseButton, phaseInfo) {
     const endOfTurnText = endOfTurnResults.length > 0
         ? `<br><br>${endOfTurnResults.map(result => result.message).join("<br>")}`
         : "";
+
+    if (gameState.currentPhase === "gameOver") {
+        phaseInfo.innerHTML = `
+            ${previousPlayer.name} ended their turn.${endOfTurnText}<br><br>
+            Game Over.
+        `;
+        phaseButton.disabled = true;
+        phaseButton.textContent = "Game Over";
+        return;
+    }
 
     gameState.currentPlayer = nextPlayer;
     gameState.turnNumber++;

@@ -268,7 +268,9 @@ function getCounterEffectPower(card, player) {
 
             if (
                 effect.actionId === "eggmanCounterPower" ||
-                effect.actionId === "leaderOrCharacterCounterPower"
+                effect.actionId === "leaderOrCharacterCounterPower" ||
+                effect.actionId === "santenKesshunCounterPower" ||
+                effect.actionId === "leaderCounterPower"
             ) {
                 return total;
             }
@@ -708,6 +710,10 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
         });
     }
 
+    if (effect.actionId === "lookTopFiveHuman") {
+        return lookTopCardsForType(player, sourceCard, 5, "Human", ui);
+    }
+
     if (effect.actionId === "eggmanCounterPower") {
         return chooseOwnBoardCard(player, sourceCard, {
             prompt: "Choose up to 1 Eggman Empire leader or character to give +4000 power during this battle.",
@@ -739,6 +745,68 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
             },
             emptyMessage: `${sourceCard.name} found no leader or character.`
         });
+    }
+
+    if (effect.actionId === "santenKesshunCounterPower") {
+        const power = player.life.length <= 2 ? 4000 : 2000;
+
+        return chooseOwnBoardCard(player, sourceCard, {
+            prompt: `Choose up to 1 leader or character to give +${power} power during this battle.`,
+            optional: true,
+            includeLeader: true,
+            filter: card => card.cardType === "leader" || card.cardType === "character",
+            onSelect: ({ card }) => {
+                addBattlePowerBonus(card, power);
+                ui.renderLeaders();
+                ui.renderCharacters();
+                addGameLog(`${sourceCard.name} gave ${card.name} +${power} power during this battle.`);
+            },
+            skipMessage: `${player.name} did not choose a card for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no leader or character.`
+        });
+    }
+
+    if (effect.actionId === "leaderCounterPower") {
+        const power = Number(effect.powerModifier ?? 0);
+
+        addBattlePowerBonus(player.leader, power);
+
+        if (ui?.renderLeaders) {
+            ui.renderLeaders();
+        }
+
+        return `${sourceCard.name} gave ${player.name}'s leader +${power} power during this battle.`;
+    }
+
+    if (effect.actionId === "leaderOrCharacterTriggerPower") {
+        const power = Number(effect.powerModifier ?? 1000);
+
+        return chooseOwnBoardCard(player, sourceCard, {
+            prompt: `Choose up to 1 leader or character to give +${power} power this turn.`,
+            optional: true,
+            includeLeader: true,
+            filter: card => card.cardType === "leader" || card.cardType === "character",
+            onSelect: ({ card }) => {
+                addTemporaryPowerBonus(card, power);
+                ui.renderLeaders();
+                ui.renderCharacters();
+                addGameLog(`${sourceCard.name} gave ${card.name} +${power} power this turn.`);
+            },
+            skipMessage: `${player.name} did not choose a card for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no leader or character.`
+        });
+    }
+
+    if (effect.id === "BL01-009-on-play-getsuga-search") {
+        return searchGetsugaTenshoFromDeck(player, sourceCard, ui);
+    }
+
+    if (effect.id === "BL01-006-main") {
+        return resolveGetsugaTenshoMain(player, sourceCard, ui);
+    }
+
+    if (effect.id === "BL01-017-main") {
+        return resolveSotenKisshunMain(player, sourceCard, ui);
     }
 
     if (effect.id === "EGG1-001-when-attacking-power") {
@@ -1580,6 +1648,237 @@ function lookTopCardsForType(player, sourceCard, amount, typeText, ui, options =
     return `${sourceCard.name}'s look top effect resolved.`;
 }
 
+function isKurosakiIchigoLeader(player) {
+    return Boolean(player?.leader && CardEffects.hasCardName(player.leader, "Kurosaki Ichigo"));
+}
+
+function hasKurosakiIchigoCharacter(player) {
+    return player?.characters?.some(card => {
+        return card?.cardType === "character" && CardEffects.hasCardName(card, "Kurosaki Ichigo");
+    });
+}
+
+function isZangetsuStage(card) {
+    return card?.cardType === "stage" && (
+        CardEffects.hasCardName(card, "Zangetsu: Sealed") ||
+        CardEffects.hasCardName(card, "Zangetsu: Shikai") ||
+        CardEffects.hasCardName(card, "Bankai: Tensa Zangetsu") ||
+        CardEffects.hasCardName(card, "Tensa Zangetsu: Visored") ||
+        hasTypeText(card, "Zanpakto")
+    );
+}
+
+function getCurrentZangetsuStageCost(player) {
+    return isZangetsuStage(player?.stage)
+        ? Number(player.stage.cost ?? 0)
+        : 0;
+}
+
+function playZangetsuStageFromDeck(player, sourceCard, ui, targetCost) {
+    if (!player) {
+        return "";
+    }
+
+    const stageIndex = player.deck.findIndex(card => {
+        return isZangetsuStage(card) && Number(card.cost ?? 0) === Number(targetCost || 0);
+    });
+
+    if (stageIndex === -1) {
+        shuffleDeck(player.deck);
+
+        if (ui?.renderDecks) {
+            ui.renderDecks();
+        }
+
+        return `${sourceCard.name} found no cost ${targetCost} Zangetsu stage in ${player.name}'s deck. ${player.name} shuffled the deck.`;
+    }
+
+    const oldStage = player.stage;
+    const stage = player.deck.splice(stageIndex, 1)[0];
+
+    stage.state = "active";
+    stage.uiAnimation = "played";
+    player.stage = stage;
+
+    if (oldStage) {
+        moveCardToTrash(player, oldStage, ui);
+    }
+
+    shuffleDeck(player.deck);
+
+    if (ui?.renderDecks) {
+        ui.renderDecks();
+    }
+
+    if (ui?.renderStages) {
+        ui.renderStages();
+    }
+
+    if (ui?.renderTrash) {
+        ui.renderTrash();
+    }
+
+    return oldStage
+        ? `${sourceCard.name} played ${stage.name} from the deck, replacing ${oldStage.name}, then shuffled the deck.`
+        : `${sourceCard.name} played ${stage.name} from the deck, then shuffled the deck.`;
+}
+
+function resolveKurosakiIchigoGameStart(player, ui) {
+    if (!isKurosakiIchigoLeader(player)) {
+        return "";
+    }
+
+    return playZangetsuStageFromDeck(player, player.leader, ui, 1);
+}
+
+function resolveKurosakiIchigoDamageStageUpgrade(player, ui) {
+    if (!isKurosakiIchigoLeader(player)) {
+        return "";
+    }
+
+    const leader = player.leader;
+    const effectId = "BL01-001-damage-upgrade-zangetsu";
+
+    if (CardEffects.hasUsedOncePerTurnEffect(leader, effectId, player.turns)) {
+        return `${leader.name}'s Once Per Turn stage upgrade has already been used this turn.`;
+    }
+
+    const targetCost = getCurrentZangetsuStageCost(player) + 1;
+
+    if (targetCost < 1 || targetCost > 4) {
+        return `${leader.name}'s stage upgrade found no higher Zangetsu stage cost.`;
+    }
+
+    const finishUpgrade = () => {
+        CardEffects.markOncePerTurnEffectUsed(leader, effectId, player.turns);
+        addGameLog(playZangetsuStageFromDeck(player, leader, ui, targetCost));
+    };
+
+    const effect = leader.effects?.find(cardEffect => cardEffect.id === effectId) || {
+        id: effectId,
+        type: "onOpponentDealsDamage",
+        text: "Play the next Zangetsu stage from your deck?"
+    };
+
+    if (ui?.chooseEffectActivation) {
+        ui.chooseEffectActivation({
+            player,
+            sourceCard: leader,
+            effect,
+            title: leader.name,
+            prompt: `Opponent dealt damage. Play a cost ${targetCost} Zangetsu stage from your deck?`,
+            activateText: "Play Stage",
+            skipText: "Skip",
+            onComplete: (shouldActivate) => {
+                if (shouldActivate) {
+                    finishUpgrade();
+                } else {
+                    addGameLog(`${player.name} skipped ${leader.name}'s stage upgrade.`);
+                }
+            }
+        });
+
+        return `${player.name} is choosing whether to use ${leader.name}'s stage upgrade.`;
+    }
+
+    finishUpgrade();
+    return `${leader.name}'s stage upgrade resolved.`;
+}
+
+function searchGetsugaTenshoFromDeck(player, sourceCard, ui) {
+    if (!isKurosakiIchigoLeader(player)) {
+        return `${sourceCard.name}'s On Play effect did not resolve because ${player.name}'s leader is not Kurosaki Ichigo.`;
+    }
+
+    const cardIndex = player.deck.findIndex(card => {
+        return card.cardType === "event" && CardEffects.hasCardName(card, "Getsuga Tensho");
+    });
+
+    if (cardIndex === -1) {
+        shuffleDeck(player.deck);
+
+        if (ui?.renderDecks) {
+            ui.renderDecks();
+        }
+
+        return `${sourceCard.name} found no Getsuga Tensho in the deck. ${player.name} shuffled the deck.`;
+    }
+
+    const foundCard = player.deck.splice(cardIndex, 1)[0];
+
+    player.hand.push(foundCard);
+    shuffleDeck(player.deck);
+
+    if (typeof ui?.revealCards === "function") {
+        ui.revealCards([foundCard]);
+    }
+
+    if (ui?.renderHands) {
+        ui.renderHands();
+    }
+
+    if (ui?.renderDecks) {
+        ui.renderDecks();
+    }
+
+    return `${sourceCard.name} revealed ${foundCard.name}, added it to hand, then shuffled the deck.`;
+}
+
+function resolveGetsugaTenshoMain(player, sourceCard, ui) {
+    if (!isKurosakiIchigoLeader(player)) {
+        return `${sourceCard.name}'s Main effect did not resolve because ${player.name}'s leader is not Kurosaki Ichigo.`;
+    }
+
+    player.characters.filter(Boolean).forEach(character => {
+        addTemporaryPowerBonus(character, 5000);
+    });
+
+    addTemporaryPowerBonus(player.leader, 5000);
+    addTemporaryKeyword(player.leader, "unblockable");
+    player.loseAtEndOfTurnSource = sourceCard.name;
+
+    if (ui?.renderLeaders) {
+        ui.renderLeaders();
+    }
+
+    if (ui?.renderCharacters) {
+        ui.renderCharacters();
+    }
+
+    return `${sourceCard.name} gave all of ${player.name}'s characters and leader +5000 power. ${player.name}'s leader gained Unblockable this turn. If ${player.name} does not win by end of turn, they lose the game.`;
+}
+
+function resolveSotenKisshunMain(player, sourceCard, ui) {
+    if (!isKurosakiIchigoLeader(player)) {
+        return `${sourceCard.name}'s Main effect did not resolve because ${player.name}'s leader is not Kurosaki Ichigo.`;
+    }
+
+    if (!restDonForCost(player, 7, ui)) {
+        return `${player.name} could not rest 7 active DON!! for ${sourceCard.name}.`;
+    }
+
+    const topDeckCard = player.deck.shift();
+
+    if (!topDeckCard) {
+        const deckOutResult = checkDeckOut(player, `${player.name} tried to add the top deck card to life with no cards in deck.`);
+        return deckOutResult?.deckOut
+            ? `${sourceCard.name}'s Main effect found no card because ${player.name} lost by deck out.`
+            : `${sourceCard.name}'s Main effect found no card in deck.`;
+    }
+
+    player.life.unshift(topDeckCard);
+
+    if (ui?.renderDecks) {
+        ui.renderDecks();
+    }
+
+    if (ui?.renderLifeCards) {
+        ui.renderLifeCards();
+    }
+
+    return `${sourceCard.name} rested 7 DON!! and placed the top card of ${player.name}'s deck on top of their life.`;
+}
+
 function getPlayerKey(player) {
     if (typeof gameState === "undefined") {
         return null;
@@ -1888,6 +2187,40 @@ function removeCharacterByOpponentEffect(actingPlayer, targetPlayer, slotIndex, 
         return `${card.name} is protected from opponent effects.`;
     }
 
+    const uryu = getAvailableUryuLifeFlipReplacement(targetPlayer, actingPlayer);
+
+    if (uryu) {
+        if (ui?.chooseEffectActivation) {
+            ui.chooseEffectActivation({
+                player: targetPlayer,
+                sourceCard: uryu,
+                effect: uryu.effects?.find(cardEffect => cardEffect.id === "BL01-008-life-flip-replace") || {
+                    id: "BL01-008-life-flip-replace",
+                    type: "replacement",
+                    text: "Flip your top life face up instead?"
+                },
+                title: uryu.name,
+                prompt: `${card.name} would be removed by ${sourceCard.name}. Flip your top life card face up instead?`,
+                activateText: "Flip Life",
+                skipText: "Let Remove",
+                onComplete: (shouldActivate) => {
+                    if (shouldActivate && useUryuLifeFlipReplacement(targetPlayer, uryu, ui)) {
+                        addGameLog(`${uryu.name} kept ${card.name} on the field by flipping ${targetPlayer.name}'s top life face up.`);
+                        return;
+                    }
+
+                    addGameLog(finishCharacterRemovalByOpponentEffect(actingPlayer, targetPlayer, slotIndex, sourceCard, ui));
+                }
+            });
+
+            return `${targetPlayer.name} is choosing whether to use ${uryu.name}'s replacement effect.`;
+        }
+
+        if (useUryuLifeFlipReplacement(targetPlayer, uryu, ui)) {
+            return `${uryu.name} kept ${card.name} on the field by flipping ${targetPlayer.name}'s top life face up.`;
+        }
+    }
+
     const sage = getAvailableSageRemovalReplacement(targetPlayer, card, actingPlayer);
 
     if (sage) {
@@ -1926,6 +2259,44 @@ function removeCharacterByOpponentEffect(actingPlayer, targetPlayer, slotIndex, 
     return finishCharacterRemovalByOpponentEffect(actingPlayer, targetPlayer, slotIndex, sourceCard, ui);
 }
 
+function getAvailableUryuLifeFlipReplacement(targetPlayer, actingPlayer) {
+    if (!targetPlayer || !actingPlayer || targetPlayer === actingPlayer) {
+        return null;
+    }
+
+    if (gameState.currentPlayer !== actingPlayer) {
+        return null;
+    }
+
+    if (!targetPlayer.life?.length) {
+        return null;
+    }
+
+    const effectId = "BL01-008-life-flip-replace";
+
+    return targetPlayer.characters.find(card => {
+        return card?.cardNumber === "BL01-008" &&
+            !CardEffects.hasUsedOncePerTurnEffect(card, effectId, targetPlayer.turns);
+    }) || null;
+}
+
+function useUryuLifeFlipReplacement(targetPlayer, uryu, ui) {
+    const topLife = targetPlayer?.life?.[0];
+
+    if (!topLife || !uryu) {
+        return false;
+    }
+
+    CardEffects.markOncePerTurnEffectUsed(uryu, "BL01-008-life-flip-replace", targetPlayer.turns);
+    topLife.faceUp = true;
+
+    if (ui?.renderLifeCards) {
+        ui.renderLifeCards();
+    }
+
+    return true;
+}
+
 function finishCharacterRemovalByOpponentEffect(actingPlayer, targetPlayer, slotIndex, sourceCard, ui) {
     const card = targetPlayer?.characters?.[slotIndex];
     const targetPlayerKey = getPlayerKey(targetPlayer);
@@ -1941,6 +2312,70 @@ function finishCharacterRemovalByOpponentEffect(actingPlayer, targetPlayer, slot
     const result = KOCharacter(targetPlayer, slotIndex, ui);
 
     return `${sourceCard.name} K.O.'d ${card.name}. ${result.message}`;
+}
+
+function removeStageByOpponentEffect(actingPlayer, targetPlayer, sourceCard, ui) {
+    const stage = targetPlayer?.stage;
+
+    if (!stage) {
+        return "No stage was found.";
+    }
+
+    const targetPlayerKey = getPlayerKey(targetPlayer);
+    const actingPlayerKey = getPlayerKey(actingPlayer);
+
+    if (!targetPlayerKey || !actingPlayerKey || targetPlayerKey === actingPlayerKey) {
+        return "Stage removal was not caused by an opponent effect.";
+    }
+
+    const replacementEffect = stage.effects?.find(effect => {
+        return effect.type === "replacement" && effect.id?.includes("stage-removal-replace");
+    });
+
+    const finishRemoval = () => {
+        targetPlayer.stage = null;
+        moveCardToTrash(targetPlayer, stage, ui);
+
+        if (ui?.renderStages) {
+            ui.renderStages();
+        }
+
+        return `${sourceCard.name} removed ${stage.name}.`;
+    };
+
+    if (!replacementEffect || CardEffects.hasUsedOncePerTurnEffect(stage, replacementEffect.id, targetPlayer.turns)) {
+        return finishRemoval();
+    }
+
+    const useReplacement = () => {
+        CardEffects.markOncePerTurnEffectUsed(stage, replacementEffect.id, targetPlayer.turns);
+        addTemporaryPowerBonus(targetPlayer.leader, -1000);
+
+        if (ui?.renderLeaders) {
+            ui.renderLeaders();
+        }
+
+        return `${stage.name} stayed in play; ${targetPlayer.name}'s leader got -1000 power this turn.`;
+    };
+
+    if (ui?.chooseEffectActivation) {
+        ui.chooseEffectActivation({
+            player: targetPlayer,
+            sourceCard: stage,
+            effect: replacementEffect,
+            title: stage.name,
+            prompt: `${stage.name} would be removed by ${sourceCard.name}. Give your leader -1000 power this turn instead?`,
+            activateText: "Protect Stage",
+            skipText: "Let Remove",
+            onComplete: (shouldActivate) => {
+                addGameLog(shouldActivate ? useReplacement() : finishRemoval());
+            }
+        });
+
+        return `${targetPlayer.name} is choosing whether to protect ${stage.name}.`;
+    }
+
+    return useReplacement();
 }
 
 function getAvailableSageRemovalReplacement(targetPlayer, targetCard, actingPlayer) {
@@ -2236,6 +2671,34 @@ function resolveOnKOEffects(player, card, ui) {
         });
 
     return messages;
+}
+
+function resolveOnBlockEffects(player, card, ui) {
+    if (!player || !card) {
+        return "";
+    }
+
+    const onBlockEffect = card.effects?.find(effect => effect.type === "onBlock");
+
+    if (!onBlockEffect) {
+        return "";
+    }
+
+    if (onBlockEffect.id === "BL01-013-on-block-minus-power") {
+        return chooseOpponentCharacter(player, card, {
+            prompt: "Choose up to 1 opposing character to give -1000 power this turn.",
+            optional: true,
+            onSelect: ({ card: targetCard }) => {
+                addTemporaryPowerBonus(targetCard, -1000);
+                ui.renderCharacters();
+                addGameLog(`${card.name} gave ${targetCard.name} -1000 power this turn.`);
+            },
+            skipMessage: `${player.name} did not choose a character for ${card.name}'s On Block effect.`,
+            emptyMessage: `${card.name} found no opposing characters.`
+        });
+    }
+
+    return "";
 }
 
 function resolveMainEffects(player, card, ui, options = {}) {
@@ -2752,6 +3215,18 @@ function resolveEndOfTurnEffects(player, ui) {
     }
 
     const results = [];
+
+    if (player.loseAtEndOfTurnSource) {
+        const sourceName = player.loseAtEndOfTurnSource;
+        player.loseAtEndOfTurnSource = null;
+        loseByLifeDamage(player, `${player.name} did not win before the end of the turn after resolving ${sourceName}.`);
+        results.push({
+            activated: true,
+            message: `${player.name} lost because they did not win before the end of the turn after resolving ${sourceName}.`
+        });
+        return results;
+    }
+
     const turboGrannyResult = CardEffects.resolveTurboGrannyFormEndOfTurn(player);
 
     if (turboGrannyResult?.message) {

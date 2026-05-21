@@ -104,5 +104,33 @@
         "text": "DON!! x1: When one of your opponent's Characters is removed from the field, give this Leader +1000 power until the end of your next turn."
       }
     ]
+  },
+
+  "BL01-001": {
+    "id": "BL01-001",
+    "cardNumber": "BL01-001",
+    "name": "Kurosaki Ichigo",
+    "cardType": "leader",
+    "type": "Human/Soul Reaper/Visored",
+    "color": "red/yellow",
+    "attribute": "slash/special",
+    "power": 5000,
+    "life": 5,
+    "image": "../images/RY Ichigo by Mrki/BL01-001.png",
+    "aliases": [],
+    "keywords": [],
+    "effects": [
+      {
+        "id": "BL01-001-starting-zangetsu",
+        "type": "gameStart",
+        "text": "Under the rules of the game, you may play up to 1 cost 1 [Zangetsu] Stage card at the beginning of the game."
+      },
+      {
+        "id": "BL01-001-damage-upgrade-zangetsu",
+        "type": "onOpponentDealsDamage",
+        "oncePerTurn": true,
+        "text": "Once Per Turn: If your Opponent deals damage, play up to 1 [Zangetsu] stage with a cost higher than the current one, by 1 from your deck. Then, shuffle your deck."
+      }
+    ]
   }
 }

@@ -73,12 +73,60 @@ function createInitialPrivateState(selectedDeck) {
         }
     }
 
-    return {
+    const privateState = {
         selectedDeck,
         hand,
         deck,
         life,
-        leader
+        leader,
+        stage: null
+    };
+
+    applyStartingZangetsuStage(privateState);
+
+    return privateState;
+}
+
+function applyStartingZangetsuStage(privateState) {
+    if (privateState?.leader?.cardNumber !== "BL01-001") {
+        return;
+    }
+
+    const stageIndex = privateState.deck.findIndex(card => {
+        return card.cardType === "stage" &&
+            Number(card.cost || 0) === 1 &&
+            (String(card.name || "").includes("Zangetsu") || String(card.type || "").includes("Zanpakto"));
+    });
+
+    if (stageIndex === -1) {
+        return;
+    }
+
+    const stage = privateState.deck.splice(stageIndex, 1)[0];
+
+    stage.state = "active";
+    privateState.stage = stage;
+}
+
+function createPublicCardSnapshot(card) {
+    if (!card) return null;
+
+    return {
+        name: card.name,
+        image: card.image,
+        cardNumber: card.cardNumber,
+        cardType: card.cardType,
+        type: card.type,
+        color: card.color,
+        cost: card.cost,
+        power: card.power,
+        counter: card.counter,
+        attribute: card.attribute,
+        keywords: card.keywords || [],
+        effects: card.effects || [],
+        instanceId: card.instanceId,
+        state: card.state || "active",
+        faceUp: Boolean(card.faceUp)
     };
 }
 
@@ -86,11 +134,14 @@ function createInitialPublicPlayerState(privateState) {
     return {
         leader: privateState.leader,
         characters: [],
-        stage: null,
+        stage: privateState.stage || null,
         trash: [],
         handCount: privateState.hand.length,
         deckCount: privateState.deck.length,
         lifeCount: privateState.life.length,
+        faceUpLifeCards: privateState.life
+            .map((card, index) => card?.faceUp ? { index, card: createPublicCardSnapshot(card) } : null)
+            .filter(Boolean),
         activeTokens: 0,
         restedTokens: 0,
         tokenDeckCount: 10,
@@ -404,6 +455,9 @@ export async function applyMultiplayerLifeDamage(roomCode, defenderSlot, attacke
         [`private/${defender.uid}/life`]: life,
         [`private/${defender.uid}/hand`]: hand,
         [`public/${publicKey}/lifeCount`]: life.length,
+        [`public/${publicKey}/faceUpLifeCards`]: life
+            .map((card, index) => card?.faceUp ? { index, card: createPublicCardSnapshot(card) } : null)
+            .filter(Boolean),
         [`public/${publicKey}/handCount`]: hand.length,
         "public/currentAttack": null
     };

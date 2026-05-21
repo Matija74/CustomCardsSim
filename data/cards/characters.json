@@ -884,5 +884,223 @@
         "text": "On Play: If your leader is [Guts] give your leader up to 1 rested DON!!"
       }
     ]
+  },
+
+  "BL01-007": {
+    "id": "BL01-007",
+    "cardNumber": "BL01-007",
+    "name": "Inoue Orihime",
+    "cardType": "character",
+    "type": "Human",
+    "color": "red",
+    "cost": 1,
+    "power": 2000,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/RY Ichigo by Mrki/BL01-007.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "BL01-007-on-play-human-search",
+        "type": "onPlay",
+        "text": "On Play: Look at 5 cards from the top of your deck; reveal up to 1 {Human} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+        "actionId": "lookTopFiveHuman"
+      }
+    ]
+  },
+
+  "BL01-008": {
+    "id": "BL01-008",
+    "cardNumber": "BL01-008",
+    "name": "Uryu Ishida",
+    "cardType": "character",
+    "type": "Human/Quincy",
+    "color": "yellow",
+    "cost": 3,
+    "power": 5000,
+    "counter": 0,
+    "attribute": "ranged/special",
+    "image": "../images/RY Ichigo by Mrki/BL01-008.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "BL01-008-life-flip-replace",
+        "type": "replacement",
+        "oncePerTurn": true,
+        "text": "Once Per Turn: If one of your Characters would be removed by your Opponent's effects, you may flip the top card of your life cards face up instead."
+      }
+    ]
+  },
+
+  "BL01-009": {
+    "id": "BL01-009",
+    "cardNumber": "BL01-009",
+    "name": "Kisuke Urahara",
+    "cardType": "character",
+    "type": "Soul Reaper/Former Gotei 13",
+    "color": "red",
+    "cost": 5,
+    "power": 5000,
+    "counter": 1000,
+    "attribute": "slash/special",
+    "image": "../images/RY Ichigo by Mrki/BL01-009.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "BL01-009-on-play-getsuga-search",
+        "type": "onPlay",
+        "text": "On Play: If your leader is [Kurosaki Ichigo]; reveal up to 1 [Getsuga Tensho] event card from your deck and put it in your hand. Then, shuffle your deck."
+      },
+      {
+        "id": "BL01-009-when-attacking-ichigo-power",
+        "type": "whenAttacking",
+        "text": "When Attacking: Give up to 1 of your [Kurosaki Ichigo] +1000 power for this turn."
+      }
+    ]
+  },
+
+  "BL01-010": {
+    "id": "BL01-010",
+    "cardNumber": "BL01-010",
+    "name": "Mr. Yoruichi",
+    "cardType": "character",
+    "type": "Soul Reaper/Cat",
+    "color": "yellow",
+    "cost": 1,
+    "power": 1000,
+    "counter": 2000,
+    "attribute": "strike",
+    "image": "../images/RY Ichigo by Mrki/BL01-010.png",
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "BL01-010-trigger",
+        "type": "trigger",
+        "text": "Trigger: Play this card.",
+        "actionId": "playThisCardFromTrigger"
+      }
+    ]
+  },
+
+  "BL01-011": {
+    "id": "BL01-011",
+    "cardNumber": "BL01-011",
+    "name": "Yoruichi Shihoin",
+    "cardType": "character",
+    "type": "Soul Reaper/Former Gotei 13",
+    "color": "red",
+    "cost": 5,
+    "power": 4000,
+    "counter": 0,
+    "attribute": "strike",
+    "image": "../images/RY Ichigo by Mrki/BL01-011.png",
+    "keywords": ["rush"],
+    "effects": [
+      {
+        "id": "BL01-011-when-attacking-don-power",
+        "type": "whenAttacking",
+        "text": "When Attacking: DON!! x1: This Character gains +3000 power during this turn."
+      }
+    ]
+  },
+
+  "BL01-012": {
+    "id": "BL01-012",
+    "cardNumber": "BL01-012",
+    "name": "Kurosaki Ichigo",
+    "cardType": "character",
+    "type": "Human/Soul Reaper/Visored",
+    "color": "red",
+    "cost": 9,
+    "power": 8000,
+    "counter": 0,
+    "attribute": "slash/special",
+    "image": "../images/RY Ichigo by Mrki/BL01-012.png",
+    "keywords": ["rush"],
+    "effects": [
+      {
+        "id": "BL01-012-stage-cost-power",
+        "type": "continuous",
+        "text": "This Character gains +1000 power for every cost number of your stage."
+      }
+    ]
+  },
+
+  "BL01-013": {
+    "id": "BL01-013",
+    "cardNumber": "BL01-013",
+    "name": "Yasutora Sado (Chad)",
+    "cardType": "character",
+    "type": "Human",
+    "color": "red",
+    "cost": 5,
+    "power": 5000,
+    "counter": 1000,
+    "attribute": "strike",
+    "image": "../images/RY Ichigo by Mrki/BL01-013.png",
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "BL01-013-on-block-minus-power",
+        "type": "onBlock",
+        "text": "On Block: Give up to 1 of your Opponent's Characters -1000 power during this turn."
+      }
+    ]
+  },
+
+  "BL01-014": {
+    "id": "BL01-014",
+    "cardNumber": "BL01-014",
+    "name": "Uryu Ishida",
+    "cardType": "character",
+    "type": "Human/Quincy",
+    "color": "red",
+    "cost": 7,
+    "power": 7000,
+    "counter": 1000,
+    "attribute": "strike",
+    "image": "../images/RY Ichigo by Mrki/BL01-014.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "BL01-014-ichigo-character-power",
+        "type": "continuous",
+        "text": "If you have a [Kurosaki Ichigo] Character in play, this Character gains +1000 power."
+      },
+      {
+        "id": "BL01-014-when-attacking-minus-ko",
+        "type": "whenAttacking",
+        "text": "When Attacking: Give up to one of your Opponent's Characters -1000 power and K.O. up to 1 of your Opponent's Characters with a power of 4000 or less."
+      }
+    ]
+  },
+
+  "BL01-015": {
+    "id": "BL01-015",
+    "cardNumber": "BL01-015",
+    "name": "Ganju Shiba",
+    "cardType": "character",
+    "type": "Soul Society",
+    "color": "yellow",
+    "cost": 3,
+    "power": 1000,
+    "counter": 2000,
+    "attribute": "strike",
+    "image": "../images/RY Ichigo by Mrki/BL01-015.png",
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "BL01-015-on-play-draw",
+        "type": "onPlay",
+        "text": "On Play: Draw 1 card.",
+        "actionId": "drawOneCard"
+      },
+      {
+        "id": "BL01-015-trigger",
+        "type": "trigger",
+        "text": "Trigger: Play this card.",
+        "actionId": "playThisCardFromTrigger"
+      }
+    ]
   }
 }

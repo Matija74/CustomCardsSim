@@ -228,5 +228,74 @@
         "text": "Main: If your leader is [Guts], give your leader up to 1 rested DON!! Then, K.O. one of your opponent's Characters with a cost of 3 or less."
       }
     ]
+  },
+
+  "BL01-006": {
+    "id": "BL01-006",
+    "cardNumber": "BL01-006",
+    "name": "Getsuga Tensho",
+    "cardType": "event",
+    "type": "Zanpakto/Soul Reaper",
+    "color": "red",
+    "cost": 10,
+    "image": "../images/RY Ichigo by Mrki/BL01-006.png",
+    "effects": [
+      {
+        "id": "BL01-006-main",
+        "type": "main",
+        "text": "Main: If your leader is [Kurosaki Ichigo], give all of your Characters and up to one of your Leader +5000 power. Then, your Leader gains Unblockable during this turn. If you do not win the game until the end of this turn, you lose the game."
+      }
+    ]
+  },
+
+  "BL01-016": {
+    "id": "BL01-016",
+    "cardNumber": "BL01-016",
+    "name": "Santen Kesshun",
+    "cardType": "event",
+    "type": "Human",
+    "color": "yellow",
+    "cost": 1,
+    "image": "../images/RY Ichigo by Mrki/BL01-016.png",
+    "effects": [
+      {
+        "id": "BL01-016-counter",
+        "type": "counter",
+        "text": "Counter: Up to 1 of your Leader or Character cards gains +2000 power during this battle. Then, if you have 2 or less Life cards, that card gains an additional +2000 power.",
+        "actionId": "santenKesshunCounterPower"
+      },
+      {
+        "id": "BL01-016-trigger",
+        "type": "trigger",
+        "text": "Trigger: Up to 1 of your Leader or Character cards gains +1000 power during this turn.",
+        "actionId": "leaderOrCharacterTriggerPower",
+        "powerModifier": 1000
+      }
+    ]
+  },
+
+  "BL01-017": {
+    "id": "BL01-017",
+    "cardNumber": "BL01-017",
+    "name": "Soten Kisshun",
+    "cardType": "event",
+    "type": "Human",
+    "color": "yellow",
+    "cost": 1,
+    "image": "../images/RY Ichigo by Mrki/BL01-017.png",
+    "effects": [
+      {
+        "id": "BL01-017-main",
+        "type": "main",
+        "text": "Main: You may rest 7 of your DON!! cards: If your Leader is [Kurosaki Ichigo], place up to 1 card from the top of your deck to the top of your life cards."
+      },
+      {
+        "id": "BL01-017-counter",
+        "type": "counter",
+        "text": "Counter: Your Leader gains +3000 power during this battle.",
+        "actionId": "leaderCounterPower",
+        "powerModifier": 3000
+      }
+    ]
   }
 }

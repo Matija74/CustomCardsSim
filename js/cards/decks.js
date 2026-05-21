@@ -53,6 +53,25 @@ const rEggmanDeckText = `
 4xEGG1-014
 `;
 
+const ryIchigoDeckText = `
+1xBL01-002
+1xBL01-003
+1xBL01-004
+1xBL01-005
+2xBL01-006
+4xBL01-007
+4xBL01-008
+4xBL01-009
+4xBL01-010
+4xBL01-011
+4xBL01-012
+4xBL01-013
+4xBL01-014
+4xBL01-015
+4xBL01-016
+4xBL01-017
+`;
+
 const availableDecks = [
     {
         id: "okarun-deck",
@@ -71,6 +90,12 @@ const availableDecks = [
         name: "R Eggman by MrJeremic",
         leaderKey: "EGG1-001",
         deckText: rEggmanDeckText
+    },
+    {
+        id: "ry-ichigo-deck",
+        name: "RY Ichigo by Mrki",
+        leaderKey: "BL01-001",
+        deckText: ryIchigoDeckText
     }
 ];
 

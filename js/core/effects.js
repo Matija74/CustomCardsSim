@@ -528,6 +528,136 @@ window.CardEffects = {
         };
     },
 
+    resolveKisukeWhenAttacking(player, attackerData, ui) {
+        const character = attackerData?.cardType === "character"
+            ? player?.characters?.[attackerData.slotIndex]
+            : null;
+
+        if (!character || character.cardNumber !== "BL01-009") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const effectId = "BL01-009-when-attacking-ichigo-power";
+
+        if (this.wasEffectSkippedForAttack(character, effectId)) {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const message = chooseOwnBoardCard(player, character, {
+            prompt: "Choose up to 1 Kurosaki Ichigo to give +1000 power this turn.",
+            optional: true,
+            includeLeader: true,
+            filter: card => this.hasCardName(card, "Kurosaki Ichigo"),
+            onSelect: ({ card }) => {
+                addTemporaryPowerBonus(card, 1000);
+                ui.renderLeaders();
+                ui.renderCharacters();
+                addGameLog(`${character.name} gave ${card.name} +1000 power this turn.`);
+            },
+            skipMessage: `${player.name} did not choose a Kurosaki Ichigo for ${character.name}.`,
+            emptyMessage: `${character.name} found no Kurosaki Ichigo cards.`
+        });
+
+        return {
+            activated: true,
+            message
+        };
+    },
+
+    resolveYoruichiWhenAttacking(player, attackerData, ui) {
+        const character = attackerData?.cardType === "character"
+            ? player?.characters?.[attackerData.slotIndex]
+            : null;
+
+        if (!character || character.cardNumber !== "BL01-011") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        if (Number(character.attachedDon || 0) < 1) {
+            return {
+                activated: false,
+                message: `${character.name}'s When Attacking effect did not activate because it has no attached DON!!.`
+            };
+        }
+
+        addTemporaryPowerBonus(character, 3000);
+
+        if (ui?.renderCharacters) {
+            ui.renderCharacters();
+        }
+
+        return {
+            activated: true,
+            message: `${character.name}'s When Attacking effect gave it +3000 power this turn.`
+        };
+    },
+
+    resolveUryuWhenAttacking(player, attackerData, ui) {
+        const character = attackerData?.cardType === "character"
+            ? player?.characters?.[attackerData.slotIndex]
+            : null;
+
+        if (!character || character.cardNumber !== "BL01-014") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const effectId = "BL01-014-when-attacking-minus-ko";
+
+        if (this.wasEffectSkippedForAttack(character, effectId)) {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const chooseKOTarget = () => {
+            const koMessage = chooseOpponentCharacter(player, character, {
+                prompt: "Choose up to 1 opposing character with 4000 power or less to K.O.",
+                optional: true,
+                filter: card => getCardBattlePower(card, getPlayerForBoardCard(card)) <= 4000,
+                onSelect: ({ playerKey, slotIndex }) => {
+                    addGameLog(removeCharacterByOpponentEffect(player, gameState[playerKey], slotIndex, character, ui));
+                },
+                skipMessage: `${player.name} did not K.O. a character with ${character.name}.`,
+                emptyMessage: `${character.name} found no opposing characters with 4000 power or less.`
+            });
+
+            addGameLog(koMessage);
+        };
+
+        const message = chooseOpponentCharacter(player, character, {
+            prompt: "Choose up to 1 opposing character to give -1000 power this turn.",
+            optional: true,
+            onSelect: ({ card }) => {
+                addTemporaryPowerBonus(card, -1000);
+                ui.renderCharacters();
+                addGameLog(`${character.name} gave ${card.name} -1000 power this turn.`);
+                chooseKOTarget();
+            },
+            onSkip: chooseKOTarget,
+            onEmpty: chooseKOTarget,
+            skipMessage: `${player.name} did not reduce a character's power with ${character.name}.`,
+            emptyMessage: `${character.name} found no opposing characters for power reduction.`
+        });
+
+        return {
+            activated: true,
+            message
+        };
+    },
+
     // =========================
     // Stage Effects
     // =========================
@@ -602,7 +732,10 @@ window.CardEffects = {
             this.resolveRefreshDonWhenAttacking(player, attackerData, ui),
             this.resolveEvilEyeWhenAttacking(player, attackerData, ui),
             this.resolveAiraWhenAttacking(player, attackerData, ui),
-            this.resolveEggmanLeaderWhenAttacking(player, attackerData, ui)
+            this.resolveEggmanLeaderWhenAttacking(player, attackerData, ui),
+            this.resolveKisukeWhenAttacking(player, attackerData, ui),
+            this.resolveYoruichiWhenAttacking(player, attackerData, ui),
+            this.resolveUryuWhenAttacking(player, attackerData, ui)
         ];
 
         effectResults.forEach(result => {

@@ -70,5 +70,105 @@
         "text": "End Of Turn: If your Leader attacked twice this turn, it will not become active during your next refresh phase."
       }
     ]
+  },
+
+  "BL01-002": {
+    "id": "BL01-002",
+    "cardNumber": "BL01-002",
+    "name": "Zangetsu: Sealed",
+    "cardType": "stage",
+    "type": "Zanpakto",
+    "color": "red",
+    "cost": 1,
+    "image": "../images/RY Ichigo by Mrki/BL01-002.png",
+    "effects": [
+      {
+        "id": "BL01-002-ichigo-base-power",
+        "type": "continuous",
+        "text": "If your leader is [Kurosaki Ichigo], up to one of your Leaders gains a base power of 4000.",
+        "basePower": 4000
+      },
+      {
+        "id": "BL01-002-stage-removal-replace",
+        "type": "replacement",
+        "oncePerTurn": true,
+        "text": "Once Per Turn: If this stage would be removed by your Opponent's effects, you may give up to one of your Leaders -1000 power during this turn."
+      }
+    ]
+  },
+
+  "BL01-003": {
+    "id": "BL01-003",
+    "cardNumber": "BL01-003",
+    "name": "Zangetsu: Shikai",
+    "cardType": "stage",
+    "type": "Zanpakto",
+    "color": "red",
+    "cost": 2,
+    "image": "../images/RY Ichigo by Mrki/BL01-003.png",
+    "effects": [
+      {
+        "id": "BL01-003-ichigo-base-power",
+        "type": "continuous",
+        "text": "If your leader is [Kurosaki Ichigo], up to one of your Leaders gains a base power of 5000.",
+        "basePower": 5000
+      },
+      {
+        "id": "BL01-003-stage-removal-replace",
+        "type": "replacement",
+        "oncePerTurn": true,
+        "text": "Once Per Turn: If this stage would be removed by your Opponent's effects, you may give up to one of your Leaders -1000 power during this turn."
+      }
+    ]
+  },
+
+  "BL01-004": {
+    "id": "BL01-004",
+    "cardNumber": "BL01-004",
+    "name": "Bankai: Tensa Zangetsu",
+    "cardType": "stage",
+    "type": "Zanpakto",
+    "color": "red",
+    "cost": 3,
+    "image": "../images/RY Ichigo by Mrki/BL01-004.png",
+    "effects": [
+      {
+        "id": "BL01-004-ichigo-base-power",
+        "type": "continuous",
+        "text": "If your leader is [Kurosaki Ichigo], up to one of your Leaders gains a base power of 6000.",
+        "basePower": 6000
+      },
+      {
+        "id": "BL01-004-stage-removal-replace",
+        "type": "replacement",
+        "oncePerTurn": true,
+        "text": "Once Per Turn: If this stage would be removed by your Opponent's effects, you may give up to one of your Leaders -1000 power during this turn."
+      }
+    ]
+  },
+
+  "BL01-005": {
+    "id": "BL01-005",
+    "cardNumber": "BL01-005",
+    "name": "Tensa Zangetsu: Visored",
+    "cardType": "stage",
+    "type": "Zanpakto",
+    "color": "red",
+    "cost": 4,
+    "image": "../images/RY Ichigo by Mrki/BL01-005.png",
+    "effects": [
+      {
+        "id": "BL01-005-ichigo-base-power",
+        "type": "continuous",
+        "text": "If your leader is [Kurosaki Ichigo], up to one of your Leaders gains a base power of 7000.",
+        "basePower": 7000
+      },
+      {
+        "id": "BL01-005-stage-removal-replace",
+        "type": "replacement",
+        "oncePerTurn": true,
+        "text": "Once Per Turn: If this stage would be removed by your Opponent's effects, you may give up to one of your Leaders -1000 power during this turn."
+      }
+    ]
   }
 }

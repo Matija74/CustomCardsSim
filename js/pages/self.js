@@ -89,6 +89,28 @@ function createHiddenCards(count) {
     }));
 }
 
+function createPublicCardSnapshot(card) {
+    if (!card) return null;
+
+    return {
+        name: card.name,
+        image: card.image,
+        cardNumber: card.cardNumber,
+        cardType: card.cardType,
+        type: card.type,
+        color: card.color,
+        cost: card.cost,
+        power: card.power,
+        counter: card.counter,
+        attribute: card.attribute,
+        keywords: card.keywords || [],
+        effects: card.effects || [],
+        instanceId: card.instanceId,
+        state: card.state || "active",
+        faceUp: Boolean(card.faceUp)
+    };
+}
+
 function getOnlinePlayerSnapshot(playerKey) {
     return onlinePublicState?.[getOnlinePublicPlayerKey(playerKey)] || null;
 }
@@ -119,6 +141,17 @@ function applyOnlinePlayerState(playerKey) {
         player.hand = createHiddenCards(publicPlayer.handCount);
         player.deck = createHiddenCards(publicPlayer.deckCount);
         player.life = createHiddenCards(publicPlayer.lifeCount);
+
+        (publicPlayer.faceUpLifeCards || []).forEach(entry => {
+            const index = Number(entry.index);
+
+            if (index >= 0 && index < player.life.length && entry.card) {
+                player.life[index] = {
+                    ...entry.card,
+                    faceUp: true
+                };
+            }
+        });
     }
 }
 
@@ -680,7 +713,10 @@ function createPublicPlayerStateFromLocal(player) {
         activeTokens: Number(player.don || 0),
         restedTokens: Number(player.restedDon || 0),
         tokenDeckCount: Number(player.donDeck ?? 10),
-        turns: Number(player.turns || 0)
+        turns: Number(player.turns || 0),
+        faceUpLifeCards: (player.life || [])
+            .map((card, index) => card?.faceUp ? { index, card: createPublicCardSnapshot(card) } : null)
+            .filter(Boolean)
     };
 }
 
@@ -907,6 +943,13 @@ async function handleOnlinePassTurn() {
             const endOfTurnResults = resolveEndOfTurnEffects(ownPlayer, ui);
 
             endOfTurnResults.forEach(result => addGameLog(result.message));
+
+            if (gameState.currentPhase === "gameOver") {
+                await syncOnlineStateFromLocal();
+                updateOnlinePhaseButton();
+                return;
+            }
+
             await syncOnlineStateFromLocal();
         }
 
@@ -1026,7 +1069,8 @@ function createUiBridge() {
         lookTopCardsAddToHand,
         chooseBoardCard: showBoardCardChoice,
         chooseEffectActivation,
-        chooseEffectOption
+        chooseEffectOption,
+        revealCards: publishOnlineReveal
     };
 }
 
@@ -1203,6 +1247,12 @@ async function handleBlockerSelection(playerKey, slotIndex) {
     pendingBlock = null;
 
     addGameLog(`${defenderPlayer.name} blocked the attack with ${blockerCard.name}.`);
+
+    const onBlockMessage = resolveOnBlockEffects(defenderPlayer, blockerCard, ui);
+
+    if (onBlockMessage) {
+        addGameLog(onBlockMessage);
+    }
 
     startCounterPhase(playerKey, () => {
         resolveCurrentAttack();
@@ -1921,14 +1971,18 @@ function renderPlayerLife(player, lifeAreaId) {
     lifeArea.querySelectorAll(".life-card").forEach(card => card.remove());
     lifeArea.querySelectorAll(".life-count").forEach(counter => counter.remove());
 
-    player.life.forEach(() => {
+    player.life.forEach(lifeCard => {
         const cardElement = document.createElement("div");
         cardElement.className = "life-card";
 
         const img = document.createElement("img");
 
-        img.src = cardBackImage;
-        img.alt = "Life Card";
+        img.src = lifeCard?.faceUp && lifeCard.image
+            ? lifeCard.image
+            : cardBackImage;
+        img.alt = lifeCard?.faceUp && lifeCard.name
+            ? lifeCard.name
+            : "Life Card";
         img.className = "life-card-img";
 
         cardElement.appendChild(img);
@@ -3901,6 +3955,14 @@ async function resolveCurrentAttack() {
 
             battleResultText += `<br>${lifeResult.message}`;
 
+            if (lifeResult.success) {
+                const upgradeMessage = resolveKurosakiIchigoDamageStageUpgrade(defenderPlayer, ui);
+
+                if (upgradeMessage) {
+                    battleResultText += `<br>${upgradeMessage}`;
+                }
+            }
+
             if (
                 isOnlineMatch &&
                 getOnlineSlotFromPlayerKey(currentAttack.defenderPlayerKey) !== playerSlot
@@ -4760,8 +4822,15 @@ function getPrintedPower(card) {
         return Number(card.temporaryBasePower.value ?? card.power ?? 0);
     }
 
+    const owner = getPlayerForBoardCard(card);
+    const zangetsuBasePower = getZangetsuLeaderBasePower(card, owner);
+
+    if (zangetsuBasePower !== null) {
+        return zangetsuBasePower;
+    }
+
     if (card?.cardNumber === "BK01-007") {
-        const player = getPlayerForBoardCard(card);
+        const player = owner;
 
         if (player?.characters?.some(character => CardEffects.hasCardName(character, "Guts"))) {
             return 6000;
@@ -4769,6 +4838,22 @@ function getPrintedPower(card) {
     }
 
     return Number(card?.power ?? 0);
+}
+
+function getZangetsuLeaderBasePower(card, player) {
+    if (!card || !player || card.cardType !== "leader") {
+        return null;
+    }
+
+    if (!CardEffects.hasCardName(card, "Kurosaki Ichigo")) {
+        return null;
+    }
+
+    const basePower = player.stage?.effects
+        ?.filter(effect => effect.type === "continuous" && Number(effect.basePower || 0) > 0)
+        .reduce((current, effect) => Number(effect.basePower || current || 0), 0) ?? 0;
+
+    return basePower > 0 ? basePower : null;
 }
 
 function isTemporaryBasePowerExpired(basePowerEntry) {
@@ -4787,6 +4872,7 @@ function getPowerModifier(card, player = null) {
         getTurboGrannyFormPowerModifier(card, player) +
         getSerpicoFarnesePowerModifier(card, player) +
         getGutsLeaderPowerModifier(card, player) +
+        getKurosakiIchigoPowerModifier(card, player) +
         getOpponentTurnPowerModifier(card, player) +
         getAttachedDonPowerModifier(card, player) +
         getTemporaryPowerModifier(card) +
@@ -4920,6 +5006,30 @@ function getGutsLeaderPowerModifier(card, player) {
             const effect = character.effects?.find(cardEffect => cardEffect.id === "BK01-016-guts-rush-leader-power");
             return total + Number(effect?.leaderPowerModifier ?? 0);
         }, 0);
+}
+
+function getKurosakiIchigoPowerModifier(card, player) {
+    if (!card || !player) {
+        return 0;
+    }
+
+    let modifier = 0;
+
+    if (card.cardNumber === "BL01-012") {
+        modifier += Number(player.stage?.cost || 0) * 1000;
+    }
+
+    if (
+        card.cardNumber === "BL01-014" &&
+        player.characters.some(character => {
+            return character?.cardType === "character" &&
+                CardEffects.hasCardName(character, "Kurosaki Ichigo");
+        })
+    ) {
+        modifier += 1000;
+    }
+
+    return modifier;
 }
 
 function getAttachedDonPowerModifier(card, player) {
