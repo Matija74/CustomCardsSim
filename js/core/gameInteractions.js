@@ -489,6 +489,7 @@ function playCharacterCard(player, handIndex, ui, targetSlotIndex = null) {
 
     if (replacedCard) {
         moveCardToTrash(player, replacedCard, ui);
+        resolveGutsLeaderCharacterRemovedBonus(player, ui);
     }
 
     const effectMessages = resolveOnPlayEffects(player, playedCard, ui);
@@ -1285,6 +1286,7 @@ function trashOwnCharacterForMetalSonicPower(player, sourceCard, ui) {
 
             player.characters[slotIndex] = null;
             moveCardToTrash(player, card, ui);
+            resolveGutsLeaderCharacterRemovedBonus(player, ui);
             addTemporaryPowerBonus(sourceCard, bonus);
 
             ui.renderCharacters();
@@ -2119,7 +2121,7 @@ function setOneNamedOwnCardActive(player, sourceCard, cardName, ui) {
 }
 
 function playTurboGrannyFormFromDeck(player, sourceCard, ui) {
-    const totalDon = player.don + player.restedDon;
+    const totalDon = getPlayerFieldDonCount(player);
 
     if (totalDon < 5) {
         return `${sourceCard.name}'s Main effect did not resolve because ${player.name} has fewer than 5 DON!! cards.`;
@@ -2152,6 +2154,21 @@ function playTurboGrannyFormFromDeck(player, sourceCard, ui) {
     return oldStage
         ? `${sourceCard.name} played ${stage.name} from the deck, replacing ${oldStage.name}, then shuffled the deck.`
         : `${sourceCard.name} played ${stage.name} from the deck, then shuffled the deck.`;
+}
+
+function getPlayerFieldDonCount(player) {
+    if (!player) {
+        return 0;
+    }
+
+    const attachedDon = [
+        player.leader,
+        ...(player.characters || []).filter(Boolean)
+    ].reduce((total, card) => {
+        return total + Number(card?.attachedDon || 0);
+    }, 0);
+
+    return Number(player.don || 0) + Number(player.restedDon || 0) + attachedDon;
 }
 
 function resolveCounterEffects(player, card, ui) {

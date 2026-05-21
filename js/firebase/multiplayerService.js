@@ -306,6 +306,8 @@ export async function initializeMultiplayerGame(roomCode) {
         "public/currentPlayer": null,
         "public/turnNumber": 0,
         "public/winner": null,
+        "public/gameOverReasonTitle": null,
+        "public/gameOverReasonText": null,
         "public/firstPlayer": null,
         "public/secondPlayer": null,
         "public/playerTurns": {
@@ -412,6 +414,9 @@ export async function applyMultiplayerLifeDamage(roomCode, defenderSlot, attacke
 
     if (moved === 0 && attackerSlot) {
         updates["public/winner"] = attackerSlot;
+        updates["public/phase"] = "gameOver";
+        updates["public/gameOverReasonTitle"] = "Final Attack";
+        updates["public/gameOverReasonText"] = "A player had no life cards left and took a successful leader attack.";
     }
 
     await update(matchRef, updates);

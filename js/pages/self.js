@@ -36,6 +36,9 @@ let onlineProcessedTurnKey = null;
 let onlineLastRevealKey = null;
 let onlineLastAttackKey = null;
 let onlineActiveAttackId = null;
+let onlineProcessedDefenderAttackEffectId = null;
+let onlineShownGameOverKey = null;
+let onlinePendingWinnerSlot = null;
 
 if (isOnlineMatch) {
     console.log("Online match loaded.");
@@ -69,6 +72,10 @@ function isCurrentOnlinePlayer() {
 
 function getOwnOnlinePlayerKey() {
     return getPlayerKeyFromOnlineSlot(playerSlot);
+}
+
+function isOwnOnlinePlayer(player) {
+    return isOnlineMatch && player && getOwnOnlinePlayerKey() && player === gameState?.[getOwnOnlinePlayerKey()];
 }
 
 function getOnlinePublicPlayerKey(playerKey) {
@@ -262,6 +269,8 @@ function applyOnlinePublicState(publicState = {}) {
         currentPlayer: publicState.currentPlayer || null,
         turnNumber: Number(publicState.turnNumber || 1),
         winner: publicState.winner || null,
+        gameOverReasonTitle: publicState.gameOverReasonTitle || null,
+        gameOverReasonText: publicState.gameOverReasonText || null,
         firstPlayer: publicState.firstPlayer || null,
         secondPlayer: publicState.secondPlayer || null,
         playerTurns: publicState.playerTurns || { p1: 0, p2: 0 },
@@ -291,6 +300,7 @@ function applyOnlinePublicState(publicState = {}) {
     showOnlineRevealedCards();
     showOnlineAttackLog();
     applyOnlineCurrentAttack();
+    handleOnlineGameOver();
 }
 
 function removeOnlineTurnChoiceButtons() {
@@ -418,6 +428,7 @@ function applyOnlineCurrentAttack() {
         }
 
         onlineActiveAttackId = null;
+        onlineProcessedDefenderAttackEffectId = null;
         return;
     }
 
@@ -427,10 +438,23 @@ function applyOnlineCurrentAttack() {
     if (!attackerPlayerKey || !defenderPlayerKey) return;
 
     if (onlineActiveAttackId === attack.id && currentAttack) {
+        const wasCounterPhase = currentAttack.counterPhaseStarted ||
+            gameState.currentPhase === "counterPhase";
+
         currentAttack.targetPowerBonus = Number(attack.targetPowerBonus || 0);
+        currentAttack.target = { ...(attack.target || currentAttack.target) };
+        currentAttack.counterPhaseStarted = Boolean(attack.counterPhaseStarted || wasCounterPhase);
+        gameState.currentPhase = currentAttack.counterPhaseStarted
+            ? "counterPhase"
+            : "attackResolving";
+
         renderLeaders();
         renderCharacters();
         drawAttackArrow(currentAttack.attacker, currentAttack.target);
+
+        if (maybeRunOnlineDefenderAttackEffects(attack)) {
+            return;
+        }
 
         const battleControls = document.getElementById("battleControls");
         if (!battleControls?.children.length) {
@@ -447,15 +471,22 @@ function applyOnlineCurrentAttack() {
         target: { ...attack.target },
         attackerPlayerKey,
         defenderPlayerKey,
-        targetPowerBonus: Number(attack.targetPowerBonus || 0)
+        targetPowerBonus: Number(attack.targetPowerBonus || 0),
+        counterPhaseStarted: Boolean(attack.counterPhaseStarted)
     };
     pendingAttack = null;
-    gameState.currentPhase = "attackResolving";
+    gameState.currentPhase = currentAttack.counterPhaseStarted
+        ? "counterPhase"
+        : "attackResolving";
 
     clearAttackTargets();
     clearBoardSelection();
     clearHandSelection();
     drawAttackArrow(currentAttack.attacker, currentAttack.target);
+
+    if (maybeRunOnlineDefenderAttackEffects(attack)) {
+        return;
+    }
 
     renderOnlineAttackControls(attack);
 }
@@ -468,10 +499,124 @@ function renderOnlineAttackControls(attack) {
     if (!defenderPlayerKey) return;
 
     if (attack.defenderSlot === playerSlot) {
-        showResolveAttackButton(defenderPlayerKey, () => resolveCurrentAttack());
+        if (!attack.defenderEffectsResolved) {
+            showWaitingForOnlineDefenderEffects(defenderPlayerKey);
+            return;
+        }
+
+        if (attack.counterPhaseStarted || currentAttack.counterPhaseStarted) {
+            showCounterPhaseControls(defenderPlayerKey, () => resolveCurrentAttack());
+        } else {
+            showResolveAttackButton(defenderPlayerKey, () => resolveCurrentAttack());
+        }
     } else {
         clearBattleControls();
     }
+}
+
+function showWaitingForOnlineDefenderEffects(defenderPlayerKey) {
+    const battleControls = document.getElementById("battleControls");
+
+    if (!battleControls) return;
+
+    clearBattleControls();
+
+    const defenderName = gameState[defenderPlayerKey]?.name ?? "Defender";
+
+    battleControls.appendChild(createBattleButton(
+        `${defenderName}: response effects`,
+        () => {},
+        true,
+        "counter-phase"
+    ));
+}
+
+function maybeRunOnlineDefenderAttackEffects(attack) {
+    if (
+        !isOnlineMatch ||
+        !attack?.id ||
+        attack.defenderSlot !== playerSlot ||
+        attack.defenderEffectsResolved ||
+        onlineProcessedDefenderAttackEffectId === attack.id
+    ) {
+        return false;
+    }
+
+    const defenderPlayerKey = getPlayerKeyFromOnlineSlot(attack.defenderSlot);
+    const defenderPlayer = defenderPlayerKey ? gameState[defenderPlayerKey] : null;
+
+    if (!defenderPlayer) {
+        return false;
+    }
+
+    onlineProcessedDefenderAttackEffectId = attack.id;
+    showWaitingForOnlineDefenderEffects(defenderPlayerKey);
+
+    CardEffects.resolveWhenOpponentAttacksStageEffects(
+        gameState,
+        defenderPlayer,
+        ui
+    ).forEach(result => {
+        addGameLog(result.message);
+    });
+
+    promptOnOpponentAttackCharacterEffects(defenderPlayer, async () => {
+        await syncOnlineStateFromLocal();
+
+        await syncOnlineCurrentAttack({
+            ...(onlinePublicState?.currentAttack || attack),
+            target: currentAttack?.target || attack.target,
+            targetPowerBonus: currentAttack?.targetPowerBonus || attack.targetPowerBonus || 0,
+            defenderEffectsResolved: true
+        });
+    });
+
+    return true;
+}
+
+function handleOnlineGameOver() {
+    if (!isOnlineMatch || !gameState || onlinePublicState?.phase !== "gameOver" || !onlinePublicState?.winner) {
+        return;
+    }
+
+    const gameOverKey = `${onlinePublicState.winner}:${onlinePublicState.phase}`;
+
+    if (onlineShownGameOverKey === gameOverKey) {
+        return;
+    }
+
+    const winnerPlayerKey = getPlayerKeyFromOnlineSlot(onlinePublicState.winner);
+    const winnerPlayer = winnerPlayerKey ? gameState[winnerPlayerKey] : null;
+
+    if (!winnerPlayer) {
+        return;
+    }
+
+    onlineShownGameOverKey = gameOverKey;
+    onlinePendingWinnerSlot = onlinePublicState.winner;
+    gameState.currentPhase = "gameOver";
+
+    pendingAttack = null;
+    currentAttack = null;
+    pendingBlock = null;
+    pendingTrashChoice = null;
+    pendingReplacePlay = null;
+
+    clearAttackTargets();
+    clearBlockerTargets();
+    clearBattleControls();
+    clearHandSelection();
+    clearBoardSelection();
+    clearReplaceTargets();
+    clearTrashChoiceTargets();
+    clearCancelAttackButton();
+    clearAttackArrow();
+
+    showGameOverPopup(
+        winnerPlayer,
+        onlinePublicState.gameOverReasonTitle || "Victory",
+        onlinePublicState.gameOverReasonText || `${winnerPlayer.name} won the online match.`
+    );
 }
 
 async function publishOnlineReveal(cards) {
@@ -568,7 +713,7 @@ async function syncOnlineStateFromLocal() {
 
     if (gameState.currentPhase === "gameOver") {
         publicState.phase = "gameOver";
-        publicState.winner = onlinePublicState?.winner || null;
+        publicState.winner = onlinePublicState?.winner || onlinePendingWinnerSlot || null;
     }
 
     await onlineMultiplayerService.sendMultiplayerAction(
@@ -1067,7 +1212,8 @@ async function handleBlockerSelection(playerKey, slotIndex) {
         await syncOnlineCurrentAttack({
             ...onlinePublicState.currentAttack,
             target: currentAttack.target,
-            targetPowerBonus: currentAttack.targetPowerBonus || 0
+            targetPowerBonus: currentAttack.targetPowerBonus || 0,
+            counterPhaseStarted: true
         });
     }
 
@@ -1084,6 +1230,17 @@ function skipCurrentBlockStep(defenderPlayerKey, onResolve) {
     addGameLog(`${defenderName} skipped the Block Phase.`);
 
     startCounterPhase(defenderPlayerKey, onResolve);
+
+    if (isOnlineMatch && onlinePublicState?.currentAttack) {
+        syncOnlineCurrentAttack({
+            ...onlinePublicState.currentAttack,
+            target: currentAttack?.target || onlinePublicState.currentAttack.target,
+            targetPowerBonus: currentAttack?.targetPowerBonus || 0,
+            counterPhaseStarted: true
+        }).catch(error => {
+            console.error("Failed to sync online counter phase:", error);
+        });
+    }
 }
 
 // =========================
@@ -1174,6 +1331,28 @@ function endGame(winnerPlayer, reasonTitle = "Victory", reasonText = "") {
     addGameLog(`${winnerPlayer.name} wins the game! ${reasonTitle}: ${reasonText}`);
 
     showGameOverPopup(winnerPlayer, reasonTitle, reasonText);
+
+    if (isOnlineMatch && onlineMultiplayerService) {
+        const winnerSlot = getOnlineSlotFromPlayerKey(getPlayerKey(winnerPlayer));
+
+        onlinePendingWinnerSlot = winnerSlot;
+
+        syncOnlineStateFromLocal().catch(error => {
+            console.error("Failed to sync final online state:", error);
+        });
+
+        if (winnerSlot) {
+            syncOnlinePublicBoardFromLocal({
+                phase: "gameOver",
+                currentAttack: null,
+                winner: winnerSlot,
+                gameOverReasonTitle: reasonTitle,
+                gameOverReasonText: reasonText
+            }).catch(error => {
+                console.error("Failed to sync online game over:", error);
+            });
+        }
+    }
 }
 
 // =========================
@@ -2376,7 +2555,9 @@ function showSelectedCounterActions() {
             if (isOnlineMatch && onlinePublicState?.currentAttack) {
                 await syncOnlineCurrentAttack({
                     ...onlinePublicState.currentAttack,
-                    targetPowerBonus: currentAttack.targetPowerBonus
+                    target: currentAttack.target,
+                    targetPowerBonus: currentAttack.targetPowerBonus,
+                    counterPhaseStarted: true
                 });
             }
         }
@@ -3064,6 +3245,18 @@ function showResolveAttackButton(defenderPlayerKey, onResolve) {
         addGameLog(`${attackerName} is Unblockable. The Block Phase was skipped.`);
 
         startCounterPhase(defenderPlayerKey, onResolve);
+
+        if (isOnlineMatch && onlinePublicState?.currentAttack) {
+            syncOnlineCurrentAttack({
+                ...onlinePublicState.currentAttack,
+                target: currentAttack?.target || onlinePublicState.currentAttack.target,
+                targetPowerBonus: currentAttack?.targetPowerBonus || 0,
+                counterPhaseStarted: true
+            }).catch(error => {
+                console.error("Failed to sync online counter phase:", error);
+            });
+        }
+
         return;
     }
 
@@ -3080,6 +3273,12 @@ function showCounterPhaseControls(defenderPlayerKey, onResolve) {
     const battleControls = document.getElementById("battleControls");
 
     if (!battleControls) return;
+
+    if (currentAttack) {
+        currentAttack.counterPhaseStarted = true;
+    }
+
+    gameState.currentPhase = "counterPhase";
 
     clearBattleControls();
 
@@ -3324,6 +3523,44 @@ function beginAttack(targetData) {
         `${attackerPlayer.name}'s ${attackerCard.name} attacks ${defenderPlayer.name}'s ${targetCard.name}.`
     );
 
+    const continueAfterDefenderResponses = () => {
+        resolveWhenAttackingEffectsBeforeBattle(
+            attackerPlayer,
+            attackerData,
+            () => {
+                if (isOnlineMatch) {
+                    syncOnlinePublicBoardFromLocal({
+                        currentAttack: {
+                            id: currentAttack.id,
+                            attackerSlot: getOnlineSlotFromPlayerKey(currentAttack.attackerPlayerKey),
+                            defenderSlot: getOnlineSlotFromPlayerKey(currentAttack.defenderPlayerKey),
+                            attacker: currentAttack.attacker,
+                            target: currentAttack.target,
+                            targetPowerBonus: currentAttack.targetPowerBonus || 0,
+                            defenderEffectsResolved: false,
+                            counterPhaseStarted: false
+                        },
+                        phase: "attackResolving"
+                    }).catch(error => {
+                        console.error("Failed to sync online attack:", error);
+                        addGameLog("Online attack sync failed. Please try again.");
+                    });
+
+                    return;
+                }
+
+                showResolveAttackButton(currentAttack.defenderPlayerKey, () => {
+                    resolveCurrentAttack();
+                });
+            }
+        );
+    };
+
+    if (isOnlineMatch) {
+        continueAfterDefenderResponses();
+        return;
+    }
+
     CardEffects.resolveWhenOpponentAttacksStageEffects(
         gameState,
         defenderPlayer,
@@ -3332,38 +3569,20 @@ function beginAttack(targetData) {
         addGameLog(result.message);
     });
 
-    promptOnOpponentAttackCharacterEffects(defenderPlayer, () => {
-        resolveWhenAttackingEffectsBeforeBattle(
-            attackerPlayer,
-            attackerData,
-            () => {
-                showResolveAttackButton(currentAttack.defenderPlayerKey, () => {
-                    resolveCurrentAttack();
-                });
-            }
-        );
-    });
-
-    if (isOnlineMatch) {
-        syncOnlinePublicBoardFromLocal({
-            currentAttack: {
-                id: currentAttack.id,
-                attackerSlot: getOnlineSlotFromPlayerKey(currentAttack.attackerPlayerKey),
-                defenderSlot: getOnlineSlotFromPlayerKey(currentAttack.defenderPlayerKey),
-                attacker: currentAttack.attacker,
-                target: currentAttack.target,
-                targetPowerBonus: currentAttack.targetPowerBonus || 0
-            },
-            phase: "attackResolving"
-        }).catch(error => {
-            console.error("Failed to sync online attack:", error);
-            addGameLog("Online attack sync failed. Please try again.");
-        });
-    }
+    promptOnOpponentAttackCharacterEffects(defenderPlayer, continueAfterDefenderResponses);
 }
 
 function promptOnOpponentAttackCharacterEffects(defenderPlayer, onComplete) {
     const playerKey = defenderPlayer === gameState.player1 ? "player1" : "player2";
+
+    if (isOnlineMatch && !isOwnOnlinePlayer(defenderPlayer)) {
+        if (typeof onComplete === "function") {
+            onComplete();
+        }
+
+        return;
+    }
+
     const effects = defenderPlayer.characters
         .map((card, slotIndex) => ({ card, slotIndex }))
         .filter(entry => entry.card?.effects?.some(effect => effect.type === "onOpponentAttack"));
@@ -3407,6 +3626,7 @@ function promptOnOpponentAttackCharacterEffects(defenderPlayer, onComplete) {
 
                     defenderPlayer.characters[entry.slotIndex] = null;
                     moveCardToTrash(defenderPlayer, trashedCard, ui);
+                    resolveGutsLeaderCharacterRemovedBonus(defenderPlayer, ui);
                     drawCard(defenderPlayer, ui);
 
                     renderCharacters();
@@ -3633,6 +3853,13 @@ async function resolveCurrentAttack() {
 
         gameState.currentPhase = "main";
 
+        if (isOnlineMatch) {
+            await syncOnlinePublicBoardFromLocal({
+                phase: "main",
+                currentAttack: null
+            });
+        }
+
         return;
     }
 
@@ -3722,7 +3949,9 @@ async function resolveCurrentAttack() {
             await syncOnlinePublicBoardFromLocal({
                 phase: "gameOver",
                 currentAttack: null,
-                winner: resolvedAttackerSlot
+                winner: resolvedAttackerSlot,
+                gameOverReasonTitle: "Final Attack",
+                gameOverReasonText: `${defenderPlayer.name} had no life cards left and took a successful leader attack.`
             });
         }
 
