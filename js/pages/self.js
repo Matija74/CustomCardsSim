@@ -273,6 +273,7 @@ function applyOnlinePublicState(publicState = {}) {
     };
 
     const turnKey = `${onlinePublicState.currentPlayer}:${onlinePublicState.turnNumber}:${onlinePublicState.phase}`;
+    const turnStartKey = `${onlinePublicState.currentPlayer}:${onlinePublicState.turnNumber}`;
 
     if (lastOnlineTurnKey && turnKey !== lastOnlineTurnKey) {
         addGameLog(
@@ -286,7 +287,7 @@ function applyOnlinePublicState(publicState = {}) {
     applyOnlineStateToGame();
     updateOnlineMatchInfo();
     updateOnlinePhaseButton();
-    maybeRunOnlineTurnStart(turnKey);
+    maybeRunOnlineTurnStart(turnStartKey);
     showOnlineRevealedCards();
     showOnlineAttackLog();
     applyOnlineCurrentAttack();
@@ -403,6 +404,19 @@ function applyOnlineCurrentAttack() {
     if (!isOnlineMatch || !gameState) return;
 
     if (!attack) {
+        if (currentAttack || pendingBlock || onlineActiveAttackId) {
+            currentAttack = null;
+            pendingAttack = null;
+            pendingBlock = null;
+            clearAttackTargets();
+            clearBlockerTargets();
+            clearBattleControls();
+            clearAttackArrow();
+            gameState.currentPhase = onlinePublicState?.phase || "main";
+            renderLeaders();
+            renderCharacters();
+        }
+
         onlineActiveAttackId = null;
         return;
     }
@@ -416,11 +430,19 @@ function applyOnlineCurrentAttack() {
         currentAttack.targetPowerBonus = Number(attack.targetPowerBonus || 0);
         renderLeaders();
         renderCharacters();
+        drawAttackArrow(currentAttack.attacker, currentAttack.target);
+
+        const battleControls = document.getElementById("battleControls");
+        if (!battleControls?.children.length) {
+            renderOnlineAttackControls(attack);
+        }
+
         return;
     }
 
     onlineActiveAttackId = attack.id;
     currentAttack = {
+        id: attack.id,
         attacker: { ...attack.attacker },
         target: { ...attack.target },
         attackerPlayerKey,
@@ -434,6 +456,16 @@ function applyOnlineCurrentAttack() {
     clearBoardSelection();
     clearHandSelection();
     drawAttackArrow(currentAttack.attacker, currentAttack.target);
+
+    renderOnlineAttackControls(attack);
+}
+
+function renderOnlineAttackControls(attack) {
+    if (!attack || !currentAttack) return;
+
+    const defenderPlayerKey = getPlayerKeyFromOnlineSlot(attack.defenderSlot);
+
+    if (!defenderPlayerKey) return;
 
     if (attack.defenderSlot === playerSlot) {
         showResolveAttackButton(defenderPlayerKey, () => resolveCurrentAttack());
@@ -486,7 +518,7 @@ function applyOnlinePrivateState(privateState = {}) {
 
     if (onlinePublicState) {
         maybeRunOnlineTurnStart(
-            `${onlinePublicState.currentPlayer}:${onlinePublicState.turnNumber}:${onlinePublicState.phase}`
+            `${onlinePublicState.currentPlayer}:${onlinePublicState.turnNumber}`
         );
     }
 }
@@ -526,22 +558,25 @@ async function syncOnlineStateFromLocal() {
 
     const publicKey = getOnlinePublicPlayerKey(ownPlayerKey);
 
+    const publicState = {
+        playerTurns: {
+            ...(onlinePublicState?.playerTurns || {}),
+            [playerSlot]: Number(ownPlayer.turns || 0)
+        },
+        [publicKey]: createPublicPlayerStateFromLocal(ownPlayer)
+    };
+
+    if (gameState.currentPhase === "gameOver") {
+        publicState.phase = "gameOver";
+        publicState.winner = onlinePublicState?.winner || null;
+    }
+
     await onlineMultiplayerService.sendMultiplayerAction(
         roomCode,
         onlineUser,
         "updateState",
         {
-            publicState: {
-                phase: gameState.currentPhase,
-                currentPlayer: onlinePublicState?.currentPlayer || playerSlot,
-                turnNumber: Number(gameState.turnNumber || onlinePublicState?.turnNumber || 1),
-                winner: onlinePublicState?.winner || null,
-                playerTurns: {
-                    ...(onlinePublicState?.playerTurns || {}),
-                    [playerSlot]: Number(ownPlayer.turns || 0)
-                },
-                [publicKey]: createPublicPlayerStateFromLocal(ownPlayer)
-            },
+            publicState,
             privateState: createOwnPrivateStateFromLocal(ownPlayer)
         }
     );
@@ -550,19 +585,24 @@ async function syncOnlineStateFromLocal() {
 async function syncOnlinePublicBoardFromLocal(extraState = {}) {
     if (!isOnlineMatch || !onlineMultiplayerService || !gameState) return;
 
+    const ownPlayerKey = getOwnOnlinePlayerKey();
+    const ownPlayer = ownPlayerKey ? gameState[ownPlayerKey] : null;
+    const publicKey = ownPlayerKey ? getOnlinePublicPlayerKey(ownPlayerKey) : null;
+
+    if (!ownPlayer || !publicKey) return;
+
     await onlineMultiplayerService.updatePublicState(roomCode, {
-        player1: createPublicPlayerStateFromLocal(gameState.player1),
-        player2: createPublicPlayerStateFromLocal(gameState.player2),
-        phase: gameState.currentPhase,
-        currentPlayer: onlinePublicState?.currentPlayer || playerSlot,
-        turnNumber: Number(gameState.turnNumber || onlinePublicState?.turnNumber || 1),
-        winner: onlinePublicState?.winner || null,
+        [publicKey]: createPublicPlayerStateFromLocal(ownPlayer),
         ...extraState
     });
 }
 
 async function maybeRunOnlineTurnStart(turnKey) {
     if (!isOnlineMatch || !onlinePrivateState || !gameState || !isCurrentOnlinePlayer()) {
+        return;
+    }
+
+    if (onlinePublicState?.phase !== "main" || onlinePublicState?.currentAttack) {
         return;
     }
 
@@ -3175,14 +3215,14 @@ function enterAttackTargetSelection(attackerData) {
     showCancelAttackButton(attackerData);
 
     addGameLog(`${attackerPlayer.name} is attacking with ${attackerCard.name}. Choose a target.`);
-
-    if (isOnlineMatch) {
-        syncOnlineStateFromLocal();
-    }
 }
 
 function setupAttackTargetSelection() {
     document.querySelectorAll(".board-leader-card, .board-character-card").forEach(cardElement => {
+        if (cardElement.dataset.attackTargetListenerAttached === "true") return;
+
+        cardElement.dataset.attackTargetListenerAttached = "true";
+
         cardElement.addEventListener("click", (event) => {
             if (!pendingAttack) return;
 
@@ -3242,10 +3282,20 @@ function beginAttack(targetData) {
         clearAttackTargets();
         gameState.currentPhase = "main";
 
+        if (isOnlineMatch) {
+            syncOnlinePublicBoardFromLocal({
+                phase: "main",
+                currentAttack: null
+            }).catch(error => {
+                console.error("Failed to clear online attack:", error);
+            });
+        }
+
         return;
     }
 
     currentAttack = {
+        id: isOnlineMatch ? crypto.randomUUID() : null,
         attacker: { ...attackerData },
         target: { ...targetData },
         attackerPlayerKey: pendingAttack.attackerPlayerKey,
@@ -3293,6 +3343,23 @@ function beginAttack(targetData) {
             }
         );
     });
+
+    if (isOnlineMatch) {
+        syncOnlinePublicBoardFromLocal({
+            currentAttack: {
+                id: currentAttack.id,
+                attackerSlot: getOnlineSlotFromPlayerKey(currentAttack.attackerPlayerKey),
+                defenderSlot: getOnlineSlotFromPlayerKey(currentAttack.defenderPlayerKey),
+                attacker: currentAttack.attacker,
+                target: currentAttack.target,
+                targetPowerBonus: currentAttack.targetPowerBonus || 0
+            },
+            phase: "attackResolving"
+        }).catch(error => {
+            console.error("Failed to sync online attack:", error);
+            addGameLog("Online attack sync failed. Please try again.");
+        });
+    }
 }
 
 function promptOnOpponentAttackCharacterEffects(defenderPlayer, onComplete) {
@@ -3653,6 +3720,7 @@ async function resolveCurrentAttack() {
             }
 
             await syncOnlinePublicBoardFromLocal({
+                phase: "gameOver",
                 currentAttack: null,
                 winner: resolvedAttackerSlot
             });
@@ -3674,6 +3742,7 @@ async function resolveCurrentAttack() {
         }
 
         await syncOnlinePublicBoardFromLocal({
+            phase: "main",
             currentAttack: null
         });
     }
@@ -3795,17 +3864,6 @@ function lookTopCardsAddToHand({
             await syncOnlineStateFromLocal();
         }
     };
-
-    if (isOnlineMatch) {
-        syncOnlineCurrentAttack({
-            id: crypto.randomUUID(),
-            attackerSlot: getOnlineSlotFromPlayerKey(currentAttack.attackerPlayerKey),
-            defenderSlot: getOnlineSlotFromPlayerKey(currentAttack.defenderPlayerKey),
-            attacker: currentAttack.attacker,
-            target: currentAttack.target,
-            phase: "attackResolving"
-        });
-    }
 
     const continueToBottomOrder = () => {
         const remainingCards = cards
@@ -3949,6 +4007,16 @@ function showBoardCardChoice({
 
     let selectedChoice = null;
 
+    const getFreshChoice = (choice) => {
+        if (!choice) return null;
+
+        const freshCard = getBoardCardFromData(choice);
+
+        return freshCard
+            ? { ...choice, card: freshCard }
+            : choice;
+    };
+
     choices.forEach(choice => {
         const cardButton = document.createElement("button");
         cardButton.className = "look-top-card-button";
@@ -3999,7 +4067,7 @@ function showBoardCardChoice({
         removeBoardChoiceOverlay();
 
         if (typeof onComplete === "function") {
-            await onComplete(selectedChoice);
+            await onComplete(getFreshChoice(selectedChoice));
         }
 
         await syncOnlineStateFromLocal();
