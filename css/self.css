@@ -1639,7 +1639,11 @@ body {
 
 .look-top-card-button.disabled-choice {
     opacity: 0.35;
-    cursor: not-allowed;
+    cursor: zoom-in;
+}
+
+.look-top-card-button {
+    cursor: zoom-in;
 }
 
 .look-top-card-img {
@@ -1699,6 +1703,67 @@ body {
 
 .look-top-action-button:hover:not(:disabled) {
     transform: translateY(-2px);
+}
+
+.search-card-image-overlay {
+    position: fixed;
+    inset: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 24px;
+    box-sizing: border-box;
+
+    background: rgba(0, 0, 0, 0.84);
+
+    z-index: 11000;
+}
+
+.search-card-image-popup {
+    width: min(520px, calc(100vw - 48px));
+    max-height: calc(100vh - 48px);
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+
+    padding: 18px;
+    box-sizing: border-box;
+
+    border: 3px solid black;
+    border-radius: 16px;
+
+    background: rgba(30, 30, 30, 0.98);
+    color: white;
+
+    box-shadow: 0 22px 55px rgba(0, 0, 0, 0.72);
+}
+
+.search-card-image-large {
+    width: min(420px, 100%);
+    max-height: calc(100vh - 190px);
+
+    object-fit: contain;
+
+    border-radius: 10px;
+}
+
+.search-card-image-popup h3 {
+    margin: 0;
+
+    font-size: 1rem;
+    font-weight: 900;
+    text-align: center;
+}
+
+.search-card-image-buttons {
+    width: 100%;
+
+    display: flex;
+    gap: 12px;
 }
 
 .effect-choice-popup {

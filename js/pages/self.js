@@ -4119,6 +4119,20 @@ function lookTopCardsAddToHand({
         });
     };
 
+    const selectCard = (cardButton, index, validChoice) => {
+        if (!validChoice) return;
+
+        selectedIndex = index;
+
+        document.querySelectorAll(".look-top-card-button").forEach(button => {
+            button.classList.remove("selected-look-card");
+        });
+
+        cardButton.classList.add("selected-look-card");
+
+        addButton.disabled = false;
+    };
+
     cards.forEach((card, index) => {
         const cardButton = document.createElement("button");
         cardButton.className = "look-top-card-button";
@@ -4127,8 +4141,9 @@ function lookTopCardsAddToHand({
 
         if (!validChoice) {
             cardButton.classList.add("disabled-choice");
-            cardButton.disabled = true;
-            cardButton.title = "This card is not a valid choice.";
+            cardButton.title = "This card is not a valid choice, but you can inspect it.";
+        } else {
+            cardButton.title = "Click to inspect. Use Select Card to add it.";
         }
 
         const img = document.createElement("img");
@@ -4144,17 +4159,11 @@ function lookTopCardsAddToHand({
         cardButton.appendChild(name);
 
         cardButton.addEventListener("click", () => {
-            if (!validChoice) return;
-
-            selectedIndex = index;
-
-            document.querySelectorAll(".look-top-card-button").forEach(button => {
-                button.classList.remove("selected-look-card");
+            selectCard(cardButton, index, validChoice);
+            showSearchCardImagePopup(card, {
+                canSelect: validChoice,
+                onSelect: () => selectCard(cardButton, index, validChoice)
             });
-
-            cardButton.classList.add("selected-look-card");
-
-            addButton.disabled = false;
         });
 
         cardGrid.appendChild(cardButton);
@@ -4196,7 +4205,76 @@ function lookTopCardsAddToHand({
     document.body.appendChild(overlay);
 }
 
+function showSearchCardImagePopup(card, options = {}) {
+    if (!card?.image) return;
+
+    removeSearchCardImagePopup();
+
+    const overlay = document.createElement("div");
+    overlay.className = "search-card-image-overlay";
+    overlay.id = "searchCardImageOverlay";
+
+    const popup = document.createElement("div");
+    popup.className = "search-card-image-popup";
+
+    const image = document.createElement("img");
+    image.src = card.image;
+    image.alt = card.name;
+    image.className = "search-card-image-large";
+
+    const name = document.createElement("h3");
+    name.textContent = card.name;
+
+    const buttons = document.createElement("div");
+    buttons.className = "search-card-image-buttons";
+
+    if (options.canSelect) {
+        const selectButton = document.createElement("button");
+        selectButton.className = "look-top-action-button";
+        selectButton.textContent = "Select Card";
+        selectButton.addEventListener("click", () => {
+            if (typeof options.onSelect === "function") {
+                options.onSelect();
+            }
+
+            removeSearchCardImagePopup();
+        });
+
+        buttons.appendChild(selectButton);
+    }
+
+    const closeButton = document.createElement("button");
+    closeButton.className = "look-top-action-button secondary";
+    closeButton.textContent = "Close";
+    closeButton.addEventListener("click", removeSearchCardImagePopup);
+
+    buttons.appendChild(closeButton);
+
+    popup.appendChild(image);
+    popup.appendChild(name);
+    popup.appendChild(buttons);
+    overlay.appendChild(popup);
+
+    overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) {
+            removeSearchCardImagePopup();
+        }
+    });
+
+    document.body.appendChild(overlay);
+}
+
+function removeSearchCardImagePopup() {
+    const oldOverlay = document.getElementById("searchCardImageOverlay");
+
+    if (oldOverlay) {
+        oldOverlay.remove();
+    }
+}
+
 function removeLookTopOverlay() {
+    removeSearchCardImagePopup();
+
     const oldOverlay = document.getElementById("lookTopOverlay");
 
     if (oldOverlay) {
