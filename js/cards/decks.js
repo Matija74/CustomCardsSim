@@ -109,12 +109,6 @@ const availableDecks = [
         name: "RY Ichigo by Mrki",
         leaderKey: "BL01-001",
         deckText: ryIchigoDeckText
-    },
-    {
-        id: "pb-rimuru-deck",
-        name: "PB Rimuru by Alex",
-        leaderKey: "RIM1-001",
-        deckText: pbRimuruDeckText
     }
 ];
 
