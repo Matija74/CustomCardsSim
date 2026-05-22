@@ -36,12 +36,12 @@ function populateDeckSelect(selectElement, selectedDeckId) {
     });
 }
 
-function updateSelfPlayLink() {
+function updateSingleplayerPlayLink() {
     const player1DeckSelect = document.getElementById("player1DeckSelect");
     const player2DeckSelect = document.getElementById("player2DeckSelect");
-    const selfPlayLink = document.getElementById("selfPlayLink");
+    const singleplayerPlayLink = document.getElementById("singleplayerPlayLink");
 
-    if (!player1DeckSelect || !player2DeckSelect || !selfPlayLink) return;
+    if (!player1DeckSelect || !player2DeckSelect || !singleplayerPlayLink) return;
 
     const player1DeckId = player1DeckSelect.value;
     const player2DeckId = player2DeckSelect.value;
@@ -53,7 +53,7 @@ function updateSelfPlayLink() {
         player2Deck: player2DeckId
     });
 
-    selfPlayLink.href = `self.html?${params.toString()}`;
+    singleplayerPlayLink.href = `singleplayer.html?${params.toString()}`;
 }
 
 function initializeDeckPicker() {
@@ -75,10 +75,10 @@ function initializeDeckPicker() {
         savedSelection.player2DeckId || defaultDeckId
     );
 
-    player1DeckSelect.addEventListener("change", updateSelfPlayLink);
-    player2DeckSelect.addEventListener("change", updateSelfPlayLink);
+    player1DeckSelect.addEventListener("change", updateSingleplayerPlayLink);
+    player2DeckSelect.addEventListener("change", updateSingleplayerPlayLink);
 
-    updateSelfPlayLink();
+    updateSingleplayerPlayLink();
 }
 
 document.addEventListener("DOMContentLoaded", initializeDeckPicker);

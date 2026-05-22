@@ -1,4 +1,4 @@
-// multiplayer.js
+// singleplayer.js
 
 // =========================
 // Image Paths

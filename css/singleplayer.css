@@ -1,4 +1,4 @@
-/* Multiplayer Page */
+/* Singleplayer Page */
 
 /* =========================
    Base Page Setup
@@ -19,7 +19,7 @@ body {
     font-family: Arial, sans-serif;
 }
 
-.multiplayer-page {
+.singleplayer-page {
     width: 100vw;
     height: 100vh;
     padding: 20px;
@@ -2030,7 +2030,7 @@ body {
 
 /* Enhanced responsive design for smaller screens */
 @media (max-width: 768px) {
-    .multiplayer-page {
+    .singleplayer-page {
         padding: 10px;
     }
 
@@ -2162,7 +2162,7 @@ body {
 }
 
 @media (max-width: 480px) {
-    .multiplayer-page {
+    .singleplayer-page {
         padding: 5px;
     }
 
@@ -2287,7 +2287,7 @@ body {
 }
 
 @media (max-width: 320px) {
-    .multiplayer-page {
+    .singleplayer-page {
         padding: 2px;
     }
 
@@ -2400,3 +2400,4 @@ body {
         max-width: 140px;
     }
 }
+

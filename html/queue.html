@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Queue - Custom Cards</title>
+
+    <link rel="icon" type="image/png" href="../images/basic/logo-without-title.png">
+    <link rel="stylesheet" href="../css/queue.css">
+</head>
+
+<body>
+    <main class="queue-page">
+        <header class="queue-header">
+            <a href="play.html" class="btn-back">Back</a>
+
+            <div class="header-title-group">
+                <p>Multiplayer queue</p>
+            </div>
+        </header>
+
+        <section class="queue-panel">
+            <div class="queue-status">
+                <span id="connectionStatus">Connecting...</span>
+            </div>
+
+            <div class="queue-grid">
+                <section class="queue-side">
+                    <h2>Create Room</h2>
+                    <p>Host a room, share the code, then start when both players are connected.</p>
+
+                    <button id="createRoomBtn" class="btn btn-primary" type="button">
+                        Create Room
+                    </button>
+                </section>
+
+                <div class="queue-divider"></div>
+
+                <section class="queue-side">
+                    <h2>Join Room</h2>
+                    <p>Enter the host's room code to join as Player 2.</p>
+
+                    <div class="join-box">
+                        <input id="roomCodeInput" type="text" maxlength="6" placeholder="Room code">
+                        <button id="joinRoomBtn" class="btn btn-secondary" type="button">
+                            Join
+                        </button>
+                    </div>
+                </section>
+            </div>
+
+            <section class="room-panel">
+                <div>
+                    <span class="room-label">Room</span>
+                    <strong id="roomCodeDisplay">------</strong>
+                </div>
+
+                <p id="roomStatus">No room yet.</p>
+
+                <div class="player-status">
+                    <span id="player1Status">Player 1: Empty</span>
+                    <span id="player2Status">Player 2: Empty</span>
+                </div>
+
+                <button id="startGameBtn" class="btn btn-primary" type="button" disabled>
+                    Start Game
+                </button>
+            </section>
+        </section>
+    </main>
+
+    <script type="module" src="../js/pages/queue.js"></script>
+</body>
+</html>

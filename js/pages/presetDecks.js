@@ -445,7 +445,7 @@ function useDeckInVsSelf(deckId) {
     localStorage.setItem("player1SelectedDeck", deckId);
     localStorage.setItem("player2SelectedDeck", deckId);
 
-    window.location.href = "self.html";
+    window.location.href = "singleplayer.html";
 }
 
 function escapeHtml(value) {

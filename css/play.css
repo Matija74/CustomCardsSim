@@ -90,10 +90,10 @@ body {
 ========================= */
 
 .play-panel {
-    width: min(520px, 100%);
+    width: min(900px, 100%);
 
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 2px 1fr;
     gap: 30px;
 
     background: rgba(255, 255, 255, 0.08);
@@ -159,6 +159,10 @@ body {
     outline-offset: 2px;
 }
 
+.play-divider {
+    background: rgba(255, 255, 255, 0.2);
+}
+
 /* =========================
    Buttons
 ========================= */
@@ -204,4 +208,8 @@ body {
         gap: 18px;
     }
 
+    .play-divider {
+        height: 2px;
+        width: 100%;
+    }
 }

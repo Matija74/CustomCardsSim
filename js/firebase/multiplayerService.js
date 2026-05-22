@@ -288,6 +288,26 @@ export function subscribeToMatch(roomCode, callback) {
     });
 }
 
+export async function startQueuedMatch(roomCode) {
+    const matchRef = ref(database, `matches/${cleanRoomCode(roomCode)}`);
+    const snapshot = await get(matchRef);
+
+    if (!snapshot.exists()) {
+        throw new Error("Room does not exist.");
+    }
+
+    const match = snapshot.val();
+
+    if (!match.players?.p1 || !match.players?.p2) {
+        throw new Error("Both players must be connected.");
+    }
+
+    await update(matchRef, {
+        status: "started",
+        "public/phase": "starting"
+    });
+}
+
 export function subscribeToPublicState(roomCode, callback) {
     const publicRef = ref(database, `matches/${cleanRoomCode(roomCode)}/public`);
 
