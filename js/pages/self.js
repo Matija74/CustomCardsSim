@@ -9,1029 +9,6 @@ const donBackImage = "../images/basic/card-back-don.webp";
 const donImage = "../images/basic/card-front-don.webp";
 
 // =========================
-// Online Stuff
-// =========================
-
-const urlParams = new URLSearchParams(window.location.search);
-
-const gameMode = urlParams.get("mode") || "local";
-const roomCode = urlParams.get("room");
-const playerSlot = urlParams.get("player");
-
-const isOnlineMatch = gameMode === "online";
-const onlinePlayerLabels = {
-    p1: "Player 1",
-    p2: "Player 2"
-};
-
-let onlineMultiplayerService = null;
-let onlineFirebaseApp = null;
-let onlineMatchUnsubscribe = null;
-let onlinePrivateUnsubscribe = null;
-let onlineUser = null;
-let onlinePublicState = null;
-let onlinePrivateState = null;
-let lastOnlineTurnKey = null;
-let onlineProcessedTurnKey = null;
-let onlineLastRevealKey = null;
-let onlineLastAttackKey = null;
-let onlineActiveAttackId = null;
-let onlineProcessedDefenderAttackEffectId = null;
-let onlineShownGameOverKey = null;
-let onlinePendingWinnerSlot = null;
-
-if (isOnlineMatch) {
-    console.log("Online match loaded.");
-    console.log("Room code:", roomCode);
-    console.log("Player slot:", playerSlot);
-}
-
-const onlineMatchInfo = document.getElementById("onlineMatchInfo");
-
-if (isOnlineMatch) {
-    updateOnlineMatchInfo();
-}
-
-function getPlayerKeyFromOnlineSlot(slot) {
-    if (slot === "p1") return "player1";
-    if (slot === "p2") return "player2";
-
-    return null;
-}
-
-function getOnlineSlotFromPlayerKey(playerKey) {
-    if (playerKey === "player1") return "p1";
-    if (playerKey === "player2") return "p2";
-
-    return null;
-}
-
-function isCurrentOnlinePlayer() {
-    return Boolean(onlinePublicState?.currentPlayer && onlinePublicState.currentPlayer === playerSlot);
-}
-
-function getOwnOnlinePlayerKey() {
-    return getPlayerKeyFromOnlineSlot(playerSlot);
-}
-
-function isOwnOnlinePlayer(player) {
-    return isOnlineMatch && player && getOwnOnlinePlayerKey() && player === gameState?.[getOwnOnlinePlayerKey()];
-}
-
-function getOnlinePublicPlayerKey(playerKey) {
-    return playerKey === "player1" ? "player1" : "player2";
-}
-
-function createHiddenCards(count) {
-    return Array.from({ length: Number(count || 0) }, (_, index) => ({
-        instanceId: `hidden-${index}`,
-        hidden: true
-    }));
-}
-
-function createPublicCardSnapshot(card) {
-    if (!card) return null;
-
-    return {
-        name: card.name,
-        image: card.image,
-        cardNumber: card.cardNumber,
-        cardType: card.cardType,
-        type: card.type,
-        color: card.color,
-        cost: card.cost,
-        power: card.power,
-        counter: card.counter,
-        attribute: card.attribute,
-        keywords: card.keywords || [],
-        effects: card.effects || [],
-        instanceId: card.instanceId,
-        state: card.state || "active",
-        faceUp: Boolean(card.faceUp)
-    };
-}
-
-function getOnlinePlayerSnapshot(playerKey) {
-    return onlinePublicState?.[getOnlinePublicPlayerKey(playerKey)] || null;
-}
-
-function applyOnlinePlayerState(playerKey) {
-    const publicPlayer = getOnlinePlayerSnapshot(playerKey);
-    const player = gameState?.[playerKey];
-
-    if (!publicPlayer || !player) return;
-
-    const isOwnPlayer = playerKey === getOwnOnlinePlayerKey();
-
-    player.name = playerKey === "player1" ? "Player 1" : "Player 2";
-    player.leader = publicPlayer.leader;
-    player.characters = publicPlayer.characters || [];
-    player.stage = publicPlayer.stage || null;
-    player.trash = publicPlayer.trash || [];
-    player.don = Number(publicPlayer.activeTokens || 0);
-    player.restedDon = Number(publicPlayer.restedTokens || 0);
-    player.donDeck = Number(publicPlayer.tokenDeckCount ?? 10);
-    player.turns = Number(publicPlayer.turns || 0);
-
-    if (isOwnPlayer && onlinePrivateState) {
-        player.hand = onlinePrivateState.hand || [];
-        player.deck = onlinePrivateState.deck || [];
-        player.life = onlinePrivateState.life || [];
-    } else {
-        player.hand = createHiddenCards(publicPlayer.handCount);
-        player.deck = createHiddenCards(publicPlayer.deckCount);
-        player.life = createHiddenCards(publicPlayer.lifeCount);
-
-        (publicPlayer.faceUpLifeCards || []).forEach(entry => {
-            const index = Number(entry.index);
-
-            if (index >= 0 && index < player.life.length && entry.card) {
-                player.life[index] = {
-                    ...entry.card,
-                    faceUp: true
-                };
-            }
-        });
-    }
-}
-
-function renderOnlineGameState() {
-    if (!gameState) return;
-
-    clearHandSelection();
-    clearBoardSelection();
-    clearSelectedCardActions();
-    clearSelectedBoardActions();
-
-    updateDonDisplay();
-    renderDecks();
-    renderDonDecks();
-    renderLifeCards();
-    renderLeaders();
-    renderHands();
-    renderCharacters();
-    renderTrash();
-    renderStages();
-}
-
-function applyOnlineStateToGame() {
-    if (!isOnlineMatch || !gameState || !onlinePublicState?.player1 || !onlinePublicState?.player2) {
-        return;
-    }
-
-    const currentPlayerKey = getPlayerKeyFromOnlineSlot(onlinePublicState.currentPlayer);
-
-    applyOnlinePlayerState("player1");
-    applyOnlinePlayerState("player2");
-
-    gameState.currentPlayer = currentPlayerKey ? gameState[currentPlayerKey] : null;
-    gameState.currentPhase = onlinePublicState.phase || "main";
-    gameState.turnNumber = Number(onlinePublicState.turnNumber || 1);
-
-    renderOnlineGameState();
-    updateOnlinePhaseButton();
-}
-
-function updateOnlineMatchInfo() {
-    if (!onlineMatchInfo) return;
-
-    onlineMatchInfo.classList.remove("hidden");
-
-    const currentPlayer = onlinePublicState?.currentPlayer;
-    const currentPlayerText = currentPlayer
-        ? onlinePlayerLabels[currentPlayer] || currentPlayer.toUpperCase()
-        : "Waiting";
-    const phaseText = onlinePublicState?.phase || "Waiting";
-    const turnText = onlinePublicState?.turnNumber ?? "-";
-    const dice = onlinePublicState?.setup?.dice || {};
-    const firstPlayer = onlinePublicState?.firstPlayer ||
-        onlinePublicState?.setup?.turnChoice?.firstPlayer ||
-        null;
-    const secondPlayer = onlinePublicState?.secondPlayer ||
-        onlinePublicState?.setup?.turnChoice?.secondPlayer ||
-        null;
-    const turnOrderText = firstPlayer && secondPlayer
-        ? `Order: ${onlinePlayerLabels[firstPlayer] || firstPlayer.toUpperCase()} first, ${onlinePlayerLabels[secondPlayer] || secondPlayer.toUpperCase()} second`
-        : "Order: Not chosen";
-    const setupText = onlinePublicState?.phase === "diceRoll"
-        ? `Rolls: P1 ${dice.p1Roll || "-"} / P2 ${dice.p2Roll || "-"}${dice.tie ? " (tie)" : ""}`
-        : `Turn #: ${turnText}`;
-
-    onlineMatchInfo.textContent = [
-        `Online Room: ${roomCode || "Unknown"}`,
-        `You are ${(playerSlot || "unknown").toUpperCase()}`,
-        `Turn: ${currentPlayerText}`,
-        `Phase: ${phaseText}`,
-        turnOrderText,
-        setupText
-    ].join(" | ");
-}
-
-function updateOnlinePhaseButton() {
-    if (!isOnlineMatch) return;
-
-    const phaseButton = document.getElementById("phaseButton");
-
-    if (!phaseButton) return;
-
-    const currentPlayer = onlinePublicState?.currentPlayer;
-    const currentPlayerText = currentPlayer
-        ? onlinePlayerLabels[currentPlayer] || currentPlayer.toUpperCase()
-        : "Waiting";
-    const dice = onlinePublicState?.setup?.dice || {};
-    const turnChoice = onlinePublicState?.setup?.turnChoice || {};
-
-    removeOnlineTurnChoiceButtons();
-    removeOnlineMulliganButtons();
-
-    if (onlinePublicState?.phase === "diceRoll") {
-        const ownRoll = dice[`${playerSlot}Roll`];
-        const canRoll = Boolean(onlineMultiplayerService && !dice.winner && (!ownRoll || dice.tie));
-
-        phaseButton.style.display = "block";
-        phaseButton.disabled = !canRoll;
-        phaseButton.textContent = dice.tie
-            ? "Reroll"
-            : ownRoll
-                ? "Waiting for roll"
-                : "Roll Dice";
-        phaseButton.title = dice.tie
-            ? "Tie roll. Both players must reroll."
-            : "Both players roll before turn order is chosen.";
-
-        if (dice.winner === playerSlot && !turnChoice.firstPlayer) {
-            phaseButton.disabled = true;
-            phaseButton.textContent = "Choose Turn Order";
-            createOnlineTurnChoiceButtons();
-        }
-
-        return;
-    }
-
-    if (onlinePublicState?.phase === "mulligan") {
-        const mulligan = onlinePublicState.setup?.mulligan || {};
-        const ownMulligan = mulligan[playerSlot] || {};
-
-        phaseButton.style.display = "block";
-        phaseButton.disabled = true;
-        phaseButton.textContent = ownMulligan.done
-            ? "Waiting for Mulligan"
-            : "Choose Mulligan";
-        phaseButton.title = "Both players must keep or mulligan before turn one starts.";
-
-        if (!ownMulligan.done) {
-            createOnlineMulliganButtons();
-        }
-
-        return;
-    }
-
-    const canPass = Boolean(
-        onlineMultiplayerService &&
-        roomCode &&
-        onlinePrivateState &&
-        isCurrentOnlinePlayer() &&
-        onlinePublicState?.phase === "main"
-    );
-
-    phaseButton.style.display = "block";
-    phaseButton.disabled = !canPass;
-    phaseButton.textContent = canPass
-        ? `End Turn (${onlinePlayerLabels[playerSlot] || playerSlot?.toUpperCase()})`
-        : `Waiting for ${currentPlayerText}`;
-    phaseButton.title = canPass
-        ? "End your synced online turn."
-        : "Only the current online player can end the turn.";
-}
-
-function applyOnlinePublicState(publicState = {}) {
-    if (!isOnlineMatch) return;
-
-    onlinePublicState = {
-        phase: publicState.phase || "main",
-        currentPlayer: publicState.currentPlayer || null,
-        turnNumber: Number(publicState.turnNumber || 1),
-        winner: publicState.winner || null,
-        gameOverReasonTitle: publicState.gameOverReasonTitle || null,
-        gameOverReasonText: publicState.gameOverReasonText || null,
-        firstPlayer: publicState.firstPlayer || null,
-        secondPlayer: publicState.secondPlayer || null,
-        playerTurns: publicState.playerTurns || { p1: 0, p2: 0 },
-        setup: publicState.setup || {},
-        revealedCards: publicState.revealedCards || [],
-        currentAttack: publicState.currentAttack || null,
-        player1: publicState.player1 || null,
-        player2: publicState.player2 || null
-    };
-
-    const turnKey = `${onlinePublicState.currentPlayer}:${onlinePublicState.turnNumber}:${onlinePublicState.phase}`;
-    const turnStartKey = `${onlinePublicState.currentPlayer}:${onlinePublicState.turnNumber}`;
-
-    if (lastOnlineTurnKey && turnKey !== lastOnlineTurnKey) {
-        addGameLog(
-            `Online state updated: ${onlinePlayerLabels[onlinePublicState.currentPlayer] || "Waiting"} ` +
-            `- ${onlinePublicState.phase}, turn ${onlinePublicState.turnNumber}.`
-        );
-    }
-
-    lastOnlineTurnKey = turnKey;
-
-    applyOnlineStateToGame();
-    updateOnlineMatchInfo();
-    updateOnlinePhaseButton();
-    maybeRunOnlineTurnStart(turnStartKey);
-    showOnlineRevealedCards();
-    showOnlineAttackLog();
-    applyOnlineCurrentAttack();
-    handleOnlineGameOver();
-}
-
-function removeOnlineTurnChoiceButtons() {
-    document.getElementById("onlineTurnChoiceButtons")?.remove();
-}
-
-function removeOnlineMulliganButtons() {
-    document.getElementById("onlineMulliganButtons")?.remove();
-}
-
-function createOnlineTurnChoiceButtons() {
-    if (document.getElementById("onlineTurnChoiceButtons")) return;
-
-    const controls = document.querySelector(".phase-controls");
-
-    if (!controls) return;
-
-    const choiceContainer = document.createElement("div");
-    choiceContainer.className = "choice-buttons";
-    choiceContainer.id = "onlineTurnChoiceButtons";
-
-    const firstButton = document.createElement("button");
-    firstButton.className = "phase-button";
-    firstButton.textContent = "Go 1st";
-
-    const secondButton = document.createElement("button");
-    secondButton.className = "phase-button";
-    secondButton.textContent = "Go 2nd";
-
-    firstButton.addEventListener("click", () => {
-        handleOnlineTurnChoice("first");
-    });
-
-    secondButton.addEventListener("click", () => {
-        handleOnlineTurnChoice("second");
-    });
-
-    choiceContainer.appendChild(firstButton);
-    choiceContainer.appendChild(secondButton);
-    controls.appendChild(choiceContainer);
-}
-
-function createOnlineMulliganButtons() {
-    if (document.getElementById("onlineMulliganButtons")) return;
-
-    const controls = document.querySelector(".phase-controls");
-
-    if (!controls) return;
-
-    const choiceContainer = document.createElement("div");
-    choiceContainer.className = "choice-buttons";
-    choiceContainer.id = "onlineMulliganButtons";
-
-    const keepButton = document.createElement("button");
-    keepButton.className = "phase-button";
-    keepButton.textContent = "Keep Hand";
-
-    const mulliganButton = document.createElement("button");
-    mulliganButton.className = "phase-button";
-    mulliganButton.textContent = "Mulligan";
-
-    keepButton.addEventListener("click", () => {
-        handleOnlineMulligan(false);
-    });
-
-    mulliganButton.addEventListener("click", () => {
-        handleOnlineMulligan(true);
-    });
-
-    choiceContainer.appendChild(keepButton);
-    choiceContainer.appendChild(mulliganButton);
-    controls.appendChild(choiceContainer);
-}
-
-function showOnlineRevealedCards() {
-    const revealedCards = onlinePublicState?.revealedCards || [];
-
-    if (!revealedCards.length) return;
-
-    const latestReveal = revealedCards[revealedCards.length - 1];
-    const cards = latestReveal.cards || [];
-
-    const revealKey = latestReveal.id || `${latestReveal.player}:${cards.map(card => card.instanceId || card.cardNumber || card.name).join(",")}`;
-
-    if (!cards.length || onlineLastRevealKey === revealKey) return;
-
-    onlineLastRevealKey = revealKey;
-
-    addGameLog(
-        `${onlinePlayerLabels[latestReveal.player] || "Player"} revealed: ` +
-        cards.map(card => card.name).join(", ")
-    );
-}
-
-function showOnlineAttackLog() {
-    const attack = onlinePublicState?.currentAttack;
-
-    if (!attack?.id || onlineLastAttackKey === attack.id) return;
-
-    onlineLastAttackKey = attack.id;
-
-    addGameLog(
-        `${onlinePlayerLabels[attack.attackerSlot] || "Player"} attacked ` +
-        `${onlinePlayerLabels[attack.defenderSlot] || "opponent"}.`
-    );
-}
-
-function applyOnlineCurrentAttack() {
-    const attack = onlinePublicState?.currentAttack;
-
-    if (!isOnlineMatch || !gameState) return;
-
-    if (!attack) {
-        if (currentAttack || pendingBlock || onlineActiveAttackId) {
-            currentAttack = null;
-            pendingAttack = null;
-            pendingBlock = null;
-            clearAttackTargets();
-            clearBlockerTargets();
-            clearBattleControls();
-            clearAttackArrow();
-            gameState.currentPhase = onlinePublicState?.phase || "main";
-            renderLeaders();
-            renderCharacters();
-        }
-
-        onlineActiveAttackId = null;
-        onlineProcessedDefenderAttackEffectId = null;
-        return;
-    }
-
-    const attackerPlayerKey = getPlayerKeyFromOnlineSlot(attack.attackerSlot);
-    const defenderPlayerKey = getPlayerKeyFromOnlineSlot(attack.defenderSlot);
-
-    if (!attackerPlayerKey || !defenderPlayerKey) return;
-
-    if (onlineActiveAttackId === attack.id && currentAttack) {
-        const wasCounterPhase = currentAttack.counterPhaseStarted ||
-            gameState.currentPhase === "counterPhase";
-
-        currentAttack.targetPowerBonus = Number(attack.targetPowerBonus || 0);
-        currentAttack.target = { ...(attack.target || currentAttack.target) };
-        currentAttack.counterPhaseStarted = Boolean(attack.counterPhaseStarted || wasCounterPhase);
-        gameState.currentPhase = currentAttack.counterPhaseStarted
-            ? "counterPhase"
-            : "attackResolving";
-
-        renderLeaders();
-        renderCharacters();
-        drawAttackArrow(currentAttack.attacker, currentAttack.target);
-
-        if (maybeRunOnlineDefenderAttackEffects(attack)) {
-            return;
-        }
-
-        const battleControls = document.getElementById("battleControls");
-        const isWaitingForDefenderEffects = Boolean(
-            battleControls?.querySelector("[data-online-waiting-defender-effects='true']")
-        );
-
-        if (!battleControls?.children.length || (attack.defenderEffectsResolved && isWaitingForDefenderEffects)) {
-            renderOnlineAttackControls(attack);
-        }
-
-        return;
-    }
-
-    onlineActiveAttackId = attack.id;
-    currentAttack = {
-        id: attack.id,
-        attacker: { ...attack.attacker },
-        target: { ...attack.target },
-        attackerPlayerKey,
-        defenderPlayerKey,
-        targetPowerBonus: Number(attack.targetPowerBonus || 0),
-        counterPhaseStarted: Boolean(attack.counterPhaseStarted)
-    };
-    pendingAttack = null;
-    gameState.currentPhase = currentAttack.counterPhaseStarted
-        ? "counterPhase"
-        : "attackResolving";
-
-    clearAttackTargets();
-    clearBoardSelection();
-    clearHandSelection();
-    drawAttackArrow(currentAttack.attacker, currentAttack.target);
-
-    if (maybeRunOnlineDefenderAttackEffects(attack)) {
-        return;
-    }
-
-    renderOnlineAttackControls(attack);
-}
-
-function renderOnlineAttackControls(attack) {
-    if (!attack || !currentAttack) return;
-
-    const defenderPlayerKey = getPlayerKeyFromOnlineSlot(attack.defenderSlot);
-
-    if (!defenderPlayerKey) return;
-
-    if (attack.defenderSlot === playerSlot) {
-        if (!attack.defenderEffectsResolved) {
-            showWaitingForOnlineDefenderEffects(defenderPlayerKey);
-            return;
-        }
-
-        if (attack.counterPhaseStarted || currentAttack.counterPhaseStarted) {
-            showCounterPhaseControls(defenderPlayerKey, () => resolveCurrentAttack());
-        } else {
-            showResolveAttackButton(defenderPlayerKey, () => resolveCurrentAttack());
-        }
-    } else {
-        clearBattleControls();
-    }
-}
-
-function showWaitingForOnlineDefenderEffects(defenderPlayerKey) {
-    const battleControls = document.getElementById("battleControls");
-
-    if (!battleControls) return;
-
-    clearBattleControls();
-
-    const defenderName = gameState[defenderPlayerKey]?.name ?? "Defender";
-
-    const waitingButton = createBattleButton(
-        `${defenderName}: response effects`,
-        () => {},
-        true,
-        "counter-phase"
-    );
-
-    waitingButton.dataset.onlineWaitingDefenderEffects = "true";
-    battleControls.appendChild(waitingButton);
-}
-
-function maybeRunOnlineDefenderAttackEffects(attack) {
-    if (
-        !isOnlineMatch ||
-        !attack?.id ||
-        attack.defenderSlot !== playerSlot ||
-        attack.defenderEffectsResolved ||
-        onlineProcessedDefenderAttackEffectId === attack.id
-    ) {
-        return false;
-    }
-
-    const defenderPlayerKey = getPlayerKeyFromOnlineSlot(attack.defenderSlot);
-    const defenderPlayer = defenderPlayerKey ? gameState[defenderPlayerKey] : null;
-
-    if (!defenderPlayer) {
-        return false;
-    }
-
-    onlineProcessedDefenderAttackEffectId = attack.id;
-    showWaitingForOnlineDefenderEffects(defenderPlayerKey);
-
-    CardEffects.resolveWhenOpponentAttacksStageEffects(
-        gameState,
-        defenderPlayer,
-        ui
-    ).forEach(result => {
-        addGameLog(result.message);
-    });
-
-    promptOnOpponentAttackCharacterEffects(defenderPlayer, async () => {
-        await syncOnlineStateFromLocal();
-
-        if (isOnlineMatch) {
-            await syncOnlineAllPublicBoardsFromLocal();
-        }
-
-        if (!getBoardCardFromData(currentAttack?.target || attack.target)) {
-            addGameLog("Attack target left the field, so the attack ended.");
-
-            currentAttack = null;
-            pendingAttack = null;
-            pendingBlock = null;
-
-            clearAttackTargets();
-            clearBlockerTargets();
-            clearBattleControls();
-            clearAttackArrow();
-
-            gameState.currentPhase = "main";
-
-            await syncOnlineAllPublicBoardsFromLocal({
-                phase: "main",
-                currentAttack: null
-            });
-
-            return;
-        }
-
-        await syncOnlineCurrentAttack({
-            ...(onlinePublicState?.currentAttack || attack),
-            target: currentAttack?.target || attack.target,
-            targetPowerBonus: currentAttack?.targetPowerBonus || attack.targetPowerBonus || 0,
-            defenderEffectsResolved: true
-        });
-    });
-
-    return true;
-}
-
-function handleOnlineGameOver() {
-    if (!isOnlineMatch || !gameState || onlinePublicState?.phase !== "gameOver" || !onlinePublicState?.winner) {
-        return;
-    }
-
-    const gameOverKey = `${onlinePublicState.winner}:${onlinePublicState.phase}`;
-
-    if (onlineShownGameOverKey === gameOverKey) {
-        return;
-    }
-
-    const winnerPlayerKey = getPlayerKeyFromOnlineSlot(onlinePublicState.winner);
-    const winnerPlayer = winnerPlayerKey ? gameState[winnerPlayerKey] : null;
-
-    if (!winnerPlayer) {
-        return;
-    }
-
-    onlineShownGameOverKey = gameOverKey;
-    onlinePendingWinnerSlot = onlinePublicState.winner;
-    gameState.currentPhase = "gameOver";
-
-    pendingAttack = null;
-    currentAttack = null;
-    pendingBlock = null;
-    pendingTrashChoice = null;
-    pendingReplacePlay = null;
-
-    clearAttackTargets();
-    clearBlockerTargets();
-    clearBattleControls();
-    clearHandSelection();
-    clearBoardSelection();
-    clearReplaceTargets();
-    clearTrashChoiceTargets();
-    clearCancelAttackButton();
-    clearAttackArrow();
-
-    showGameOverPopup(
-        winnerPlayer,
-        onlinePublicState.gameOverReasonTitle || "Victory",
-        onlinePublicState.gameOverReasonText || `${winnerPlayer.name} won the online match.`
-    );
-}
-
-async function publishOnlineReveal(cards) {
-    if (!isOnlineMatch || !onlineMultiplayerService || !cards?.length) return;
-
-    const revealedCards = onlinePublicState?.revealedCards || [];
-
-    await onlineMultiplayerService.updatePublicState(roomCode, {
-        revealedCards: [
-            ...revealedCards,
-            {
-                id: crypto.randomUUID(),
-                player: playerSlot,
-                cards: cards.map(card => ({
-                    name: card.name,
-                    image: card.image,
-                    cardNumber: card.cardNumber,
-                    cardType: card.cardType,
-                    type: card.type
-                }))
-            }
-        ]
-    });
-}
-
-async function syncOnlineCurrentAttack(attackState) {
-    if (!isOnlineMatch || !onlineMultiplayerService) return;
-
-    await onlineMultiplayerService.updateCurrentAttack(roomCode, attackState);
-}
-
-function applyOnlinePrivateState(privateState = {}) {
-    if (!isOnlineMatch) return;
-
-    onlinePrivateState = {
-        selectedDeck: privateState.selectedDeck || null,
-        hand: privateState.hand || [],
-        deck: privateState.deck || [],
-        life: privateState.life || []
-    };
-
-    applyOnlineStateToGame();
-    updateOnlinePhaseButton();
-
-    if (onlinePublicState) {
-        maybeRunOnlineTurnStart(
-            `${onlinePublicState.currentPlayer}:${onlinePublicState.turnNumber}`
-        );
-    }
-}
-
-function createPublicPlayerStateFromLocal(player) {
-    return {
-        leader: player.leader,
-        characters: player.characters || [],
-        stage: player.stage || null,
-        trash: player.trash || [],
-        handCount: player.hand?.length || 0,
-        deckCount: player.deck?.length || 0,
-        lifeCount: player.life?.length || 0,
-        activeTokens: Number(player.don || 0),
-        restedTokens: Number(player.restedDon || 0),
-        tokenDeckCount: Number(player.donDeck ?? 10),
-        turns: Number(player.turns || 0),
-        faceUpLifeCards: (player.life || [])
-            .map((card, index) => card?.faceUp ? { index, card: createPublicCardSnapshot(card) } : null)
-            .filter(Boolean)
-    };
-}
-
-function createOwnPrivateStateFromLocal(player) {
-    return {
-        selectedDeck: onlinePrivateState?.selectedDeck || null,
-        hand: player.hand || [],
-        deck: player.deck || [],
-        life: player.life || []
-    };
-}
-
-async function syncOnlineStateFromLocal() {
-    if (!isOnlineMatch || !onlineMultiplayerService || !onlineUser || !gameState) return;
-
-    const ownPlayerKey = getOwnOnlinePlayerKey();
-    const ownPlayer = ownPlayerKey ? gameState[ownPlayerKey] : null;
-
-    if (!ownPlayer) return;
-
-    const publicKey = getOnlinePublicPlayerKey(ownPlayerKey);
-
-    const publicState = {
-        playerTurns: {
-            ...(onlinePublicState?.playerTurns || {}),
-            [playerSlot]: Number(ownPlayer.turns || 0)
-        },
-        [publicKey]: createPublicPlayerStateFromLocal(ownPlayer)
-    };
-
-    if (gameState.currentPhase === "gameOver") {
-        publicState.phase = "gameOver";
-        publicState.winner = onlinePublicState?.winner || onlinePendingWinnerSlot || null;
-    }
-
-    const privateState = createOwnPrivateStateFromLocal(ownPlayer);
-
-    onlinePrivateState = privateState;
-
-    await onlineMultiplayerService.sendMultiplayerAction(
-        roomCode,
-        onlineUser,
-        "updateState",
-        {
-            publicState,
-            privateState
-        }
-    );
-}
-
-async function syncOnlinePublicBoardFromLocal(extraState = {}) {
-    if (!isOnlineMatch || !onlineMultiplayerService || !gameState) return;
-
-    const ownPlayerKey = getOwnOnlinePlayerKey();
-    const ownPlayer = ownPlayerKey ? gameState[ownPlayerKey] : null;
-    const publicKey = ownPlayerKey ? getOnlinePublicPlayerKey(ownPlayerKey) : null;
-
-    if (!ownPlayer || !publicKey) return;
-
-    await onlineMultiplayerService.updatePublicState(roomCode, {
-        [publicKey]: createPublicPlayerStateFromLocal(ownPlayer),
-        ...extraState
-    });
-}
-
-async function syncOnlineAllPublicBoardsFromLocal(extraState = {}) {
-    if (!isOnlineMatch || !onlineMultiplayerService || !gameState) return;
-
-    await onlineMultiplayerService.updatePublicState(roomCode, {
-        player1: createPublicPlayerStateFromLocal(gameState.player1),
-        player2: createPublicPlayerStateFromLocal(gameState.player2),
-        ...extraState
-    });
-}
-
-async function maybeRunOnlineTurnStart(turnKey) {
-    if (!isOnlineMatch || !onlinePrivateState || !gameState || !isCurrentOnlinePlayer()) {
-        return;
-    }
-
-    if (onlinePublicState?.phase !== "main" || onlinePublicState?.currentAttack) {
-        return;
-    }
-
-    const player = gameState[getOwnOnlinePlayerKey()];
-
-    if (!player) return;
-
-    const expectedTurns = Number(onlinePublicState?.turnNumber || 1);
-    const publicTurns = Number(
-        onlinePublicState?.playerTurns?.[playerSlot] ??
-        onlinePublicState?.[getOnlinePublicPlayerKey(getOwnOnlinePlayerKey())]?.turns ??
-        player.turns ??
-        0
-    );
-
-    if (publicTurns >= expectedTurns || onlineProcessedTurnKey === turnKey) {
-        return;
-    }
-
-    onlineProcessedTurnKey = turnKey;
-
-    const phaseInfo = createPhaseLogProxy();
-
-    player.turns = expectedTurns;
-    player.leaderAttacksThisTurn = 0;
-
-    runRefreshPhase(player, phaseInfo);
-    const drawResult = runDrawPhase(player, phaseInfo);
-
-    if (drawResult?.deckOut || gameState.currentPhase === "gameOver") {
-        await syncOnlineStateFromLocal();
-
-        if (isOnlineMatch) {
-            await syncOnlineAllPublicBoardsFromLocal();
-        }
-        return;
-    }
-
-    runDonPhase(player, 2, phaseInfo);
-
-    gameState.currentPhase = "main";
-
-    await syncOnlineStateFromLocal();
-    updateOnlinePhaseButton();
-}
-
-async function initializeOnlineMultiplayer() {
-    if (!isOnlineMatch) return;
-
-    if (!roomCode || !playerSlot) {
-        addGameLog("Online match URL is missing room or player slot.");
-        updateOnlinePhaseButton();
-        return;
-    }
-
-    if (playerSlot !== "p1" && playerSlot !== "p2") {
-        addGameLog("Online match URL has an invalid player slot.");
-        updateOnlinePhaseButton();
-        return;
-    }
-
-    try {
-        onlineMultiplayerService = await import("../firebase/multiplayerService.js");
-        onlineFirebaseApp = await import("../firebase/firebaseApp.js");
-        if (!onlineFirebaseApp.auth.currentUser) {
-            await onlineFirebaseApp.signInGuest();
-        }
-        onlineUser = await onlineFirebaseApp.waitForUser();
-
-        // Multiplayer code reads public board/count state plus this user's private zones only.
-        onlineMatchUnsubscribe = onlineMultiplayerService.subscribeToPublicState(
-            roomCode,
-            (publicState) => applyOnlinePublicState(publicState || {})
-        );
-        onlinePrivateUnsubscribe = onlineMultiplayerService.subscribeToPrivateState(
-            roomCode,
-            onlineUser.uid,
-            (privateState) => applyOnlinePrivateState(privateState || {})
-        );
-
-        addGameLog(`Connected to online room ${roomCode} as ${playerSlot.toUpperCase()}.`);
-        updateOnlinePhaseButton();
-    } catch (error) {
-        console.error(error);
-        addGameLog(`Failed to connect online match: ${error.message}`);
-        updateOnlinePhaseButton();
-    }
-}
-
-async function handleOnlineDiceRoll() {
-    if (!onlineMultiplayerService || onlinePublicState?.phase !== "diceRoll") return;
-
-    try {
-        await onlineMultiplayerService.rollMultiplayerDice(roomCode, playerSlot);
-    } catch (error) {
-        console.error(error);
-        addGameLog(`Failed to roll dice: ${error.message}`);
-    }
-}
-
-async function handleOnlineTurnChoice(choice) {
-    if (!onlineMultiplayerService || onlinePublicState?.setup?.dice?.winner !== playerSlot) {
-        addGameLog("Only the dice winner can choose turn order.");
-        return;
-    }
-
-    try {
-        removeOnlineTurnChoiceButtons();
-        await onlineMultiplayerService.chooseMultiplayerTurnOrder(roomCode, playerSlot, choice);
-    } catch (error) {
-        console.error(error);
-        addGameLog(`Failed to choose turn order: ${error.message}`);
-        updateOnlinePhaseButton();
-    }
-}
-
-async function handleOnlineMulligan(tookMulligan) {
-    if (!onlineMultiplayerService || !onlineUser || onlinePublicState?.phase !== "mulligan") {
-        return;
-    }
-
-    try {
-        removeOnlineMulliganButtons();
-        await onlineMultiplayerService.setMultiplayerMulligan(
-            roomCode,
-            onlineUser,
-            playerSlot,
-            tookMulligan
-        );
-    } catch (error) {
-        console.error(error);
-        addGameLog(`Failed to choose mulligan: ${error.message}`);
-        updateOnlinePhaseButton();
-    }
-}
-
-async function handleOnlinePassTurn() {
-    if (!isOnlineMatch) return;
-
-    if (!onlineMultiplayerService || !onlinePublicState?.currentPlayer) {
-        addGameLog("Online match is still connecting.");
-        updateOnlinePhaseButton();
-        return;
-    }
-
-    if (!isCurrentOnlinePlayer()) {
-        addGameLog("Only the current online player can end the turn.");
-        updateOnlinePhaseButton();
-        return;
-    }
-
-    const phaseButton = document.getElementById("phaseButton");
-
-    try {
-        if (phaseButton) {
-            phaseButton.disabled = true;
-        }
-
-        const ownPlayer = gameState[getOwnOnlinePlayerKey()];
-        const phaseInfo = createPhaseLogProxy();
-
-        if (ownPlayer) {
-            const endOfTurnResults = resolveEndOfTurnEffects(ownPlayer, ui);
-
-            endOfTurnResults.forEach(result => addGameLog(result.message));
-
-            if (gameState.currentPhase === "gameOver") {
-                await syncOnlineStateFromLocal();
-                updateOnlinePhaseButton();
-                return;
-            }
-
-            await syncOnlineStateFromLocal();
-            await syncOnlineAllPublicBoardsFromLocal();
-        }
-
-        // Multiplayer turn owner writes private/public snapshot, then flips public turn pointer.
-        const result = await onlineMultiplayerService.passTurn(roomCode, onlinePublicState.currentPlayer);
-
-        if (!result?.committed) {
-            addGameLog("Online turn was already updated.");
-            updateOnlinePhaseButton();
-        }
-    } catch (error) {
-        console.error(error);
-        addGameLog(`Failed to end online turn: ${error.message}`);
-        updateOnlinePhaseButton();
-    }
-}
-
-// =========================
 // Selected Card State
 // =========================
 
@@ -1134,7 +111,7 @@ function createUiBridge() {
         chooseBoardCard: showBoardCardChoice,
         chooseEffectActivation,
         chooseEffectOption,
-        revealCards: publishOnlineReveal
+        revealCards: () => {}
     };
 }
 
@@ -1222,7 +199,6 @@ async function initializeGamePage() {
             Player 2: ${gameState.player2.deckName}
         `);
 
-        initializeOnlineMultiplayer();
     } catch (error) {
         console.error(error);
         addGameLog(`Failed to load card database: ${error.message}`);
@@ -1322,16 +298,6 @@ async function handleBlockerSelection(playerKey, slotIndex) {
         resolveCurrentAttack();
     });
 
-    if (isOnlineMatch && onlinePublicState?.currentAttack) {
-        await syncOnlineCurrentAttack({
-            ...onlinePublicState.currentAttack,
-            target: currentAttack.target,
-            targetPowerBonus: currentAttack.targetPowerBonus || 0,
-            counterPhaseStarted: true
-        });
-    }
-
-    await syncOnlinePublicBoardFromLocal();
 }
 
 function skipCurrentBlockStep(defenderPlayerKey, onResolve) {
@@ -1345,16 +311,6 @@ function skipCurrentBlockStep(defenderPlayerKey, onResolve) {
 
     startCounterPhase(defenderPlayerKey, onResolve);
 
-    if (isOnlineMatch && onlinePublicState?.currentAttack) {
-        syncOnlineCurrentAttack({
-            ...onlinePublicState.currentAttack,
-            target: currentAttack?.target || onlinePublicState.currentAttack.target,
-            targetPowerBonus: currentAttack?.targetPowerBonus || 0,
-            counterPhaseStarted: true
-        }).catch(error => {
-            console.error("Failed to sync online counter phase:", error);
-        });
-    }
 }
 
 // =========================
@@ -1398,11 +354,6 @@ function showGameOverPopup(winnerPlayer, reasonTitle = "Victory", reasonText = "
     playAgainButton.textContent = "Play Again";
 
     playAgainButton.addEventListener("click", () => {
-        if (isOnlineMatch) {
-            window.location.href = "multiplayer.html";
-            return;
-        }
-
         window.location.reload();
     });
 
@@ -1451,27 +402,6 @@ function endGame(winnerPlayer, reasonTitle = "Victory", reasonText = "") {
 
     showGameOverPopup(winnerPlayer, reasonTitle, reasonText);
 
-    if (isOnlineMatch && onlineMultiplayerService) {
-        const winnerSlot = getOnlineSlotFromPlayerKey(getPlayerKey(winnerPlayer));
-
-        onlinePendingWinnerSlot = winnerSlot;
-
-        syncOnlineStateFromLocal().catch(error => {
-            console.error("Failed to sync final online state:", error);
-        });
-
-        if (winnerSlot) {
-            syncOnlineAllPublicBoardsFromLocal({
-                phase: "gameOver",
-                currentAttack: null,
-                winner: winnerSlot,
-                gameOverReasonTitle: reasonTitle,
-                gameOverReasonText: reasonText
-            }).catch(error => {
-                console.error("Failed to sync online game over:", error);
-            });
-        }
-    }
 }
 
 // =========================
@@ -1616,16 +546,6 @@ function setupPhaseControls() {
             return;
         }
 
-        // Multiplayer controls are driven by Firebase public phase/current-player state.
-        if (isOnlineMatch) {
-            if (onlinePublicState?.phase === "diceRoll") {
-                handleOnlineDiceRoll();
-                return;
-            }
-
-            handleOnlinePassTurn();
-            return;
-        }
 
         if (gameState.currentPhase === "gameOver") {
             return;
@@ -1964,12 +884,6 @@ function renderDeck(player, deckAreaId) {
 // =========================
 
 function renderHands() {
-    if (isOnlineMatch) {
-        renderPlayerHand(gameState.player1, "player1Hand", playerSlot !== "p1");
-        renderPlayerHand(gameState.player2, "player2Hand", playerSlot !== "p2");
-        return;
-    }
-
     renderPlayerHand(gameState.player1, "player1Hand", false);
     renderPlayerHand(gameState.player2, "player2Hand", false);
 }
@@ -2063,9 +977,6 @@ async function sortPlayerHand(player) {
 
     addGameLog(`${player.name}'s hand was sorted.`);
 
-    if (isOnlineMatch && player === gameState[getOwnOnlinePlayerKey()]) {
-        await syncOnlineStateFromLocal();
-    }
 }
 
 function getHandSortKey(card) {
@@ -2656,7 +1567,6 @@ function showSelectedCardActions() {
 
         pendingReplacePlay = null;
 
-        await syncOnlineStateFromLocal();
     });
 
     selectedHandCard.appendChild(playButton);
@@ -2684,8 +1594,6 @@ function showSelectedCounterActions() {
 
     const defenderPlayerKey = currentAttack.defenderPlayerKey;
     const isDefender = selectedHandCardData.playerKey === defenderPlayerKey;
-    const isOnlineOwnDefender = !isOnlineMatch ||
-        (isDefender && selectedHandCardData.playerKey === getOwnOnlinePlayerKey());
     const counterValue = typeof getCounterPowerForUse === "function"
         ? getCounterPowerForUse(card, player)
         : getCardCounterValue(card, player);
@@ -2694,7 +1602,7 @@ function showSelectedCounterActions() {
 
     counterButton.className = "card-action-button-on-card";
 
-    if (!isOnlineOwnDefender) {
+    if (!isDefender) {
         counterButton.disabled = true;
         counterButton.textContent = "Not Def.";
         counterButton.title = "Only the defending player can counter with their own hand.";
@@ -2730,10 +1638,6 @@ function showSelectedCounterActions() {
 
         if (!result.success) return;
 
-        if (isOnlineMatch) {
-            await syncOnlineStateFromLocal();
-        }
-
         if (result.counterPower > 0) {
             applyCounterPowerToCurrentAttack(result.counterPower);
 
@@ -2742,20 +1646,7 @@ function showSelectedCounterActions() {
             );
         }
 
-        if (isOnlineMatch && onlinePublicState?.currentAttack) {
-            await syncOnlineCurrentAttack({
-                ...onlinePublicState.currentAttack,
-                target: currentAttack.target,
-                targetPowerBonus: currentAttack.targetPowerBonus || 0,
-                counterPhaseStarted: true
-            });
-        }
-
         clearHandSelection();
-
-        if (!isOnlineMatch) {
-            await syncOnlineStateFromLocal();
-        }
     });
 
     selectedHandCard.appendChild(counterButton);
@@ -2998,8 +1889,6 @@ function createAttachDonButton(player, card) {
         } else {
             clearBoardSelection();
         }
-
-        await syncOnlineStateFromLocal();
     });
 
     return attachDonButton;
@@ -3143,8 +2032,6 @@ async function resolveActivateMainBoardEffect(player, card, effect) {
     addGameLog(`${player.name} activated ${card.name}'s Activate: Main effect. ${result.message}`);
 
     showSelectedBoardActions();
-
-    await syncOnlineStateFromLocal();
 }
 
 function resolveBoardActionEffect(player, card, effect) {
@@ -3400,8 +2287,6 @@ function setupCharacterSlotInteractions() {
 
             clearReplaceTargets();
             clearHandSelection();
-
-            await syncOnlineStateFromLocal();
         };
     });
 }
@@ -3453,18 +2338,6 @@ function showResolveAttackButton(defenderPlayerKey, onResolve) {
 
     clearBattleControls();
 
-    if (isOnlineMatch && defenderPlayerKey !== getOwnOnlinePlayerKey()) {
-        const defenderName = gameState[defenderPlayerKey]?.name ?? "Defender";
-
-        battleControls.appendChild(createBattleButton(
-            `Waiting for ${defenderName}`,
-            () => {},
-            true,
-            "counter-phase"
-        ));
-        return;
-    }
-
     const attackerCard = currentAttack
         ? getBoardCardFromData(currentAttack.attacker)
         : null;
@@ -3478,17 +2351,6 @@ function showResolveAttackButton(defenderPlayerKey, onResolve) {
         addGameLog(`${attackerName} is Unblockable. The Block Phase was skipped.`);
 
         startCounterPhase(defenderPlayerKey, onResolve);
-
-        if (isOnlineMatch && onlinePublicState?.currentAttack) {
-            syncOnlineCurrentAttack({
-                ...onlinePublicState.currentAttack,
-                target: currentAttack?.target || onlinePublicState.currentAttack.target,
-                targetPowerBonus: currentAttack?.targetPowerBonus || 0,
-                counterPhaseStarted: true
-            }).catch(error => {
-                console.error("Failed to sync online counter phase:", error);
-            });
-        }
 
         return;
     }
@@ -3714,20 +2576,11 @@ function beginAttack(targetData) {
         clearAttackTargets();
         gameState.currentPhase = "main";
 
-        if (isOnlineMatch) {
-            syncOnlinePublicBoardFromLocal({
-                phase: "main",
-                currentAttack: null
-            }).catch(error => {
-                console.error("Failed to clear online attack:", error);
-            });
-        }
-
         return;
     }
 
     currentAttack = {
-        id: isOnlineMatch ? crypto.randomUUID() : null,
+        id: null,
         attacker: { ...attackerData },
         target: { ...targetData },
         attackerPlayerKey: pendingAttack.attackerPlayerKey,
@@ -3761,38 +2614,12 @@ function beginAttack(targetData) {
             attackerPlayer,
             attackerData,
             () => {
-                if (isOnlineMatch) {
-                    syncOnlineAllPublicBoardsFromLocal({
-                        currentAttack: {
-                            id: currentAttack.id,
-                            attackerSlot: getOnlineSlotFromPlayerKey(currentAttack.attackerPlayerKey),
-                            defenderSlot: getOnlineSlotFromPlayerKey(currentAttack.defenderPlayerKey),
-                            attacker: currentAttack.attacker,
-                            target: currentAttack.target,
-                            targetPowerBonus: currentAttack.targetPowerBonus || 0,
-                            defenderEffectsResolved: false,
-                            counterPhaseStarted: false
-                        },
-                        phase: "attackResolving"
-                    }).catch(error => {
-                        console.error("Failed to sync online attack:", error);
-                        addGameLog("Online attack sync failed. Please try again.");
-                    });
-
-                    return;
-                }
-
                 showResolveAttackButton(currentAttack.defenderPlayerKey, () => {
                     resolveCurrentAttack();
                 });
             }
         );
     };
-
-    if (isOnlineMatch) {
-        continueAfterDefenderResponses();
-        return;
-    }
 
     CardEffects.resolveWhenOpponentAttacksStageEffects(
         gameState,
@@ -3807,14 +2634,6 @@ function beginAttack(targetData) {
 
 function promptOnOpponentAttackCharacterEffects(defenderPlayer, onComplete) {
     const playerKey = defenderPlayer === gameState.player1 ? "player1" : "player2";
-
-    if (isOnlineMatch && !isOwnOnlinePlayer(defenderPlayer)) {
-        if (typeof onComplete === "function") {
-            onComplete();
-        }
-
-        return;
-    }
 
     const effects = defenderPlayer.characters
         .map((card, slotIndex) => ({ card, slotIndex }))
@@ -4055,20 +2874,12 @@ async function handlePendingTrashChoice(playerKey, cardInstanceId) {
     }
 
     ui.renderHands();
-
-    await syncOnlineStateFromLocal();
 }
 
 async function resolveCurrentAttack() {
     if (!currentAttack) {
         clearBattleControls();
         gameState.currentPhase = "main";
-        return;
-    }
-
-    if (isOnlineMatch && currentAttack.defenderPlayerKey !== getOwnOnlinePlayerKey()) {
-        addGameLog("Only the defending player can resolve this online attack.");
-        renderOnlineAttackControls(onlinePublicState?.currentAttack);
         return;
     }
 
@@ -4091,13 +2902,6 @@ async function resolveCurrentAttack() {
         clearAttackArrow();
 
         gameState.currentPhase = "main";
-
-        if (isOnlineMatch) {
-            await syncOnlineAllPublicBoardsFromLocal({
-                phase: "main",
-                currentAttack: null
-            });
-        }
 
         return;
     }
@@ -4148,19 +2952,6 @@ async function resolveCurrentAttack() {
                     battleResultText += `<br>${upgradeMessage}`;
                 }
             }
-
-            if (
-                isOnlineMatch &&
-                getOnlineSlotFromPlayerKey(currentAttack.defenderPlayerKey) !== playerSlot
-            ) {
-                await onlineMultiplayerService.applyMultiplayerLifeDamage(
-                    roomCode,
-                    getOnlineSlotFromPlayerKey(currentAttack.defenderPlayerKey),
-                    getOnlineSlotFromPlayerKey(currentAttack.attackerPlayerKey),
-                    damageAmount,
-                    { banish: shouldBanishLife }
-                );
-            }
         }
     }
 
@@ -4172,9 +2963,6 @@ async function resolveCurrentAttack() {
     `);
 
     clearBattleOnlyEffectsForCurrentAttack(attackerCard, targetCard);
-
-    const resolvedAttackerSlot = getOnlineSlotFromPlayerKey(currentAttack.attackerPlayerKey);
-    const resolvedDefenderSlot = getOnlineSlotFromPlayerKey(currentAttack.defenderPlayerKey);
 
     currentAttack = null;
     pendingAttack = null;
@@ -4189,20 +2977,6 @@ async function resolveCurrentAttack() {
     renderCharacters();
 
     if (gameWinner) {
-        if (isOnlineMatch) {
-            if (resolvedDefenderSlot === playerSlot) {
-                await syncOnlineStateFromLocal();
-            }
-
-            await syncOnlineAllPublicBoardsFromLocal({
-                phase: "gameOver",
-                currentAttack: null,
-                winner: resolvedAttackerSlot,
-                gameOverReasonTitle: "Final Attack",
-                gameOverReasonText: `${defenderPlayer.name} had no life cards left and took a successful leader attack.`
-            });
-        }
-
         endGame(
             gameWinner,
             "Final Attack",
@@ -4212,17 +2986,6 @@ async function resolveCurrentAttack() {
     }
 
     gameState.currentPhase = "main";
-
-    if (isOnlineMatch) {
-        if (resolvedDefenderSlot === playerSlot) {
-            await syncOnlineStateFromLocal();
-        }
-
-        await syncOnlineAllPublicBoardsFromLocal({
-            phase: "main",
-            currentAttack: null
-        });
-    }
 }
 
 function clearBattleOnlyEffectsForCurrentAttack(attackerCard, targetCard) {
@@ -4325,23 +3088,9 @@ function lookTopCardsAddToHand({
 
     let selectedIndex = null;
 
-    const completeLookTopSelection = async (selection) => {
-        const selectedIndex = selection?.selectedIndex;
-        const selectedCard = selectedIndex !== null && selectedIndex !== undefined
-            ? cards[selectedIndex]
-            : null;
-
+    const completeLookTopSelection = (selection) => {
         if (typeof onComplete === "function") {
             onComplete(selection);
-        }
-
-        // Multiplayer search pools stay local/private; only explicitly revealed chosen cards go public.
-        if (isOnlineMatch && player === gameState[getOwnOnlinePlayerKey()]) {
-            if (revealSelected && selectedCard && isSelectable(selectedCard)) {
-                await publishOnlineReveal([selectedCard]);
-            }
-
-            await syncOnlineStateFromLocal();
         }
     };
 
@@ -4630,12 +3379,6 @@ function showBoardCardChoice({
         if (typeof onComplete === "function") {
             await onComplete(getFreshChoice(selectedChoice));
         }
-
-        await syncOnlineStateFromLocal();
-
-        if (isOnlineMatch) {
-            await syncOnlineAllPublicBoardsFromLocal();
-        }
     });
 
     skipButton.addEventListener("click", async () => {
@@ -4643,12 +3386,6 @@ function showBoardCardChoice({
 
         if (typeof onComplete === "function") {
             await onComplete(null);
-        }
-
-        await syncOnlineStateFromLocal();
-
-        if (isOnlineMatch) {
-            await syncOnlineAllPublicBoardsFromLocal();
         }
     });
 
@@ -4871,8 +3608,6 @@ function chooseEffectOption({
             if (typeof onComplete === "function") {
                 await onComplete(option.value);
             }
-
-            await syncOnlineStateFromLocal();
         });
 
         buttonRow.appendChild(button);

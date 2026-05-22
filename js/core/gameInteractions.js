@@ -1735,11 +1735,6 @@ function resolveCarreraOnPlay(player, sourceCard, ui) {
             return;
         }
 
-        if (typeof isOnlineMatch !== "undefined" && isOnlineMatch && opponent.hand.some(card => card.hidden)) {
-            addGameLog(`${sourceCard.name}'s opponent hand trash needs opponent-side private choice in multiplayer.`);
-            return;
-        }
-
         const targetHandSize = Math.max(player.hand.length, 4);
 
         const trimNext = () => {
