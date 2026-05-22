@@ -1883,6 +1883,11 @@ function lockOpponentCharactersFromAttacking(player, sourceCard, ui, maxTargets,
                     expiresAtEndOfTurns
                 };
                 locked.push({ card, slotIndex });
+
+                if (ui?.renderCharacters) {
+                    ui.renderCharacters();
+                }
+
                 addGameLog(`${sourceCard.name} prevented ${card.name} from attacking until ${opponent.name}'s next end phase.`);
                 chooseNext();
             },

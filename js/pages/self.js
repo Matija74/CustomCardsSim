@@ -204,6 +204,15 @@ function updateOnlineMatchInfo() {
     const phaseText = onlinePublicState?.phase || "Waiting";
     const turnText = onlinePublicState?.turnNumber ?? "-";
     const dice = onlinePublicState?.setup?.dice || {};
+    const firstPlayer = onlinePublicState?.firstPlayer ||
+        onlinePublicState?.setup?.turnChoice?.firstPlayer ||
+        null;
+    const secondPlayer = onlinePublicState?.secondPlayer ||
+        onlinePublicState?.setup?.turnChoice?.secondPlayer ||
+        null;
+    const turnOrderText = firstPlayer && secondPlayer
+        ? `Order: ${onlinePlayerLabels[firstPlayer] || firstPlayer.toUpperCase()} first, ${onlinePlayerLabels[secondPlayer] || secondPlayer.toUpperCase()} second`
+        : "Order: Not chosen";
     const setupText = onlinePublicState?.phase === "diceRoll"
         ? `Rolls: P1 ${dice.p1Roll || "-"} / P2 ${dice.p2Roll || "-"}${dice.tie ? " (tie)" : ""}`
         : `Turn #: ${turnText}`;
@@ -213,6 +222,7 @@ function updateOnlineMatchInfo() {
         `You are ${(playerSlot || "unknown").toUpperCase()}`,
         `Turn: ${currentPlayerText}`,
         `Phase: ${phaseText}`,
+        turnOrderText,
         setupText
     ].join(" | ");
 }
@@ -603,6 +613,32 @@ function maybeRunOnlineDefenderAttackEffects(attack) {
     promptOnOpponentAttackCharacterEffects(defenderPlayer, async () => {
         await syncOnlineStateFromLocal();
 
+        if (isOnlineMatch) {
+            await syncOnlineAllPublicBoardsFromLocal();
+        }
+
+        if (!getBoardCardFromData(currentAttack?.target || attack.target)) {
+            addGameLog("Attack target left the field, so the attack ended.");
+
+            currentAttack = null;
+            pendingAttack = null;
+            pendingBlock = null;
+
+            clearAttackTargets();
+            clearBlockerTargets();
+            clearBattleControls();
+            clearAttackArrow();
+
+            gameState.currentPhase = "main";
+
+            await syncOnlineAllPublicBoardsFromLocal({
+                phase: "main",
+                currentAttack: null
+            });
+
+            return;
+        }
+
         await syncOnlineCurrentAttack({
             ...(onlinePublicState?.currentAttack || attack),
             target: currentAttack?.target || attack.target,
@@ -759,13 +795,17 @@ async function syncOnlineStateFromLocal() {
         publicState.winner = onlinePublicState?.winner || onlinePendingWinnerSlot || null;
     }
 
+    const privateState = createOwnPrivateStateFromLocal(ownPlayer);
+
+    onlinePrivateState = privateState;
+
     await onlineMultiplayerService.sendMultiplayerAction(
         roomCode,
         onlineUser,
         "updateState",
         {
             publicState,
-            privateState: createOwnPrivateStateFromLocal(ownPlayer)
+            privateState
         }
     );
 }
@@ -781,6 +821,16 @@ async function syncOnlinePublicBoardFromLocal(extraState = {}) {
 
     await onlineMultiplayerService.updatePublicState(roomCode, {
         [publicKey]: createPublicPlayerStateFromLocal(ownPlayer),
+        ...extraState
+    });
+}
+
+async function syncOnlineAllPublicBoardsFromLocal(extraState = {}) {
+    if (!isOnlineMatch || !onlineMultiplayerService || !gameState) return;
+
+    await onlineMultiplayerService.updatePublicState(roomCode, {
+        player1: createPublicPlayerStateFromLocal(gameState.player1),
+        player2: createPublicPlayerStateFromLocal(gameState.player2),
         ...extraState
     });
 }
@@ -822,6 +872,10 @@ async function maybeRunOnlineTurnStart(turnKey) {
 
     if (drawResult?.deckOut || gameState.currentPhase === "gameOver") {
         await syncOnlineStateFromLocal();
+
+        if (isOnlineMatch) {
+            await syncOnlineAllPublicBoardsFromLocal();
+        }
         return;
     }
 
@@ -960,6 +1014,7 @@ async function handleOnlinePassTurn() {
             }
 
             await syncOnlineStateFromLocal();
+            await syncOnlineAllPublicBoardsFromLocal();
         }
 
         // Multiplayer turn owner writes private/public snapshot, then flips public turn pointer.
@@ -1343,6 +1398,11 @@ function showGameOverPopup(winnerPlayer, reasonTitle = "Victory", reasonText = "
     playAgainButton.textContent = "Play Again";
 
     playAgainButton.addEventListener("click", () => {
+        if (isOnlineMatch) {
+            window.location.href = "multiplayer.html";
+            return;
+        }
+
         window.location.reload();
     });
 
@@ -2610,26 +2670,32 @@ function showSelectedCounterActions() {
 
         if (!result.success) return;
 
+        if (isOnlineMatch) {
+            await syncOnlineStateFromLocal();
+        }
+
         if (result.counterPower > 0) {
             applyCounterPowerToCurrentAttack(result.counterPower);
 
             addGameLog(
                 `${player.name}'s attack target has +${currentAttack.targetPowerBonus} counter power this battle.`
             );
+        }
 
-            if (isOnlineMatch && onlinePublicState?.currentAttack) {
-                await syncOnlineCurrentAttack({
-                    ...onlinePublicState.currentAttack,
-                    target: currentAttack.target,
-                    targetPowerBonus: currentAttack.targetPowerBonus,
-                    counterPhaseStarted: true
-                });
-            }
+        if (isOnlineMatch && onlinePublicState?.currentAttack) {
+            await syncOnlineCurrentAttack({
+                ...onlinePublicState.currentAttack,
+                target: currentAttack.target,
+                targetPowerBonus: currentAttack.targetPowerBonus || 0,
+                counterPhaseStarted: true
+            });
         }
 
         clearHandSelection();
 
-        await syncOnlineStateFromLocal();
+        if (!isOnlineMatch) {
+            await syncOnlineStateFromLocal();
+        }
     });
 
     selectedHandCard.appendChild(counterButton);
@@ -3075,6 +3141,48 @@ function resolveBoardActionEffect(player, card, effect) {
         effect.id === "EGG1-006-activate-main-base-power" ||
         effect.id === "EGG1-008-activate-main-trash-power"
     ) {
+        if (effect.id === "EGG1-002-activate-main-copy") {
+            const copyChoices = getOpponentBoardChoices(player, {
+                includeLeader: true,
+                filter: targetCard => getCopyableEffects(targetCard).length > 0
+            });
+
+            if (copyChoices.length === 0) {
+                return {
+                    success: false,
+                    message: `${card.name} found no opposing leader or character abilities to copy.`
+                };
+            }
+        }
+
+        if (effect.id === "EGG1-006-activate-main-base-power") {
+            const ownEggmanCharacters = getOwnBoardChoices(player, {
+                includeLeader: false,
+                filter: targetCard => targetCard.cardType === "character" && hasTypeText(targetCard, "Eggman Empire")
+            });
+            const opponentCharacters = getOpponentCharacterChoices(player);
+
+            if (ownEggmanCharacters.length === 0 || opponentCharacters.length === 0) {
+                return {
+                    success: false,
+                    message: `${card.name} needs one of your Eggman Empire characters and one opposing character.`
+                };
+            }
+        }
+
+        if (effect.id === "EGG1-008-activate-main-trash-power") {
+            const otherCharacters = getOwnBoardChoices(player, {
+                includeLeader: false,
+                filter: targetCard => targetCard.cardType === "character" && targetCard !== card
+            });
+
+            if (otherCharacters.length === 0) {
+                return {
+                    success: false,
+                    message: `${card.name} needs another character to trash.`
+                };
+            }
+        }
         const message = resolveEffectAction(player, card, effect, ui, {
             skipActivationPrompt: true
         });
@@ -3594,7 +3702,7 @@ function beginAttack(targetData) {
             attackerData,
             () => {
                 if (isOnlineMatch) {
-                    syncOnlinePublicBoardFromLocal({
+                    syncOnlineAllPublicBoardsFromLocal({
                         currentAttack: {
                             id: currentAttack.id,
                             attackerSlot: getOnlineSlotFromPlayerKey(currentAttack.attackerPlayerKey),
@@ -4461,6 +4569,10 @@ function showBoardCardChoice({
         }
 
         await syncOnlineStateFromLocal();
+
+        if (isOnlineMatch) {
+            await syncOnlineAllPublicBoardsFromLocal();
+        }
     });
 
     skipButton.addEventListener("click", async () => {
@@ -4471,6 +4583,10 @@ function showBoardCardChoice({
         }
 
         await syncOnlineStateFromLocal();
+
+        if (isOnlineMatch) {
+            await syncOnlineAllPublicBoardsFromLocal();
+        }
     });
 
     buttonRow.appendChild(chooseButton);
