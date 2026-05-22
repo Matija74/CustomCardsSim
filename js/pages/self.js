@@ -1461,7 +1461,7 @@ function endGame(winnerPlayer, reasonTitle = "Victory", reasonText = "") {
         });
 
         if (winnerSlot) {
-            syncOnlinePublicBoardFromLocal({
+            syncOnlineAllPublicBoardsFromLocal({
                 phase: "gameOver",
                 currentAttack: null,
                 winner: winnerSlot,
@@ -2012,6 +2012,22 @@ function renderPlayerHand(player, handElementId, hidden) {
         handElement.appendChild(cardElement);
     });
 
+    if (!hidden) {
+        const sortButton = document.createElement("button");
+        sortButton.className = "hand-sort-button";
+        sortButton.type = "button";
+        sortButton.textContent = "Sort";
+        sortButton.title = "Sort hand by category, cost, then card ID.";
+
+        sortButton.addEventListener("click", async (event) => {
+            event.stopPropagation();
+
+            await sortPlayerHand(player);
+        });
+
+        handElement.appendChild(sortButton);
+    }
+
     const count = document.createElement("div");
 
     count.className = "hand-count";
@@ -2021,6 +2037,50 @@ function renderPlayerHand(player, handElementId, hidden) {
 
     setupCardPreview();
     setupHandCardSelection();
+}
+
+async function sortPlayerHand(player) {
+    if (!player || !Array.isArray(player.hand)) {
+        return;
+    }
+
+    const indexedHand = player.hand.map((card, index) => ({ card, index }));
+
+    indexedHand.sort((left, right) => {
+        const leftKey = getHandSortKey(left.card);
+        const rightKey = getHandSortKey(right.card);
+
+        return leftKey.category - rightKey.category ||
+            leftKey.cost - rightKey.cost ||
+            leftKey.cardId.localeCompare(rightKey.cardId) ||
+            left.index - right.index;
+    });
+
+    player.hand = indexedHand.map(entry => entry.card);
+
+    clearHandSelection();
+    renderHands();
+
+    addGameLog(`${player.name}'s hand was sorted.`);
+
+    if (isOnlineMatch && player === gameState[getOwnOnlinePlayerKey()]) {
+        await syncOnlineStateFromLocal();
+    }
+}
+
+function getHandSortKey(card) {
+    const categoryOrder = {
+        stage: 0,
+        event: 1,
+        character: 2
+    };
+    const cardType = String(card?.cardType || "").toLowerCase();
+
+    return {
+        category: categoryOrder[cardType] ?? 3,
+        cost: Number(card?.cost ?? card?.playCost ?? 0),
+        cardId: String(card?.cardNumber || card?.id || card?.name || "")
+    };
 }
 
 // =========================
@@ -3173,7 +3233,7 @@ function resolveBoardActionEffect(player, card, effect) {
         if (effect.id === "EGG1-008-activate-main-trash-power") {
             const otherCharacters = getOwnBoardChoices(player, {
                 includeLeader: false,
-                filter: targetCard => targetCard.cardType === "character" && targetCard !== card
+                filter: targetCard => targetCard.cardType === "character" && targetCard.instanceId !== card.instanceId
             });
 
             if (otherCharacters.length === 0) {
@@ -4033,7 +4093,7 @@ async function resolveCurrentAttack() {
         gameState.currentPhase = "main";
 
         if (isOnlineMatch) {
-            await syncOnlinePublicBoardFromLocal({
+            await syncOnlineAllPublicBoardsFromLocal({
                 phase: "main",
                 currentAttack: null
             });
@@ -4134,7 +4194,7 @@ async function resolveCurrentAttack() {
                 await syncOnlineStateFromLocal();
             }
 
-            await syncOnlinePublicBoardFromLocal({
+            await syncOnlineAllPublicBoardsFromLocal({
                 phase: "gameOver",
                 currentAttack: null,
                 winner: resolvedAttackerSlot,
@@ -4158,7 +4218,7 @@ async function resolveCurrentAttack() {
             await syncOnlineStateFromLocal();
         }
 
-        await syncOnlinePublicBoardFromLocal({
+        await syncOnlineAllPublicBoardsFromLocal({
             phase: "main",
             currentAttack: null
         });
@@ -4353,7 +4413,10 @@ function lookTopCardsAddToHand({
             selectCard(cardButton, index, validChoice);
             showSearchCardImagePopup(card, {
                 canSelect: validChoice,
-                onSelect: () => selectCard(cardButton, index, validChoice)
+                onSelect: () => {
+                    selectCard(cardButton, index, validChoice);
+                    continueToBottomOrder();
+                }
             });
         });
 
@@ -5196,7 +5259,21 @@ function getTemporaryPowerModifier(card) {
 
 function getDurationPowerModifier(card) {
     return card?.durationPowerBonuses
-        ?.reduce((total, entry) => total + Number(entry.amount ?? 0), 0) ?? 0;
+        ?.filter(entry => !isDurationPowerBonusExpired(card, entry))
+        .reduce((total, entry) => total + Number(entry.amount ?? 0), 0) ?? 0;
+}
+
+function isDurationPowerBonusExpired(card, entry) {
+    const fallbackPlayer = getPlayerForBoardCard(card);
+    const expiringPlayer = entry?.expiresAtPlayerKey
+        ? gameState?.[entry.expiresAtPlayerKey]
+        : fallbackPlayer;
+
+    if (!expiringPlayer) {
+        return false;
+    }
+
+    return Number(expiringPlayer.turns || 0) > Number(entry.expiresAtEndOfTurns ?? 0);
 }
 
 function getBattlePowerModifier(card) {

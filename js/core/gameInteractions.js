@@ -1441,22 +1441,30 @@ function copyOpponentCharacterBasePower(player, sourceCard, ui) {
 }
 
 function trashOwnCharacterForMetalSonicPower(player, sourceCard, ui) {
+    const sourceInstanceId = sourceCard?.instanceId;
+
     return chooseOwnBoardCard(player, sourceCard, {
         prompt: "Choose one of your other characters to trash for Metal Sonic's power bonus.",
         optional: true,
         includeLeader: false,
-        filter: card => card.cardType === "character" && card !== sourceCard,
+        filter: card => card.cardType === "character" && card.instanceId !== sourceInstanceId,
         onSelect: ({ slotIndex, card }) => {
             const bonus = getCardEffectiveCost(card) * 1000;
+            const sourceSlotIndex = player.characters.findIndex(character => {
+                return character?.instanceId === sourceInstanceId;
+            });
+            const metalSonic = sourceSlotIndex !== -1
+                ? player.characters[sourceSlotIndex]
+                : sourceCard;
 
             player.characters[slotIndex] = null;
             moveCardToTrash(player, card, ui);
             resolveGutsLeaderCharacterRemovedBonus(player, ui);
-            addTemporaryPowerBonus(sourceCard, bonus);
+            addTemporaryPowerBonus(metalSonic, bonus);
 
             ui.renderCharacters();
             ui.renderTrash();
-            addGameLog(`${sourceCard.name} trashed ${card.name} and gained +${bonus} power this turn.`);
+            addGameLog(`${metalSonic.name} trashed ${card.name} and gained +${bonus} power this turn.`);
         },
         skipMessage: `${player.name} did not trash a character for ${sourceCard.name}.`,
         emptyMessage: `${sourceCard.name} found no other characters to trash.`
@@ -2576,7 +2584,7 @@ function addTemporaryPowerBonus(card, amount) {
     card.temporaryPowerBonus = Number(card.temporaryPowerBonus || 0) + Number(amount || 0);
 }
 
-function addDurationPowerBonus(card, amount, expiresAtEndOfTurns) {
+function addDurationPowerBonus(card, amount, expiresAtEndOfTurns, expiresAtPlayerKey = null) {
     if (!card) {
         return;
     }
@@ -2587,7 +2595,8 @@ function addDurationPowerBonus(card, amount, expiresAtEndOfTurns) {
 
     card.durationPowerBonuses.push({
         amount: Number(amount || 0),
-        expiresAtEndOfTurns
+        expiresAtEndOfTurns,
+        expiresAtPlayerKey
     });
 }
 
@@ -3021,7 +3030,12 @@ function resolveGutsLeaderCharacterRemovedBonus(removedCharacterPlayer, ui) {
         return;
     }
 
-    addDurationPowerBonus(leader, 1000, Number(opponent.turns || 0) + 1);
+    addDurationPowerBonus(
+        leader,
+        1000,
+        Number(opponent.turns || 0) + 1,
+        getPlayerKey(opponent)
+    );
 
     if (ui?.renderLeaders) {
         ui.renderLeaders();
@@ -3965,7 +3979,13 @@ function clearEndOfTurnTemporaryEffects(player, options = {}) {
         card.protectedFromOpponentEffects = false;
 
         if (!options.preserveDurationPower && Array.isArray(card.durationPowerBonuses)) {
+            const expiringPlayerKey = getPlayerKey(player);
+
             card.durationPowerBonuses = card.durationPowerBonuses.filter(entry => {
+                if (entry.expiresAtPlayerKey && entry.expiresAtPlayerKey !== expiringPlayerKey) {
+                    return true;
+                }
+
                 return Number(entry.expiresAtEndOfTurns ?? 0) > Number(player.turns || 0);
             });
         }
