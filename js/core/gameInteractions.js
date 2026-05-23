@@ -1225,19 +1225,7 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
     }
 
     if (effect.id === "BK01-014-on-play-ko-each") {
-        const ownMessage = chooseOwnBoardCard(player, sourceCard, {
-            prompt: "Choose up to 1 of your characters to K.O.",
-            optional: true,
-            includeLeader: false,
-            filter: card => card.cardType === "character",
-            onSelect: ({ slotIndex }) => {
-                const result = KOCharacter(player, slotIndex, ui);
-                addGameLog(`${sourceCard.name} K.O.'d one of your characters. ${result.message}`);
-            },
-            skipMessage: `${player.name} did not K.O. one of their characters with ${sourceCard.name}.`,
-            emptyMessage: `${sourceCard.name} found no own characters to K.O.`
-        });
-        const opponentMessage = chooseOpponentCharacter(player, sourceCard, {
+        const chooseOpponentKOTarget = () => chooseOpponentCharacter(player, sourceCard, {
             prompt: "Choose up to 1 opposing character to K.O.",
             optional: true,
             onSelect: ({ playerKey, slotIndex }) => {
@@ -1247,7 +1235,25 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
             emptyMessage: `${sourceCard.name} found no opposing characters.`
         });
 
-        return `${ownMessage} ${opponentMessage}`;
+        return chooseOwnBoardCard(player, sourceCard, {
+            prompt: "Choose up to 1 of your characters to K.O.",
+            optional: true,
+            includeLeader: false,
+            filter: card => card.cardType === "character",
+            onSelect: ({ slotIndex }) => {
+                const result = KOCharacter(player, slotIndex, ui);
+
+                if (!result.success) {
+                    addGameLog(`${sourceCard.name} could not K.O. one of your characters. ${result.message}`);
+                    return;
+                }
+
+                addGameLog(`${sourceCard.name} K.O.'d one of your characters. ${result.message}`);
+                addGameLog(chooseOpponentKOTarget());
+            },
+            skipMessage: `${player.name} did not K.O. one of their characters with ${sourceCard.name}, so the opposing K.O. did not resolve.`,
+            emptyMessage: `${sourceCard.name} found no own characters to K.O., so its effect did not resolve.`
+        });
     }
 
     if (effect.id === "BK01-015-main") {
@@ -1559,8 +1565,11 @@ function playEggmanCharactersFromTrashByCost(player, sourceCard, ui, maxCost, ma
                 player.characters[slotIndex] = playedCard;
                 played.push(playedCard);
 
+                const effectMessages = resolveOnPlayEffects(player, playedCard, ui);
+
                 ui.renderCharacters();
                 ui.renderTrash();
+                effectMessages.forEach(message => addGameLog(message));
 
                 if (played.length >= maxAmount) {
                     drawCard(player, ui);
@@ -1709,9 +1718,12 @@ function resolveDiabloOnPlay(player, sourceCard, ui) {
             playedCard.uiAnimation = "played";
             player.characters[slotIndex] = playedCard;
 
+            const effectMessages = resolveOnPlayEffects(player, playedCard, ui);
+
             ui.renderCharacters();
             ui.renderTrash();
             addGameLog(`${sourceCard.name} played ${playedCard.name} from trash.`);
+            effectMessages.forEach(effectMessage => addGameLog(effectMessage));
             addLifeIfNeeded();
         },
         onSkip: addLifeIfNeeded,
@@ -2151,12 +2163,29 @@ function findZangetsuStageForGameStart(player, targetCost) {
     return null;
 }
 
+function findZangetsuStageInDeck(player, targetCost) {
+    const deck = player?.deck || [];
+    const index = deck.findIndex(card => {
+        return isZangetsuStage(card) && Number(card.cost ?? 0) === Number(targetCost || 0);
+    });
+
+    return index === -1
+        ? null
+        : {
+            zone: {
+                name: "deck",
+                cards: deck
+            },
+            index
+        };
+}
+
 function playZangetsuStageFromDeck(player, sourceCard, ui, targetCost) {
     if (!player) {
         return "";
     }
 
-    const stageLocation = findZangetsuStageForGameStart(player, targetCost);
+    const stageLocation = findZangetsuStageInDeck(player, targetCost);
 
     if (!stageLocation) {
         shuffleDeck(player.deck);
@@ -2764,6 +2793,10 @@ function getAvailableUryuLifeFlipReplacement(targetPlayer, actingPlayer) {
         return null;
     }
 
+    if (targetPlayer.life[0]?.faceUp) {
+        return null;
+    }
+
     const effectId = "BL01-008-life-flip-replace";
 
     return targetPlayer.characters.find(card => {
@@ -2775,7 +2808,7 @@ function getAvailableUryuLifeFlipReplacement(targetPlayer, actingPlayer) {
 function useUryuLifeFlipReplacement(targetPlayer, uryu, ui) {
     const topLife = targetPlayer?.life?.[0];
 
-    if (!topLife || !uryu) {
+    if (!topLife || topLife.faceUp || !uryu) {
         return false;
     }
 
