@@ -3758,6 +3758,12 @@ function getPrintedPower(card) {
     }
 
     const owner = getPlayerForBoardCard(card);
+    const copiedBasePower = getCopiedEffectBasePower(card, owner);
+
+    if (copiedBasePower !== null) {
+        return copiedBasePower;
+    }
+
     const zangetsuBasePower = getZangetsuLeaderBasePower(card, owner);
 
     if (zangetsuBasePower !== null) {
@@ -3803,7 +3809,8 @@ function getPowerModifier(card, player = null) {
         return 0;
     }
 
-    return getYourTurnPowerBonus(card, player) +
+    return getCopiedEffectPowerModifier(card, player) +
+        getYourTurnPowerBonus(card, player) +
         getTurboGrannyFormPowerModifier(card, player) +
         getSerpicoFarnesePowerModifier(card, player) +
         getGutsLeaderPowerModifier(card, player) +
@@ -3813,7 +3820,7 @@ function getPowerModifier(card, player = null) {
         getAttachedDonPowerModifier(card, player) +
         getTemporaryPowerModifier(card) +
         getDurationPowerModifier(card) +
-        getTokenAttachedPowerModifier(card) +
+        getDonAttachedPowerModifier(card) +
         getBattlePowerModifier(card);
 }
 
@@ -3836,7 +3843,7 @@ function getYourTurnPowerBonus(card, player) {
         return 0;
     }
 
-    const leaderPowerEffect = card.effects?.find(effect => {
+    const leaderPowerEffect = getCardAllEffects(card)?.find(effect => {
         return effect.type === "yourTurn" && effect.actionId === "leaderPowerPerCharacter";
     });
 
@@ -3883,26 +3890,26 @@ function getOpponentTurnPowerModifier(card, player) {
         return 0;
     }
 
-    return card.effects
+    return getCardAllEffects(card)
         ?.filter(effect => effect.type === "opponentsTurn")
         .reduce((total, effect) => {
             return total + Number(effect.powerModifier ?? 0);
         }, 0) ?? 0;
 }
 
-function getTokenAttachedPowerModifier(card) {
+function getDonAttachedPowerModifier(card) {
     if (!card) {
         return 0;
     }
 
     const attachedDon = Number(card.attachedDon ?? 0);
 
-    return card.effects
-        ?.filter(effect => effect.type === "tokenAttached")
+    return getCardAllEffects(card)
+        ?.filter(effect => effect.type === "donAttached")
         .reduce((total, effect) => {
-            const requiredTokens = Number(effect.requiredTokens ?? 0);
+            const requiredDon = Number(effect.requiredDon ?? 0);
 
-            if (attachedDon < requiredTokens) {
+            if (attachedDon < requiredDon) {
                 return total;
             }
 
@@ -4013,6 +4020,76 @@ function isDurationPowerBonusExpired(card, entry) {
 
 function getBattlePowerModifier(card) {
     return Number(card?.battlePowerBonus ?? 0);
+}
+
+function getCopiedEffectBasePower(card, player) {
+    if (!card || !player) {
+        return null;
+    }
+
+    return card.temporaryCopiedEffects
+        ?.reduce((currentBasePower, effect) => {
+            if (currentBasePower !== null) {
+                return currentBasePower;
+            }
+
+            if (
+                effect.id === "BK01-007-guts-base-power" &&
+                player.characters?.some(character => CardEffects.hasCardName(character, "Guts"))
+            ) {
+                return Number(effect.conditionalBasePower ?? 6000);
+            }
+
+            return null;
+        }, null) ?? null;
+}
+
+function getCopiedEffectPowerModifier(card, player) {
+    if (!card || !player) {
+        return 0;
+    }
+
+    return card.temporaryCopiedEffects
+        ?.reduce((total, effect) => {
+            if (effect.id === "BL01-012-stage-cost-power") {
+                return total + Number(player.stage?.cost ?? 0) * 1000;
+            }
+
+            if (effect.id === "BL01-014-ichigo-character-power") {
+                return player.characters?.some(character => {
+                    return character?.cardType === "character" &&
+                        CardEffects.hasCardName(character, "Kurosaki Ichigo");
+                })
+                    ? total + 1000
+                    : total;
+            }
+
+            if (
+                effect.id === "RIM1-004-rimuru-power" &&
+                player.leader &&
+                CardEffects.hasCardName(player.leader, "Rimuru Tempest")
+            ) {
+                return total + 1000;
+            }
+
+            if (
+                effect.type === "continuous" &&
+                Number(effect.powerModifier ?? 0) !== 0 &&
+                copiedEffectTargetsThisCard(effect)
+            ) {
+                return total + Number(effect.powerModifier ?? 0);
+            }
+
+            return total;
+        }, 0) ?? 0;
+}
+
+function copiedEffectTargetsThisCard(effect) {
+    const text = String(effect?.text || "").toLowerCase();
+
+    return text.includes("this card") ||
+        text.includes("this character") ||
+        text.includes("this leader");
 }
 
 function getCostModifier(card) {

@@ -1,39 +1,4 @@
 {
-  "testLeader": {
-    "id": "test-leader",
-    "cardNumber": "TEST-001",
-    "name": "Test Leader",
-    "cardType": "leader",
-    "type": "type",
-    "color": "red",
-    "attribute": "slash",
-    "power": 5000,
-    "life": 5,
-    "image": "../images/testCards/test-leader.png",
-    "keywords": ["unblockable"],
-    "effects": [
-      {
-        "id": "test-leader-main-draw",
-        "type": "activateMain",
-        "oncePerTurn": true,
-        "text": "Activate: Main Once Per Turn: Draw 1 card.",
-        "actionId": "drawOneCard"
-      },
-      {
-        "id": "test-leader-when-attacking-trash",
-        "type": "whenAttacking",
-        "text": "When Attacking: Trash 1 card.",
-        "actionId": "trashOneCard"
-      },
-      {
-        "id": "test-leader-your-turn-power",
-        "type": "yourTurn",
-        "text": "Your Turn: This card gets +1000 power for every character on your field.",
-        "actionId": "leaderPowerPerCharacter"
-      }
-    ]
-  },
-
   "DD01-001": {
     "id": "DD01-001",
     "cardNumber": "DD01-001",

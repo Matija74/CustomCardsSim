@@ -273,6 +273,7 @@ function setupModalCloseEvents() {
     document.addEventListener("keydown", event => {
         if (event.key === "Escape") {
             closeDeckImageModal();
+            closeDeckCardPreview();
         }
     });
 
@@ -317,6 +318,10 @@ function createDeckImageCard(entry) {
         const img = document.createElement("img");
         img.src = entry.card.image;
         img.alt = entry.card.name;
+        img.addEventListener("click", event => {
+            event.stopPropagation();
+            openDeckCardPreview(entry.card);
+        });
 
         const name = document.createElement("span");
         name.className = "deck-image-name";
@@ -333,6 +338,54 @@ function createDeckImageCard(entry) {
     }
 
     return wrapper;
+}
+
+function openDeckCardPreview(card) {
+    if (!card?.image) return;
+
+    closeDeckCardPreview();
+
+    const overlay = document.createElement("div");
+    overlay.className = "card-preview-modal open";
+    overlay.id = "presetCardPreviewModal";
+
+    const backdrop = document.createElement("div");
+    backdrop.className = "card-preview-backdrop";
+    backdrop.addEventListener("click", closeDeckCardPreview);
+
+    const box = document.createElement("div");
+    box.className = "card-preview-box";
+
+    const closeButton = document.createElement("button");
+    closeButton.className = "card-preview-close";
+    closeButton.type = "button";
+    closeButton.textContent = "x";
+    closeButton.setAttribute("aria-label", "Close card preview");
+    closeButton.addEventListener("click", closeDeckCardPreview);
+
+    const image = document.createElement("img");
+    image.className = "card-preview-image";
+    image.src = card.image;
+    image.alt = card.name;
+
+    const info = document.createElement("div");
+    info.className = "card-preview-info";
+
+    const name = document.createElement("h2");
+    name.textContent = card.name;
+
+    info.appendChild(name);
+    box.appendChild(closeButton);
+    box.appendChild(image);
+    box.appendChild(info);
+    overlay.appendChild(backdrop);
+    overlay.appendChild(box);
+
+    document.body.appendChild(overlay);
+}
+
+function closeDeckCardPreview() {
+    document.getElementById("presetCardPreviewModal")?.remove();
 }
 
 // =========================

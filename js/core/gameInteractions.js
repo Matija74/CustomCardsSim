@@ -21,6 +21,13 @@ function assignCardInstance(card) {
     return createCardInstance(card);
 }
 
+function getCardAllEffects(card) {
+    return [
+        ...(Array.isArray(card?.effects) ? card.effects : []),
+        ...(Array.isArray(card?.temporaryCopiedEffects) ? card.temporaryCopiedEffects : [])
+    ];
+}
+
 // =========================
 // Card Lookup Helpers
 // =========================
@@ -89,7 +96,7 @@ function isRimuruTempestLeader(player) {
 
 function isTwelveGuardianLordType(card) {
     return hasTypeText(card, "Twelve Guardian Lords") ||
-        card?.effects?.some(effect => {
+        getCardAllEffects(card)?.some(effect => {
             return effect.type === "continuous" &&
                 String(effect.text || "").toLowerCase().includes("also considered a {twelve guardian lords} type");
         });
@@ -388,7 +395,7 @@ function getEventCounterBonusFromBoard(card, player) {
     return player.characters
         .filter(Boolean)
         .reduce((total, character) => {
-            const eventCounterEffects = character.effects?.filter(effect => {
+            const eventCounterEffects = getCardAllEffects(character)?.filter(effect => {
                 return effect.type === "opponentsTurn" &&
                     effect.actionId === "eventCounterIfLeaderRested";
             }) ?? [];
@@ -1340,31 +1347,59 @@ function resolveCopiedBoardAbility(player, sourceCard, copiedEffect, ui, copiedF
         return "";
     }
 
+    const gainedKeywords = copyTemporaryRelevantKeywords(sourceCard, copiedFromCard);
+
+    if (
+        copiedEffect.type === "continuous" ||
+        copiedEffect.type === "yourTurn" ||
+        copiedEffect.type === "opponentsTurn" ||
+        copiedEffect.type === "donAttached"
+    ) {
+        const message = applyTemporaryCopiedBoardEffect(sourceCard, copiedEffect, ui, copiedFromCard);
+        return appendCopiedKeywordMessage(message, gainedKeywords);
+    }
+
+    if (copiedEffect.type === "onKO") {
+        const message = resolveCopiedOnKOEffect(player, sourceCard, copiedEffect, ui, copiedFromCard);
+        return appendCopiedKeywordMessage(message, gainedKeywords);
+    }
+
     if (copiedEffect.id === "DD01-007-when-attacking-refresh-don") {
         const refreshedDon = setRestedDonActive(player, 2, ui);
 
-        return refreshedDon > 0
+        const message = refreshedDon > 0
             ? `${sourceCard.name} copied ${copiedFromCard.name}'s ability and set ${refreshedDon} DON!! as active.`
             : `${sourceCard.name} copied ${copiedFromCard.name}'s ability but found no rested DON!!.`;
+
+        return appendCopiedKeywordMessage(message, gainedKeywords);
     }
 
     if (copiedEffect.id === "DD01-010-when-attacking-unblockable") {
         const returnedDon = returnDonToDeck(player, 1, ui);
 
         if (returnedDon < 1) {
-            return `${sourceCard.name} copied ${copiedFromCard.name}'s ability but could not pay DON!! -1.`;
+            return appendCopiedKeywordMessage(
+                `${sourceCard.name} copied ${copiedFromCard.name}'s ability but could not pay DON!! -1.`,
+                gainedKeywords
+            );
         }
 
         addTemporaryKeyword(sourceCard, "unblockable");
 
-        return `${sourceCard.name} copied ${copiedFromCard.name}'s ability, returned 1 DON!!, and gained Unblockable this turn.`;
+        return appendCopiedKeywordMessage(
+            `${sourceCard.name} copied ${copiedFromCard.name}'s ability, returned 1 DON!!, and gained Unblockable this turn.`,
+            gainedKeywords
+        );
     }
 
     if (copiedEffect.id === "DD01-017-when-attacking-ko-blocker") {
         const returnedDon = returnDonToDeck(player, 1, ui);
 
         if (returnedDon < 1) {
-            return `${sourceCard.name} copied ${copiedFromCard.name}'s ability but could not pay DON!! -1.`;
+            return appendCopiedKeywordMessage(
+                `${sourceCard.name} copied ${copiedFromCard.name}'s ability but could not pay DON!! -1.`,
+                gainedKeywords
+            );
         }
 
         const message = chooseOpponentCharacter(player, sourceCard, {
@@ -1378,7 +1413,10 @@ function resolveCopiedBoardAbility(player, sourceCard, copiedEffect, ui, copiedF
             emptyMessage: `${sourceCard.name} found no opposing cost 5 or lower Blockers.`
         });
 
-        return `${sourceCard.name} copied ${copiedFromCard.name}'s ability and returned 1 DON!!. ${message}`;
+        return appendCopiedKeywordMessage(
+            `${sourceCard.name} copied ${copiedFromCard.name}'s ability and returned 1 DON!!. ${message}`,
+            gainedKeywords
+        );
     }
 
     if (copiedEffect.id === "DD01-006-when-attacking-active") {
@@ -1388,18 +1426,105 @@ function resolveCopiedBoardAbility(player, sourceCard, copiedEffect, ui, copiedF
             ui.renderCharacters();
         }
 
-        return `${sourceCard.name} copied ${copiedFromCard.name}'s ability and set itself active.`;
+        return appendCopiedKeywordMessage(
+            `${sourceCard.name} copied ${copiedFromCard.name}'s ability and set itself active.`,
+            gainedKeywords
+        );
     }
 
-    return resolveEffectAction(player, sourceCard, copiedEffect, ui, {
+    return appendCopiedKeywordMessage(resolveEffectAction(player, sourceCard, copiedEffect, ui, {
         skipActivationPrompt: true
-    });
+    }), gainedKeywords);
 }
 
 function getCopyableEffects(card) {
-    return card?.effects
-        ?.filter(effect => effect.type !== "continuous" && effect.type !== "opponentsTurn")
-        .filter(effect => effect.id !== "EGG1-002-activate-main-copy") ?? [];
+    const excludedTypes = new Set([
+        "gameStart",
+        "manualReview",
+        "onOpponentDealsDamage"
+    ]);
+
+    return getCardAllEffects(card)
+        .filter(effect => !excludedTypes.has(effect.type))
+        .filter(effect => effect.id !== "EGG1-002-activate-main-copy");
+}
+
+function appendCopiedKeywordMessage(message, gainedKeywords) {
+    if (!gainedKeywords.length) {
+        return message || "";
+    }
+
+    const keywordText = gainedKeywords.join(", ");
+
+    return message
+        ? `${message} It also gained ${keywordText} this turn.`
+        : `It gained ${keywordText} this turn.`;
+}
+
+function copyTemporaryRelevantKeywords(sourceCard, copiedFromCard) {
+    if (!sourceCard || !copiedFromCard) {
+        return [];
+    }
+
+    const copiedKeywords = [];
+    const keywordMap = [
+        { key: "unblockable", label: "Unblockable" },
+        { key: "banish", label: "Banish" },
+        { key: "doubleAttack", label: "Double Attack" }
+    ];
+
+    keywordMap.forEach(({ key, label }) => {
+        if (!CardEffects.hasKeyword(copiedFromCard, key) || CardEffects.hasKeyword(sourceCard, key)) {
+            return;
+        }
+
+        addTemporaryKeyword(sourceCard, key);
+        copiedKeywords.push(label);
+    });
+
+    return copiedKeywords;
+}
+
+function applyTemporaryCopiedBoardEffect(sourceCard, copiedEffect, ui, copiedFromCard) {
+    if (!sourceCard || !copiedEffect) {
+        return "";
+    }
+
+    if (!Array.isArray(sourceCard.temporaryCopiedEffects)) {
+        sourceCard.temporaryCopiedEffects = [];
+    }
+
+    const effectCopy = typeof structuredClone === "function"
+        ? structuredClone(copiedEffect)
+        : JSON.parse(JSON.stringify(copiedEffect));
+
+    sourceCard.temporaryCopiedEffects.push(effectCopy);
+
+    if (ui?.renderLeaders) {
+        ui.renderLeaders();
+    }
+
+    if (ui?.renderCharacters) {
+        ui.renderCharacters();
+    }
+
+    return `${sourceCard.name} copied ${copiedFromCard.name}'s ${getEffectLabel(copiedEffect)} effect until end of turn.`;
+}
+
+function resolveCopiedOnKOEffect(player, sourceCard, copiedEffect, ui, copiedFromCard) {
+    if (copiedEffect.id === "DD01-012-on-ko-add-don") {
+        const addedDon = addDon(player, 1, ui);
+
+        return addedDon > 0
+            ? `${sourceCard.name} copied ${copiedFromCard.name}'s On K.O. effect and added 1 active DON!!.`
+            : `${sourceCard.name} copied ${copiedFromCard.name}'s On K.O. effect but found no DON!! cards to add.`;
+    }
+
+    const message = resolveEffectAction(player, sourceCard, copiedEffect, ui, {
+        skipActivationPrompt: true
+    });
+
+    return message || `${sourceCard.name} copied ${copiedFromCard.name}'s On K.O. effect.`;
 }
 
 function copyOpponentCharacterBasePower(player, sourceCard, ui) {
@@ -4000,6 +4125,7 @@ function clearEndOfTurnTemporaryEffects(player, options = {}) {
 
     cards.forEach(card => {
         card.temporaryKeywords = [];
+        card.temporaryCopiedEffects = [];
         card.battleKeywords = [];
         card.battlePowerBonus = 0;
         card.temporaryPowerBonus = 0;

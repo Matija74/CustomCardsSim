@@ -164,9 +164,9 @@ function createInitialPublicPlayerState(privateState) {
         faceUpLifeCards: privateState.life
             .map((card, index) => card?.faceUp ? { index, card: createPublicCardSnapshot(card) } : null)
             .filter(Boolean),
-        activeTokens: 0,
-        restedTokens: 0,
-        tokenDeckCount: 10,
+        activeDon: 0,
+        restedDon: 0,
+        donDeckCount: 10,
         turns: 0
     };
 }
@@ -674,9 +674,9 @@ export async function setMultiplayerMulligan(roomCode, user, playerSlot, tookMul
         updates["public/currentPlayer"] = firstPlayer;
         updates["public/turnNumber"] = 1;
         updates[`public/playerTurns/${firstPlayer}`] = 1;
-        updates[`public/${firstPublicKey}/activeTokens`] = 1;
-        updates[`public/${firstPublicKey}/tokenDeckCount`] =
-            Math.max(0, Number(firstPlayerState.tokenDeckCount ?? 10) - 1);
+        updates[`public/${firstPublicKey}/activeDon`] = 1;
+        updates[`public/${firstPublicKey}/donDeckCount`] =
+            Math.max(0, Number(firstPlayerState.donDeckCount ?? 10) - 1);
         updates[`public/${firstPublicKey}/turns`] = 1;
     }
 

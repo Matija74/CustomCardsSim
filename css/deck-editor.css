@@ -25,6 +25,11 @@ body {
     color: white;
 }
 
+:root {
+    --full-card-preview-width: min(500px, calc(92vw - 36px));
+    --full-card-preview-height: min(700px, calc(92vh - 110px));
+}
+
 /* =========================
    Deck Editor Page
 ========================= */
@@ -620,7 +625,7 @@ body {
     position: relative;
     z-index: 1;
 
-    width: min(420px, 92vw);
+    width: min(calc(var(--full-card-preview-width) + 36px), 92vw);
     max-height: 92vh;
 
     padding: 18px;
@@ -638,8 +643,10 @@ body {
 }
 
 .card-preview-image {
-    width: min(330px, 78vw);
-    max-height: 70vh;
+    width: var(--full-card-preview-width);
+    height: var(--full-card-preview-height);
+    max-width: 100%;
+    max-height: 100%;
 
     object-fit: contain;
 

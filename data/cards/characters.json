@@ -336,7 +336,7 @@
   "TEST-003": {
     "id": "TEST-003",
     "cardNumber": "TEST-003",
-    "name": "Test Banish & DA & Token Effects",
+    "name": "Test Banish & DA & DON Effects",
     "cardType": "character",
     "type": "type",
     "color": "red",
@@ -348,10 +348,10 @@
     "keywords": ["rushCharacters", "banish", "doubleAttack"],
     "effects": [
       {
-        "id": "TEST-003-token-x1",
-        "type": "tokenAttached",
-        "requiredTokens": 1,
-        "text": "Token x1: This character gets +1000 power.",
+        "id": "TEST-003-don-x1",
+        "type": "donAttached",
+        "requiredDon": 1,
+        "text": "DON!! x1: This character gets +1000 power.",
         "powerModifier": 1000
       },
       {

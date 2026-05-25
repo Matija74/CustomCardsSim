@@ -219,7 +219,11 @@ window.CardEffects = {
             ? [...card.aliases]
             : [];
 
-        card.effects
+        const effects = typeof getCardAllEffects === "function"
+            ? getCardAllEffects(card)
+            : card.effects;
+
+        effects
             ?.filter(effect => effect.type === "continuous")
             .forEach(effect => {
                 const text = effect.text || "";
