@@ -1,35 +1,4 @@
 {
-  "TEST-004": {
-    "id": "TEST-004",
-    "cardNumber": "TEST-004",
-    "name": "Test Stage",
-    "cardType": "stage",
-    "type": "type",
-    "color": "red",
-    "cost": 0,
-    "image": "../images/testCards/test-stage.png",
-    "effects": [
-      {
-        "id": "TEST-004-on-play",
-        "type": "onPlay",
-        "text": "On Play: Draw 1 card.",
-        "actionId": "drawOneCard"
-      },
-      {
-        "id": "TEST-004-when-opponent-attacks",
-        "type": "whenOpponentAttacks",
-        "text": "When Opponent Attacks: Rest this stage.",
-        "actionId": "restThisCard"
-      },
-      {
-        "id": "TEST-004-trigger",
-        "type": "trigger",
-        "text": "Trigger: Draw 1 card.",
-        "actionId": "drawOneCard"
-      }
-    ]
-  },
-
   "EGG1-009": {
     "id": "EGG1-009",
     "cardNumber": "EGG1-009",

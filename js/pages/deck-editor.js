@@ -27,6 +27,8 @@ class DeckEditor {
         this.powerFilter = document.getElementById("powerFilter");
         this.attributeFilter = document.getElementById("attributeFilter");
         this.counterFilter = document.getElementById("counterFilter");
+        this.leaderColorFilterToggle = document.getElementById("leaderColorFilterToggle");
+        this.leaderTypeFilterToggle = document.getElementById("leaderTypeFilterToggle");
 
         this.clearDeckButton = document.getElementById("clearDeckButton");
 
@@ -59,6 +61,8 @@ class DeckEditor {
         this.powerFilter.addEventListener("change", () => this.renderCardLibrary());
         this.attributeFilter.addEventListener("change", () => this.renderCardLibrary());
         this.counterFilter.addEventListener("change", () => this.renderCardLibrary());
+        this.leaderColorFilterToggle.addEventListener("change", () => this.renderCardLibrary());
+        this.leaderTypeFilterToggle.addEventListener("change", () => this.renderCardLibrary());
 
         this.clearDeckButton.addEventListener("click", () => this.clearDeck());
 
@@ -306,6 +310,12 @@ class DeckEditor {
         const selectedPower = this.powerFilter.value;
         const selectedAttribute = this.attributeFilter.value;
         const selectedCounter = this.counterFilter.value;
+        const matchLeaderColors = !options.leadersOnly &&
+            Boolean(this.selectedLeader) &&
+            Boolean(this.leaderColorFilterToggle?.checked);
+        const matchLeaderTypes = !options.leadersOnly &&
+            Boolean(this.selectedLeader) &&
+            Boolean(this.leaderTypeFilterToggle?.checked);
 
         const cards = options.leadersOnly
             ? Object.values(this.leaders)
@@ -313,10 +323,20 @@ class DeckEditor {
 
         return cards.filter(card => {
             const cardName = card.name.toLowerCase();
+            const excludesLeadersAfterSelection =
+                !options.leadersOnly &&
+                Boolean(this.selectedLeader) &&
+                String(card.cardType || "").toLowerCase() === "leader";
 
             const cardColors = this.getCardColors(card);
             const cardTypes = this.getCardTypeValues(card)
                 .map(type => type.toLowerCase());
+            const leaderColors = matchLeaderColors
+                ? this.getCardColors(this.selectedLeader)
+                : [];
+            const leaderTypes = matchLeaderTypes
+                ? this.getCardTypeValues(this.selectedLeader).map(type => type.toLowerCase())
+                : [];
 
             const matchesSearch =
                 searchValue === "" || cardName.includes(searchValue);
@@ -348,15 +368,26 @@ class DeckEditor {
             const matchesCounter =
                 selectedCounter === "all" ||
                 this.matchesNumberFilter(card.counter, selectedCounter);
+            const matchesLeaderColors =
+                !matchLeaderColors ||
+                leaderColors.some(color => cardColors.includes(color));
+            const matchesLeaderTypes =
+                !matchLeaderTypes ||
+                leaderTypes.some(type => cardTypes.includes(type));
 
-            return matchesSearch &&
+            return !excludesLeadersAfterSelection &&
+                matchesSearch &&
                 matchesCategory &&
                 matchesType &&
                 matchesColor &&
                 matchesCost &&
                 matchesPower &&
                 matchesAttribute &&
-                matchesCounter;
+                matchesCounter &&
+                matchesLeaderColors &&
+                matchesLeaderTypes;
+        }).sort((firstCard, secondCard) => {
+            return this.compareCardsForLibrary(firstCard, secondCard);
         });
     }
 
@@ -383,6 +414,60 @@ class DeckEditor {
         }
 
         return Number(cardValue) === Number(selectedValue);
+    }
+
+    compareCardsForLibrary(firstCard, secondCard) {
+        const colorDifference = this.compareColorGroups(firstCard, secondCard);
+
+        if (colorDifference !== 0) {
+            return colorDifference;
+        }
+
+        const categoryDifference =
+            this.getCategorySortValue(firstCard) - this.getCategorySortValue(secondCard);
+
+        if (categoryDifference !== 0) {
+            return categoryDifference;
+        }
+
+        const costDifference = Number(firstCard.cost ?? -1) - Number(secondCard.cost ?? -1);
+
+        if (costDifference !== 0) {
+            return costDifference;
+        }
+
+        return String(firstCard.name || "").localeCompare(String(secondCard.name || ""));
+    }
+
+    compareColorGroups(firstCard, secondCard) {
+        const firstColors = this.getCardColors(firstCard);
+        const secondColors = this.getCardColors(secondCard);
+        const colorOrder = ["red", "green", "blue", "purple", "black", "yellow"];
+        const maxLength = Math.max(firstColors.length, secondColors.length);
+
+        for (let index = 0; index < maxLength; index++) {
+            const firstValue = colorOrder.indexOf(firstColors[index]);
+            const secondValue = colorOrder.indexOf(secondColors[index]);
+            const normalizedFirst = firstValue === -1 ? colorOrder.length : firstValue;
+            const normalizedSecond = secondValue === -1 ? colorOrder.length : secondValue;
+
+            if (normalizedFirst !== normalizedSecond) {
+                return normalizedFirst - normalizedSecond;
+            }
+        }
+
+        return firstColors.length - secondColors.length;
+    }
+
+    getCategorySortValue(card) {
+        const categoryOrder = {
+            leader: 0,
+            character: 1,
+            stage: 2,
+            event: 3
+        };
+
+        return categoryOrder[String(card.cardType || "").toLowerCase()] ?? 99;
     }
 
     // =========================

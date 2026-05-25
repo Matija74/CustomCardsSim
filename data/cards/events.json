@@ -1,35 +1,4 @@
 {
-  "TEST-005": {
-    "id": "TEST-005",
-    "cardNumber": "TEST-005",
-    "name": "Test Main & Counter",
-    "cardType": "event",
-    "type": "type",
-    "color": "yellow",
-    "cost": 0,
-    "image": "../images/testCards/test-event.png",
-    "effects": [
-      {
-        "id": "TEST-005-main",
-        "type": "main",
-        "text": "Main: Draw 1 card.",
-        "actionId": "drawOneCard"
-      },
-      {
-        "id": "TEST-005-counter",
-        "type": "counter",
-        "text": "Counter: Look top 5, reveal 1, add to hand and place the rest on bottom.",
-        "actionId": "lookTopFiveAddOne"
-      },
-      {
-        "id": "TEST-005-trigger",
-        "type": "trigger",
-        "text": "Trigger: Activate Main.",
-        "actionId": "activateMainEffect"
-      }
-    ]
-  },
-
   "DD01-004": {
     "id": "DD01-004",
     "cardNumber": "DD01-004",
