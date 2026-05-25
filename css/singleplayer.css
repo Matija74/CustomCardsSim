@@ -38,15 +38,15 @@ body {
     font-weight: 600;
 
     padding: 12px 18px;
-    border: 2px solid rgba(255, 255, 255, 0.4);
+    border: 2px solid rgba(176, 212, 238, 0.55);
     border-radius: 14px;
 
-    background: rgba(255, 255, 255, 0.08);
+    background: linear-gradient(135deg, rgba(124, 138, 152, 0.92) 0%, rgba(82, 94, 107, 0.92) 100%);
     transition: 0.2s ease;
 }
 
 .btn-back:hover {
-    background: rgba(255, 255, 255, 0.18);
+    background: linear-gradient(135deg, rgba(143, 156, 168, 0.98) 0%, rgba(96, 110, 123, 0.98) 100%);
     transform: translateY(-2px);
 }
 
@@ -143,7 +143,7 @@ body {
     border: none;
     border-radius: 10px;
 
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    background: linear-gradient(135deg, #9ad7ff 0%, #5faee8 100%);
     color: white;
 
     font-size: 0.95rem;
@@ -185,7 +185,7 @@ body {
     border: none;
     border-radius: 8px;
 
-    background: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%);
+    background: linear-gradient(135deg, #7f8b96 0%, #566270 100%);
     color: white;
 
     font-size: 0.7rem;
@@ -208,24 +208,24 @@ body {
 
 .activate-main-button {
     bottom: 8px;
-    background: linear-gradient(135deg, #1f8fff 0%, #1456d9 100%);
+    background: linear-gradient(135deg, #9ad7ff 0%, #5faee8 100%);
 }
 
 .activate-main-button:hover:not(:disabled) {
-    background: linear-gradient(135deg, #43a5ff 0%, #1e66f0 100%);
+    background: linear-gradient(135deg, #b5e5ff 0%, #75bff0 100%);
 }
 
 .attach-don-button {
     background:
-        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.35), transparent 34%),
-        linear-gradient(135deg, #2d2d2d 0%, #080808 100%);
-    border: 1px solid rgba(255, 214, 102, 0.75);
+        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.28), transparent 34%),
+        linear-gradient(135deg, #8fcbf3 0%, #5b9fd5 100%);
+    border: 1px solid rgba(196, 230, 255, 0.82);
 }
 
 .attach-don-button:hover:not(:disabled) {
     background:
-        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.44), transparent 34%),
-        linear-gradient(135deg, #424242 0%, #101010 100%);
+        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.34), transparent 34%),
+        linear-gradient(135deg, #b5e5ff 0%, #75bff0 100%);
 }
 
 .board-action-button-on-card:disabled {
@@ -295,7 +295,7 @@ body {
 }
 
 .phase-button {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    background: linear-gradient(135deg, #9ad7ff 0%, #5faee8 100%);
     color: white;
 
     border: none;
@@ -1089,8 +1089,8 @@ body {
     border: none;
     border-radius: 8px;
 
-    background: rgba(255, 255, 255, 0.92);
-    color: #111;
+    background: linear-gradient(135deg, rgba(126, 139, 152, 0.96) 0%, rgba(80, 93, 106, 0.96) 100%);
+    color: white;
 
     font-size: 0.75rem;
     font-weight: 900;
@@ -1102,7 +1102,7 @@ body {
 }
 
 .hand-sort-button:hover {
-    background: white;
+    background: linear-gradient(135deg, rgba(142, 154, 166, 0.98) 0%, rgba(95, 108, 121, 0.98) 100%);
     transform: translateY(-1px);
 }
 
@@ -1186,7 +1186,7 @@ body {
     border: none;
     border-radius: 8px;
 
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    background: linear-gradient(135deg, #9ad7ff 0%, #5faee8 100%);
     color: white;
 
     font-size: 0.7rem;
@@ -1276,7 +1276,7 @@ body {
     border: none;
     border-radius: 10px;
 
-    background: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%);
+    background: linear-gradient(135deg, #7f8b96 0%, #566270 100%);
     color: white;
 
     font-size: 0.95rem;
@@ -1289,19 +1289,19 @@ body {
 }
 
 .battle-button.player1-resolve {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    background: linear-gradient(135deg, #9ad7ff 0%, #5faee8 100%);
 }
 
 .battle-button.player2-resolve {
-    background: linear-gradient(135deg, #ff5e62 0%, #ff9966 100%);
+    background: linear-gradient(135deg, #7f8b96 0%, #566270 100%);
 }
 
 .battle-button.skip-block {
-    background: linear-gradient(135deg, #ffb347 0%, #ff7b00 100%);
+    background: linear-gradient(135deg, #8fcbf3 0%, #5b9fd5 100%);
 }
 
 .cancel-attack-button-on-card {
-    background: linear-gradient(135deg, #ff3333 0%, #990000 100%);
+    background: linear-gradient(135deg, #6d7884 0%, #4b5661 100%);
 }
 
 .blocker-target {
@@ -1312,7 +1312,7 @@ body {
 }
 
 .battle-button.counter-phase {
-    background: linear-gradient(135deg, #8e54e9 0%, #4776e6 100%);
+    background: linear-gradient(135deg, #9ad7ff 0%, #5faee8 100%);
 }
 
 @keyframes blockerPulse {
@@ -1691,7 +1691,7 @@ body {
     border: none;
     border-radius: 10px;
 
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    background: linear-gradient(135deg, #9ad7ff 0%, #5faee8 100%);
     color: white;
 
     font-size: 0.95rem;
@@ -1703,7 +1703,7 @@ body {
 }
 
 .look-top-action-button.secondary {
-    background: linear-gradient(135deg, #777 0%, #444 100%);
+    background: linear-gradient(135deg, #7f8b96 0%, #566270 100%);
 }
 
 .look-top-action-button:disabled {
@@ -1935,11 +1935,11 @@ body {
 }
 
 .game-over-button.main-menu {
-    background: linear-gradient(135deg, #777 0%, #444 100%);
+    background: linear-gradient(135deg, #7f8b96 0%, #566270 100%);
 }
 
 .game-over-button.play-again {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    background: linear-gradient(135deg, #9ad7ff 0%, #5faee8 100%);
 }
 
 /* =========================

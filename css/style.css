@@ -123,15 +123,15 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #4facfe 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #9ad7ff 0%, #5faee8 100%);
 }
 
 .btn-secondary {
-    background: rgba(255, 255, 255, 0.1);
+    background: linear-gradient(135deg, rgba(126, 139, 152, 0.92) 0%, rgba(80, 93, 106, 0.92) 100%);
 }
 
 .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.16);
+    background: linear-gradient(135deg, rgba(142, 154, 166, 0.96) 0%, rgba(95, 108, 121, 0.96) 100%);
 }
 
 /* =========================

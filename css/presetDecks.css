@@ -67,15 +67,15 @@ body {
     font-weight: 600;
 
     padding: 12px 18px;
-    border: 2px solid rgba(255, 255, 255, 0.4);
+    border: 2px solid rgba(176, 212, 238, 0.55);
     border-radius: 14px;
 
-    background: rgba(255, 255, 255, 0.08);
+    background: linear-gradient(135deg, rgba(124, 138, 152, 0.92) 0%, rgba(82, 94, 107, 0.92) 100%);
     transition: 0.2s ease;
 }
 
 .btn-back:hover {
-    background: rgba(255, 255, 255, 0.18);
+    background: linear-gradient(135deg, rgba(143, 156, 168, 0.98) 0%, rgba(96, 110, 123, 0.98) 100%);
     transform: translateY(-2px);
 }
 
@@ -307,11 +307,11 @@ body {
 }
 
 .deck-action-button.primary {
-    background: linear-gradient(135deg, #4facfe 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #9ad7ff 0%, #5faee8 100%);
 }
 
 .deck-action-button.secondary {
-    background: rgba(255, 255, 255, 0.12);
+    background: linear-gradient(135deg, rgba(126, 139, 152, 0.92) 0%, rgba(80, 93, 106, 0.92) 100%);
 }
 
 .deck-action-button:hover {
@@ -409,7 +409,7 @@ body {
     border: none;
     border-radius: 50%;
 
-    background: rgba(255, 255, 255, 0.12);
+    background: linear-gradient(135deg, rgba(126, 139, 152, 0.92) 0%, rgba(80, 93, 106, 0.92) 100%);
     color: white;
 
     font-size: 1.5rem;
@@ -421,7 +421,7 @@ body {
 }
 
 .deck-modal-close:hover {
-    background: rgba(255, 255, 255, 0.22);
+    background: linear-gradient(135deg, rgba(142, 154, 166, 0.96) 0%, rgba(95, 108, 121, 0.96) 100%);
     transform: scale(1.05);
 }
 
@@ -595,12 +595,12 @@ body {
     border: none;
     border-radius: 50%;
 
-    background: rgba(180, 45, 45, 0.9);
+    background: linear-gradient(135deg, #7f8b96 0%, #566270 100%);
     transition: 0.2s ease;
 }
 
 .card-preview-close:hover {
-    background: rgba(225, 70, 70, 1);
+    background: linear-gradient(135deg, #95a2ae 0%, #667584 100%);
     transform: scale(1.05);
 }
 

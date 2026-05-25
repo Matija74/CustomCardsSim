@@ -85,15 +85,15 @@ body {
     font-weight: 600;
 
     padding: 12px 18px;
-    border: 2px solid rgba(255, 255, 255, 0.4);
+    border: 2px solid rgba(176, 212, 238, 0.55);
     border-radius: 14px;
 
-    background: rgba(255, 255, 255, 0.08);
+    background: linear-gradient(135deg, rgba(124, 138, 152, 0.92) 0%, rgba(82, 94, 107, 0.92) 100%);
     transition: 0.2s ease;
 }
 
 .btn-back:hover {
-    background: rgba(255, 255, 255, 0.18);
+    background: linear-gradient(135deg, rgba(143, 156, 168, 0.98) 0%, rgba(96, 110, 123, 0.98) 100%);
     transform: translateY(-2px);
 }
 
@@ -387,19 +387,19 @@ body {
 }
 
 .quantity-button:first-child {
-    background: rgba(180, 45, 45, 0.85);
+    background: linear-gradient(135deg, #7f8b96 0%, #566270 100%);
 }
 
 .quantity-button:first-child:hover {
-    background: rgba(220, 60, 60, 0.95);
+    background: linear-gradient(135deg, #95a2ae 0%, #667584 100%);
 }
 
 .quantity-button:last-child {
-    background: rgba(45, 120, 220, 0.85);
+    background: linear-gradient(135deg, #9ad7ff 0%, #5faee8 100%);
 }
 
 .quantity-button:last-child:hover {
-    background: rgba(65, 145, 255, 0.95);
+    background: linear-gradient(135deg, #b5e5ff 0%, #75bff0 100%);
 }
 
 .small-remove-button {
@@ -414,12 +414,12 @@ body {
     border: none;
     border-radius: 10px;
 
-    background: rgba(180, 45, 45, 0.85);
+    background: linear-gradient(135deg, #7f8b96 0%, #566270 100%);
     transition: 0.2s ease;
 }
 
 .small-remove-button:hover {
-    background: rgba(220, 60, 60, 0.95);
+    background: linear-gradient(135deg, #95a2ae 0%, #667584 100%);
     transform: translateY(-2px);
 }
 
@@ -452,11 +452,11 @@ body {
 }
 
 .save-button {
-    background: linear-gradient(135deg, #3d7dff, #2351bd);
+    background: linear-gradient(135deg, #9ad7ff 0%, #5faee8 100%);
 }
 
 .clear-button {
-    background: linear-gradient(135deg, #8f3131, #5f1f1f);
+    background: linear-gradient(135deg, #7f8b96 0%, #566270 100%);
 }
 
 .deck-action-button:hover,
@@ -572,7 +572,7 @@ body {
 
 .add-card-button {
     padding: 10px;
-    background: linear-gradient(135deg, #3d7dff, #2351bd);
+    background: linear-gradient(135deg, #9ad7ff 0%, #5faee8 100%);
 }
 
 .library-message {
@@ -710,12 +710,12 @@ body {
     border: none;
     border-radius: 50%;
 
-    background: rgba(180, 45, 45, 0.9);
+    background: linear-gradient(135deg, #7f8b96 0%, #566270 100%);
     transition: 0.2s ease;
 }
 
 .card-preview-close:hover {
-    background: rgba(230, 60, 60, 1);
+    background: linear-gradient(135deg, #95a2ae 0%, #667584 100%);
     transform: scale(1.08);
 }
 
