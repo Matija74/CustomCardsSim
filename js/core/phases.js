@@ -79,6 +79,7 @@ function selectTurnOrder(choice, phaseButton, phaseInfo) {
     phaseButton.style.display = "none";
 
     createMulliganButtons(gameState.player1, phaseButton, phaseInfo);
+    window.queueMultiplayerStateSync?.();
 }
 
 // =========================
@@ -112,6 +113,7 @@ function handleMulliganChoice(player, tookMulligan, phaseButton, phaseInfo) {
         `;
 
         createMulliganButtons(gameState.player2, phaseButton, phaseInfo);
+        window.queueMultiplayerStateSync?.();
         return;
     }
 
@@ -123,6 +125,7 @@ function handleMulliganChoice(player, tookMulligan, phaseButton, phaseInfo) {
 
     removeChoiceButtons();
     startTurnOne(phaseButton, phaseInfo);
+    window.queueMultiplayerStateSync?.();
 }
 
 function drawStartingHand(player) {
@@ -178,6 +181,7 @@ function startTurnOne(phaseButton, phaseInfo) {
     phaseButton.style.display = "block";
     phaseButton.disabled = false;
     phaseButton.textContent = `Pass to ${nextPlayer.name}`;
+    window.queueMultiplayerStateSync?.();
 }
 
 // =========================
@@ -322,6 +326,7 @@ function passTurn(phaseButton, phaseInfo) {
 
     runDonPhase(gameState.currentPlayer, 2, phaseInfo);
     runMainPhase(gameState.currentPlayer, phaseButton);
+    window.queueMultiplayerStateSync?.();
 }
 
 // =========================
@@ -350,6 +355,8 @@ function startCounterPhase(defenderPlayerKey, onResolve) {
     if (typeof showCounterPhaseControls === "function") {
         showCounterPhaseControls(defenderPlayerKey, onResolve);
     }
+
+    window.queueMultiplayerStateSync?.();
 }
 
 // =========================

@@ -5,7 +5,9 @@ import {
     update,
     onValue,
     runTransaction,
-    serverTimestamp
+    serverTimestamp,
+    remove,
+    onDisconnect
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 import { database } from "./firebaseApp.js";
@@ -60,24 +62,13 @@ function createInitialPrivateState(selectedDeck) {
 
     const deck = globalThis.shuffleDeck(globalThis.parseDeckText(selectedDeck.deckText))
         .map(card => createMultiplayerCard(card));
-    const hand = deck.splice(0, 5);
     const leader = createMultiplayerCard(leaderDefinition);
-    const life = [];
-    const lifeAmount = Number(leader.life || 0);
-
-    for (let i = 0; i < lifeAmount; i++) {
-        const lifeCard = deck.shift();
-
-        if (lifeCard) {
-            life.push(lifeCard);
-        }
-    }
 
     const privateState = {
         selectedDeck,
-        hand,
+        hand: [],
         deck,
-        life,
+        life: [],
         leader,
         stage: null
     };
@@ -158,16 +149,75 @@ function createInitialPublicPlayerState(privateState) {
         characters: [],
         stage: privateState.stage || null,
         trash: [],
-        handCount: privateState.hand.length,
+        handCount: 0,
         deckCount: privateState.deck.length,
-        lifeCount: privateState.life.length,
-        faceUpLifeCards: privateState.life
-            .map((card, index) => card?.faceUp ? { index, card: createPublicCardSnapshot(card) } : null)
-            .filter(Boolean),
+        lifeCount: 0,
+        faceUpLifeCards: [],
         activeDon: 0,
         restedDon: 0,
         donDeckCount: 10,
         turns: 0
+    };
+}
+
+function drawStartingHand(privateState) {
+    if (!privateState) {
+        return privateState;
+    }
+
+    const hand = [...(privateState.hand || [])];
+    const deck = [...(privateState.deck || [])];
+
+    while (hand.length < 5 && deck.length > 0) {
+        hand.push(deck.shift());
+    }
+
+    return {
+        ...privateState,
+        hand,
+        deck
+    };
+}
+
+function setupLifeCards(privateState) {
+    if (!privateState?.leader) {
+        return privateState;
+    }
+
+    const deck = [...(privateState.deck || [])];
+    const life = [];
+    const lifeAmount = Number(privateState.leader.life || 0);
+
+    for (let i = 0; i < lifeAmount; i++) {
+        const lifeCard = deck.shift();
+
+        if (lifeCard) {
+            life.push(lifeCard);
+        }
+    }
+
+    return {
+        ...privateState,
+        deck,
+        life
+    };
+}
+
+function createPublicPlayerState(privateState, publicPlayerState = {}) {
+    const hand = Array.isArray(privateState?.hand) ? privateState.hand : [];
+    const deck = Array.isArray(privateState?.deck) ? privateState.deck : [];
+    const life = Array.isArray(privateState?.life) ? privateState.life : [];
+
+    return {
+        ...publicPlayerState,
+        leader: privateState?.leader || publicPlayerState.leader || null,
+        stage: privateState?.stage || null,
+        handCount: hand.length,
+        deckCount: deck.length,
+        lifeCount: life.length,
+        faceUpLifeCards: life
+            .map((card, index) => card?.faceUp ? { index, card: createPublicCardSnapshot(card) } : null)
+            .filter(Boolean)
     };
 }
 
@@ -183,6 +233,33 @@ function shuffleCards(cards) {
     return shuffled;
 }
 
+function getRoomRef(roomCode) {
+    return ref(database, `matches/${cleanRoomCode(roomCode)}`);
+}
+
+function normalizePlayerSlot(playerSlot) {
+    if (playerSlot !== "p1" && playerSlot !== "p2") {
+        throw new Error("Invalid player slot.");
+    }
+
+    return playerSlot;
+}
+
+function getNumericTimestamp(value) {
+    return typeof value === "number" ? value : 0;
+}
+
+function getRoomActivityTimestamp(match) {
+    return getNumericTimestamp(match?.updatedAt) || getNumericTimestamp(match?.createdAt);
+}
+
+async function touchRoom(roomCode, extra = {}) {
+    await update(getRoomRef(roomCode), {
+        updatedAt: serverTimestamp(),
+        ...extra
+    });
+}
+
 export async function createRoom(user) {
     console.log("createRoom() called with user:", user);
 
@@ -193,19 +270,22 @@ export async function createRoom(user) {
     const roomCode = generateRoomCode();
     console.log("Generated room code:", roomCode);
 
-    const matchRef = ref(database, `matches/${roomCode}`);
+    const matchRef = getRoomRef(roomCode);
     console.log("Firebase match ref created:", matchRef);
 
     await set(matchRef, {
         status: "waiting",
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
         hostUid: user.uid,
 
         players: {
             p1: {
                 uid: user.uid,
                 name: "Player 1",
-                connected: true,
+                connected: false,
+                disconnectedAt: null,
+                lastSeenAt: serverTimestamp(),
                 ready: false
             }
         },
@@ -235,8 +315,8 @@ export async function createRoom(user) {
 }
 
 export async function joinRoom(roomCode, user) {
-    const cleanRoomCode = roomCode.trim().toUpperCase();
-    const matchRef = ref(database, `matches/${cleanRoomCode}`);
+    const normalizedRoomCode = cleanRoomCode(roomCode);
+    const matchRef = getRoomRef(normalizedRoomCode);
 
     const snapshot = await get(matchRef);
 
@@ -246,17 +326,20 @@ export async function joinRoom(roomCode, user) {
 
     const match = snapshot.val();
 
-    if (match.players?.p2 && match.players.p2.uid !== user.uid) {
+    if (match.players?.p2 && match.players.p2.uid !== user.uid && match.players.p2.connected) {
         throw new Error("Room is already full.");
     }
 
     await update(matchRef, {
         status: "ready",
+        updatedAt: serverTimestamp(),
 
         "players/p2": {
             uid: user.uid,
             name: "Player 2",
-            connected: true,
+            connected: false,
+            disconnectedAt: null,
+            lastSeenAt: serverTimestamp(),
             ready: false
         },
 
@@ -268,11 +351,11 @@ export async function joinRoom(roomCode, user) {
         }
     });
 
-    return cleanRoomCode;
+    return normalizedRoomCode;
 }
 
 export function subscribeToMatch(roomCode, callback) {
-    const matchRef = ref(database, `matches/${cleanRoomCode(roomCode)}`);
+    const matchRef = getRoomRef(roomCode);
 
     return onValue(matchRef, (snapshot) => {
         const match = snapshot.val();
@@ -289,7 +372,7 @@ export function subscribeToMatch(roomCode, callback) {
 }
 
 export async function startQueuedMatch(roomCode) {
-    const matchRef = ref(database, `matches/${cleanRoomCode(roomCode)}`);
+    const matchRef = getRoomRef(roomCode);
     const snapshot = await get(matchRef);
 
     if (!snapshot.exists()) {
@@ -304,6 +387,7 @@ export async function startQueuedMatch(roomCode) {
 
     await update(matchRef, {
         status: "started",
+        updatedAt: serverTimestamp(),
         "public/phase": "starting"
     });
 }
@@ -325,7 +409,7 @@ export function subscribeToPrivateState(roomCode, uid, callback) {
 }
 
 export async function getMatch(roomCode) {
-    const matchRef = ref(database, `matches/${cleanRoomCode(roomCode)}`);
+    const matchRef = getRoomRef(roomCode);
     const snapshot = await get(matchRef);
 
     return snapshot.val();
@@ -335,12 +419,14 @@ export async function updatePublicState(roomCode, partialState) {
     const publicRef = ref(database, `matches/${cleanRoomCode(roomCode)}/public`);
 
     await update(publicRef, partialState);
+    await touchRoom(roomCode);
 }
 
 export async function updatePrivateState(roomCode, uid, partialState) {
     const privateRef = ref(database, `matches/${cleanRoomCode(roomCode)}/private/${uid}`);
 
     await update(privateRef, partialState);
+    await touchRoom(roomCode);
 }
 
 export async function setPlayerDeck(roomCode, uid, deckData) {
@@ -359,6 +445,7 @@ export async function setPlayerReady(roomCode, uid, ready) {
     }
 
     await update(ref(database, `matches/${cleanRoomCode(roomCode)}`), {
+        updatedAt: serverTimestamp(),
         [`players/${playerEntry[0]}/ready`]: Boolean(ready)
     });
 }
@@ -395,6 +482,7 @@ export async function initializeMultiplayerGame(roomCode) {
 
     await update(matchRef, {
         status: "started",
+        updatedAt: serverTimestamp(),
         "public/phase": "diceRoll",
         "public/currentPlayer": null,
         "public/turnNumber": 0,
@@ -494,6 +582,7 @@ export async function applyMultiplayerLifeDamage(roomCode, defenderSlot, attacke
     }
 
     const updates = {
+        updatedAt: serverTimestamp(),
         [`private/${defender.uid}/life`]: life,
         [`private/${defender.uid}/hand`]: hand,
         [`public/${publicKey}/lifeCount`]: life.length,
@@ -572,38 +661,61 @@ export async function chooseMultiplayerTurnOrder(roomCode, chooserSlot, choice) 
         throw new Error("Invalid turn choice.");
     }
 
-    const publicRef = ref(database, `matches/${cleanRoomCode(roomCode)}/public`);
+    const room = cleanRoomCode(roomCode);
+    const matchRef = getRoomRef(room);
+    const snapshot = await get(matchRef);
 
-    return runTransaction(publicRef, (publicState) => {
-        const diceWinner = publicState?.setup?.dice?.winner;
+    if (!snapshot.exists()) {
+        throw new Error("Room does not exist.");
+    }
 
-        if (!publicState || publicState.phase !== "diceRoll" || diceWinner !== chooserSlot) {
-            return;
-        }
+    const match = snapshot.val();
+    const publicState = match.public || {};
+    const diceWinner = publicState.setup?.dice?.winner;
 
-        const otherSlot = chooserSlot === "p1" ? "p2" : "p1";
-        const firstPlayer = choice === "first" ? chooserSlot : otherSlot;
-        const secondPlayer = firstPlayer === "p1" ? "p2" : "p1";
-        return {
-            ...publicState,
-            phase: "mulligan",
-            currentPlayer: null,
-            turnNumber: 0,
+    if (publicState.phase !== "diceRoll" || diceWinner !== chooserSlot) {
+        throw new Error("Turn order cannot be chosen right now.");
+    }
+
+    const otherSlot = chooserSlot === "p1" ? "p2" : "p1";
+    const firstPlayer = choice === "first" ? chooserSlot : otherSlot;
+    const secondPlayer = firstPlayer === "p1" ? "p2" : "p1";
+    const player1Uid = match.players?.p1?.uid;
+    const player2Uid = match.players?.p2?.uid;
+
+    if (!player1Uid || !player2Uid) {
+        throw new Error("Both players must be in the room.");
+    }
+
+    const p1Private = drawStartingHand(match.private?.[player1Uid] || {});
+    const p2Private = drawStartingHand(match.private?.[player2Uid] || {});
+
+    await update(matchRef, {
+        updatedAt: serverTimestamp(),
+        "public/phase": "mulligan",
+        "public/currentPlayer": null,
+        "public/turnNumber": 0,
+        "public/firstPlayer": firstPlayer,
+        "public/secondPlayer": secondPlayer,
+        "public/playerTurns": {
+            p1: 0,
+            p2: 0
+        },
+        "public/setup/turnChoice": {
+            chooser: chooserSlot,
             firstPlayer,
-            secondPlayer,
-            playerTurns: {
-                p1: 0,
-                p2: 0
-            },
-            setup: {
-                ...publicState.setup,
-                turnChoice: {
-                    chooser: chooserSlot,
-                    firstPlayer,
-                    secondPlayer
-                }
-            }
-        };
+            secondPlayer
+        },
+        "public/player1": createPublicPlayerState(
+            p1Private,
+            publicState.player1 || {}
+        ),
+        "public/player2": createPublicPlayerState(
+            p2Private,
+            publicState.player2 || {}
+        ),
+        [`private/${player1Uid}`]: p1Private,
+        [`private/${player2Uid}`]: p2Private
     });
 }
 
@@ -648,6 +760,16 @@ export async function setMultiplayerMulligan(roomCode, user, playerSlot, tookMul
         hand = deck.splice(0, 5);
     }
 
+    const nextPrivateState = setupLifeCards({
+        ...privateState,
+        hand,
+        deck,
+        life: []
+    });
+    hand = nextPrivateState.hand;
+    deck = nextPrivateState.deck;
+    const life = nextPrivateState.life;
+
     const publicPlayerKey = playerSlot === "p1" ? "player1" : "player2";
     const mulliganState = {
         ...(publicState.setup?.mulligan || {}),
@@ -658,10 +780,14 @@ export async function setMultiplayerMulligan(roomCode, user, playerSlot, tookMul
     };
     const bothDone = Boolean(mulliganState.p1?.done && mulliganState.p2?.done);
     const updates = {
+        updatedAt: serverTimestamp(),
         [`private/${user.uid}/hand`]: hand,
         [`private/${user.uid}/deck`]: deck,
+        [`private/${user.uid}/life`]: life,
         [`public/${publicPlayerKey}/handCount`]: hand.length,
         [`public/${publicPlayerKey}/deckCount`]: deck.length,
+        [`public/${publicPlayerKey}/lifeCount`]: life.length,
+        [`public/${publicPlayerKey}/faceUpLifeCards`]: [],
         [`public/setup/mulligan/${playerSlot}`]: mulliganState[playerSlot]
     };
 
@@ -751,4 +877,96 @@ export async function passTurn(roomCode, currentPlayer) {
 
 export async function startMatch(roomCode) {
     await initializeMultiplayerGame(roomCode);
+}
+
+export async function deleteRoom(roomCode) {
+    await remove(getRoomRef(roomCode));
+}
+
+export async function registerRoomPresence(roomCode, playerSlot, user) {
+    normalizePlayerSlot(playerSlot);
+
+    if (!user?.uid) {
+        throw new Error("User is required to register room presence.");
+    }
+
+    const room = cleanRoomCode(roomCode);
+    const match = await getMatch(room);
+    const player = match?.players?.[playerSlot];
+
+    if (!player) {
+        throw new Error("Room player slot does not exist.");
+    }
+
+    if (player.uid && player.uid !== user.uid) {
+        throw new Error("This room slot belongs to a different player.");
+    }
+
+    const playerRef = ref(database, `matches/${room}/players/${playerSlot}`);
+    const disconnectHandler = onDisconnect(playerRef);
+
+    await disconnectHandler.cancel();
+
+    await update(playerRef, {
+        uid: user.uid,
+        connected: true,
+        disconnectedAt: null,
+        lastSeenAt: serverTimestamp()
+    });
+
+    await disconnectHandler.update({
+        connected: false,
+        disconnectedAt: serverTimestamp(),
+        lastSeenAt: serverTimestamp()
+    });
+
+    await touchRoom(room);
+}
+
+export async function cleanupInactiveRooms(options = {}) {
+    const {
+        emptyGraceMs = 5 * 60 * 1000,
+        abandonedLobbyMs = 60 * 60 * 1000,
+        startedRoomMs = 6 * 60 * 60 * 1000
+    } = options;
+
+    const matchesRef = ref(database, "matches");
+    const snapshot = await get(matchesRef);
+
+    if (!snapshot.exists()) {
+        return 0;
+    }
+
+    const now = Date.now();
+    const matches = snapshot.val() || {};
+    const deleteTasks = [];
+
+    for (const [roomCode, match] of Object.entries(matches)) {
+        const players = match?.players || {};
+        const p1 = players.p1 || null;
+        const p2 = players.p2 || null;
+        const status = String(match?.status || "waiting");
+        const activityTimestamp = getRoomActivityTimestamp(match);
+        const ageMs = activityTimestamp ? now - activityTimestamp : Number.POSITIVE_INFINITY;
+        const isLegacyRoom = !getNumericTimestamp(match?.updatedAt);
+        const p1Connected = Boolean(p1?.connected);
+        const p2Connected = Boolean(p2?.connected);
+        const hasHost = Boolean(p1);
+        const bothDisconnected = hasHost && !p1Connected && !p2Connected;
+
+        const shouldDelete =
+            !hasHost ||
+            ((status === "waiting" || status === "ready") && !p1Connected && ageMs >= emptyGraceMs) ||
+            ((status === "waiting" || status === "ready") && ageMs >= abandonedLobbyMs) ||
+            (bothDisconnected && ageMs >= emptyGraceMs) ||
+            (status === "started" && ageMs >= startedRoomMs && (bothDisconnected || isLegacyRoom));
+
+        if (shouldDelete) {
+            deleteTasks.push(remove(ref(database, `matches/${roomCode}`)));
+        }
+    }
+
+    await Promise.all(deleteTasks);
+
+    return deleteTasks.length;
 }

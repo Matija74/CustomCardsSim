@@ -90,6 +90,30 @@ body {
     gap: 14px;
 }
 
+.deck-picker-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.deck-picker-field span {
+    color: #eeeeee;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.deck-picker-select {
+    width: 100%;
+    min-width: 0;
+    padding: 14px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 8px;
+    background: rgba(20, 20, 20, 0.72);
+    color: white;
+    font: inherit;
+    font-weight: 700;
+}
+
 .queue-side h2 {
     font-size: clamp(1.2rem, 3vw, 1.5rem);
 }

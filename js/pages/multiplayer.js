@@ -31,12 +31,298 @@ const renderedBoardCardStates = new Map();
 // =========================
 
 let gameState = null;
+let syncedLogMessages = [];
+let isApplyingMultiplayerState = false;
 
 // =========================
 // UI Bridge
 // =========================
 
 let ui = null;
+
+function cloneSerializableValue(value) {
+    if (typeof structuredClone === "function") {
+        return structuredClone(value);
+    }
+
+    return JSON.parse(JSON.stringify(value));
+}
+
+function getMultiplayerRuntime() {
+    return window.__multiplayerRuntime || null;
+}
+
+function getMultiplayerLocalSlot() {
+    return getMultiplayerRuntime()?.getLocalSlot?.() || "p1";
+}
+
+function getOpponentMultiplayerSlot(slot) {
+    return slot === "p1" ? "p2" : "p1";
+}
+
+function getCanonicalSlotForLocalPlayerKey(playerKey) {
+    const localSlot = getMultiplayerLocalSlot();
+
+    return playerKey === "player1"
+        ? localSlot
+        : getOpponentMultiplayerSlot(localSlot);
+}
+
+function getLocalPlayerKeyForCanonicalSlot(slot) {
+    const localSlot = getMultiplayerLocalSlot();
+
+    return slot === localSlot ? "player1" : "player2";
+}
+
+function mapBoardCardDataToCanonical(boardCardData) {
+    if (!boardCardData) {
+        return null;
+    }
+
+    return {
+        ...cloneSerializableValue(boardCardData),
+        playerKey: getCanonicalSlotForLocalPlayerKey(boardCardData.playerKey)
+    };
+}
+
+function mapBoardCardDataToLocal(boardCardData) {
+    if (!boardCardData) {
+        return null;
+    }
+
+    return {
+        ...cloneSerializableValue(boardCardData),
+        playerKey: getLocalPlayerKeyForCanonicalSlot(boardCardData.playerKey)
+    };
+}
+
+function queueMultiplayerStateSync() {
+    if (isApplyingMultiplayerState) {
+        return;
+    }
+
+    getMultiplayerRuntime()?.scheduleStateSync?.();
+}
+
+function serializePlayerState(player) {
+    if (!player) {
+        return null;
+    }
+
+    const clone = cloneSerializableValue(player);
+
+    delete clone.multiplayerSlot;
+
+    return clone;
+}
+
+function hydratePlayerState(player, multiplayerSlot) {
+    const hydratedPlayer = cloneSerializableValue(player || {
+        hand: [],
+        deck: [],
+        life: [],
+        trash: [],
+        characters: [],
+        don: 0,
+        restedDon: 0,
+        donDeck: 10,
+        turns: 0,
+        leader: null,
+        stage: null,
+        hasMulliganed: false,
+        leaderAttacksThisTurn: 0
+    });
+
+    hydratedPlayer.hand = Array.isArray(hydratedPlayer.hand) ? hydratedPlayer.hand : [];
+    hydratedPlayer.deck = Array.isArray(hydratedPlayer.deck) ? hydratedPlayer.deck : [];
+    hydratedPlayer.life = Array.isArray(hydratedPlayer.life) ? hydratedPlayer.life : [];
+    hydratedPlayer.trash = Array.isArray(hydratedPlayer.trash) ? hydratedPlayer.trash : [];
+    hydratedPlayer.characters = Array.isArray(hydratedPlayer.characters) ? hydratedPlayer.characters : [];
+    hydratedPlayer.multiplayerSlot = multiplayerSlot;
+
+    return hydratedPlayer;
+}
+
+function renderGameLogMessages(messages) {
+    const gameLogMessages = document.getElementById("gameLogMessages");
+
+    if (!gameLogMessages) {
+        return;
+    }
+
+    gameLogMessages.innerHTML = "";
+
+    messages.forEach(message => {
+        const logMessage = document.createElement("div");
+
+        logMessage.className = "log-message";
+        logMessage.innerHTML = message;
+        gameLogMessages.appendChild(logMessage);
+    });
+
+    gameLogMessages.scrollTop = gameLogMessages.scrollHeight;
+}
+
+function syncPhaseButtonForCurrentState() {
+    const phaseButton = document.getElementById("phaseButton");
+
+    if (!phaseButton || !gameState) {
+        return;
+    }
+
+    if (gameState.currentPhase === "gameOver") {
+        phaseButton.style.display = "block";
+        phaseButton.disabled = true;
+        phaseButton.textContent = "Game Over";
+        return;
+    }
+
+    if (gameState.currentPhase === "main") {
+        const localPlayer = gameState.player1;
+        const currentPlayer = gameState.currentPlayer;
+        const nextPlayer = currentPlayer ? getNextPlayer(currentPlayer) : null;
+        const isLocalTurn = currentPlayer === localPlayer;
+
+        phaseButton.style.display = "block";
+        phaseButton.disabled = !isLocalTurn;
+        phaseButton.textContent = isLocalTurn
+            ? `Pass to ${nextPlayer?.name || "Opponent"}`
+            : `${currentPlayer?.name || "Opponent"}'s Turn`;
+        return;
+    }
+
+    if (gameState.currentPhase === "counterPhase") {
+        phaseButton.style.display = "block";
+        phaseButton.disabled = true;
+        phaseButton.textContent = "Counter Phase";
+        return;
+    }
+
+    if (gameState.currentPhase === "attackResolving" || gameState.currentPhase === "choosingAttackTarget") {
+        phaseButton.style.display = "block";
+        phaseButton.disabled = true;
+        phaseButton.textContent = "Attack In Progress";
+        return;
+    }
+}
+
+function clearLocalSelectionsAndOverlays() {
+    pendingReplacePlay = null;
+    selectedHandCard = null;
+    selectedHandCardData = null;
+    selectedBoardCard = null;
+    selectedBoardCardData = null;
+
+    clearSelectedCardActions();
+    clearSelectedBoardActions();
+    clearHandSelection();
+    clearBoardSelection();
+    clearReplaceTargets();
+    clearTrashChoiceTargets();
+    clearCancelAttackButton();
+    clearAttackTargets();
+    clearBlockerTargets();
+    clearBattleControls();
+    clearAttackArrow();
+    removeLookTopOverlay();
+    removeBoardChoiceOverlay();
+    removeEffectChoiceOverlay();
+}
+
+function restoreBattleUiFromSyncedState() {
+    if (pendingTrashChoice?.playerKey) {
+        highlightTrashChoiceTargets(pendingTrashChoice.playerKey);
+    }
+
+    if (pendingAttack) {
+        const attackerCard = getBoardCardFromData(pendingAttack.attacker);
+        const attackerPlayer = gameState[pendingAttack.attackerPlayerKey];
+
+        if (attackerCard && attackerPlayer) {
+            const attackerWasPlayedThisTurn =
+                pendingAttack.attacker.cardType === "character" &&
+                isCharacterPlayedThisTurn(attackerPlayer, attackerCard);
+            const canTargetLeader =
+                !attackerWasPlayedThisTurn ||
+                CardEffects.canAttackOnTurnPlayed(attackerCard);
+            const defenderKey = pendingAttack.defenderPlayerKey;
+            const opponentLeader = document.querySelector(
+                `.board-leader-card[data-player="${defenderKey}"]`
+            );
+
+            if (opponentLeader && canTargetLeader) {
+                opponentLeader.classList.add("attack-target");
+            }
+
+            document
+                .querySelectorAll(`.board-character-card[data-player="${defenderKey}"]`)
+                .forEach(characterElement => {
+                    const slotIndex = Number(characterElement.getAttribute("data-character-slot"));
+                    const defenderPlayer = gameState[defenderKey];
+                    const character = defenderPlayer?.characters?.[slotIndex];
+
+                    if (!character || character.state !== "rested") {
+                        return;
+                    }
+
+                    if (
+                        attackerWasPlayedThisTurn &&
+                        !CardEffects.canAttackTargetOnTurnPlayed(attackerCard, {
+                            playerKey: defenderKey,
+                            cardType: "character",
+                            slotIndex
+                        })
+                    ) {
+                        return;
+                    }
+
+                    characterElement.classList.add("attack-target");
+                });
+
+            showCancelAttackButton(pendingAttack.attacker);
+        }
+    }
+
+    if (currentAttack) {
+        drawAttackArrow(currentAttack.attacker, currentAttack.target);
+
+        if (gameState.currentPhase === "counterPhase" || currentAttack.counterPhaseStarted) {
+            showCounterPhaseControls(currentAttack.defenderPlayerKey, async () => {
+                await resolveCurrentAttack();
+                queueMultiplayerStateSync();
+            });
+        } else {
+            showResolveAttackButton(currentAttack.defenderPlayerKey, async () => {
+                await resolveCurrentAttack();
+                queueMultiplayerStateSync();
+            });
+        }
+    }
+}
+
+function renderFullGameState() {
+    if (!gameState) {
+        return;
+    }
+
+    updateDonDisplay();
+    renderDecks();
+    renderDonDecks();
+    renderLifeCards();
+    renderLeaders();
+    renderHands();
+    renderCharacters();
+    renderTrash();
+    renderStages();
+
+    setupCharacterSlotInteractions();
+    setupBoardLeaderSelection();
+    setupCardPreview();
+    syncPhaseButtonForCurrentState();
+
+    clearLocalSelectionsAndOverlays();
+    restoreBattleUiFromSyncedState();
+}
 
 // =========================
 // Game Initialization
@@ -179,25 +465,14 @@ async function initializeGamePage() {
         setupLifeArea("opponentLifeArea", "opponentLifeToggleText");
 
         setupPhaseControls();
-
-        updateDonDisplay();
-        renderDecks();
-        renderDonDecks();
-        renderLeaders();
-        renderHands();
-        renderCharacters();
-        renderTrash();
-        renderStages();
-
-        setupCharacterSlotInteractions();
-        setupBoardLeaderSelection();
-        setupCardPreview();
+        renderFullGameState();
 
         addGameLog(`
             Card database loaded. Game ready.<br>
             Player 1: ${gameState.player1.deckName}<br>
             Player 2: ${gameState.player2.deckName}
         `);
+        window.dispatchEvent(new CustomEvent("multiplayer-page-ready"));
 
     } catch (error) {
         console.error(error);
@@ -234,6 +509,11 @@ function enterBlockerStep(defenderPlayerKey, onResolve) {
 
     clearBlockerTargets();
 
+    if (!canLocalPlayerControlDefense(defenderPlayerKey)) {
+        addGameLog(`${defenderPlayer.name} is choosing a Blocker.`);
+        return;
+    }
+
     availableBlockers.forEach(({ slotIndex }) => {
         const blockerElement = document.querySelector(
             `.board-character-card[data-player="${defenderPlayerKey}"][data-character-slot="${slotIndex}"]`
@@ -253,6 +533,11 @@ function enterBlockerStep(defenderPlayerKey, onResolve) {
 
 async function handleBlockerSelection(playerKey, slotIndex) {
     if (!pendingBlock || !currentAttack) return;
+
+    if (!canLocalPlayerControlDefense(pendingBlock.defenderPlayerKey)) {
+        addGameLog("Wait for the defending player to choose a blocker.");
+        return;
+    }
 
     if (playerKey !== pendingBlock.defenderPlayerKey) {
         addGameLog("Only the defending player can block this attack.");
@@ -297,11 +582,17 @@ async function handleBlockerSelection(playerKey, slotIndex) {
     startCounterPhase(playerKey, () => {
         resolveCurrentAttack();
     });
+    queueMultiplayerStateSync();
 
 }
 
 function skipCurrentBlockStep(defenderPlayerKey, onResolve) {
     const defenderName = gameState[defenderPlayerKey]?.name ?? "Defender";
+
+    if (!canLocalPlayerControlDefense(defenderPlayerKey)) {
+        addGameLog("Wait for the defending player to choose blockers.");
+        return;
+    }
 
     pendingBlock = null;
 
@@ -310,6 +601,7 @@ function skipCurrentBlockStep(defenderPlayerKey, onResolve) {
     addGameLog(`${defenderName} skipped the Block Phase.`);
 
     startCounterPhase(defenderPlayerKey, onResolve);
+    queueMultiplayerStateSync();
 
 }
 
@@ -546,6 +838,13 @@ function setupPhaseControls() {
             return;
         }
 
+        const externalPhaseHandler = getMultiplayerRuntime()?.handlePhaseButtonClick;
+
+        if (typeof externalPhaseHandler === "function") {
+            externalPhaseHandler();
+            return;
+        }
+
 
         if (gameState.currentPhase === "gameOver") {
             return;
@@ -553,11 +852,13 @@ function setupPhaseControls() {
 
         if (gameState.currentPhase === "diceRoll") {
             runDiceRollPhase(phaseButton, phaseInfo);
+            queueMultiplayerStateSync();
             return;
         }
 
         if (gameState.currentPhase === "main") {
             passTurn(phaseButton, phaseInfo);
+            queueMultiplayerStateSync();
             return;
         }
     });
@@ -748,17 +1049,25 @@ function createPhaseLogProxy() {
     };
 }
 
+function normalizeLogMessage(message) {
+    return String(message || "")
+        .replace(/^\s*(<br>\s*)+/gi, "")
+        .replace(/(<br>\s*){3,}/gi, "<br><br>")
+        .trim();
+}
+
 function addGameLog(message) {
     const gameLogMessages = document.getElementById("gameLogMessages");
 
     if (!gameLogMessages) return;
 
-    const cleanMessage = message
-        .replace(/^\s*(<br>\s*)+/gi, "")
-        .replace(/(<br>\s*){3,}/gi, "<br><br>")
-        .trim();
+    const cleanMessage = normalizeLogMessage(message);
 
     if (!cleanMessage) return;
+
+    if (!isApplyingMultiplayerState) {
+        syncedLogMessages.push(cleanMessage);
+    }
 
     const logMessage = document.createElement("div");
 
@@ -843,11 +1152,11 @@ function renderDonDeck(player, areaId) {
 // =========================
 
 function renderDecks() {
-    renderDeck(gameState.player1, "player1DeckArea");
-    renderDeck(gameState.player2, "player2DeckArea");
+    renderDeck(gameState.player1, "player1DeckArea", false);
+    renderDeck(gameState.player2, "player2DeckArea", true);
 }
 
-function renderDeck(player, deckAreaId) {
+function renderDeck(player, deckAreaId, hidden = false) {
     const deckArea = document.getElementById(deckAreaId);
 
     if (!deckArea) return;
@@ -856,7 +1165,7 @@ function renderDeck(player, deckAreaId) {
 
     deckArea.classList.remove("deck-warning");
 
-    if (player.deck.length > 0 && player.deck.length <= 2) {
+    if (!hidden && player.deck.length > 0 && player.deck.length <= 2) {
         deckArea.classList.add("deck-warning");
     }
 
@@ -869,14 +1178,16 @@ function renderDeck(player, deckAreaId) {
 
         deckArea.appendChild(img);
     } else {
-        deckArea.textContent = "Deck Empty";
+        deckArea.textContent = hidden ? "Deck" : "Deck Empty";
     }
 
-    const count = document.createElement("div");
-    count.className = "deck-count-badge main-deck-count";
-    count.textContent = player.deck.length;
+    if (!hidden) {
+        const count = document.createElement("div");
+        count.className = "deck-count-badge main-deck-count";
+        count.textContent = player.deck.length;
 
-    deckArea.appendChild(count);
+        deckArea.appendChild(count);
+    }
 }
 
 // =========================
@@ -885,7 +1196,7 @@ function renderDeck(player, deckAreaId) {
 
 function renderHands() {
     renderPlayerHand(gameState.player1, "player1Hand", false);
-    renderPlayerHand(gameState.player2, "player2Hand", false);
+    renderPlayerHand(gameState.player2, "player2Hand", true);
 }
 
 function renderPlayerHand(player, handElementId, hidden) {
@@ -942,12 +1253,14 @@ function renderPlayerHand(player, handElementId, hidden) {
         handElement.appendChild(sortButton);
     }
 
-    const count = document.createElement("div");
+    if (!hidden) {
+        const count = document.createElement("div");
 
-    count.className = "hand-count";
-    count.textContent = player.hand.length;
+        count.className = "hand-count";
+        count.textContent = player.hand.length;
 
-    handElement.appendChild(count);
+        handElement.appendChild(count);
+    }
 
     setupCardPreview();
     setupHandCardSelection();
@@ -976,6 +1289,7 @@ async function sortPlayerHand(player) {
     renderHands();
 
     addGameLog(`${player.name}'s hand was sorted.`);
+    queueMultiplayerStateSync();
 
 }
 
@@ -999,11 +1313,11 @@ function getHandSortKey(card) {
 // =========================
 
 function renderLifeCards() {
-    renderPlayerLife(gameState.player2, "lifeArea");
-    renderPlayerLife(gameState.player1, "opponentLifeArea");
+    renderPlayerLife(gameState.player2, "lifeArea", true);
+    renderPlayerLife(gameState.player1, "opponentLifeArea", false);
 }
 
-function renderPlayerLife(player, lifeAreaId) {
+function renderPlayerLife(player, lifeAreaId, hidden = false) {
     const lifeArea = document.getElementById(lifeAreaId);
 
     if (!lifeArea) return;
@@ -1017,10 +1331,12 @@ function renderPlayerLife(player, lifeAreaId) {
 
         const img = document.createElement("img");
 
-        img.src = lifeCard?.faceUp && lifeCard.image
+        img.src = hidden
+            ? cardBackImage
+            : lifeCard?.faceUp && lifeCard.image
             ? lifeCard.image
             : cardBackImage;
-        img.alt = lifeCard?.faceUp && lifeCard.name
+        img.alt = !hidden && lifeCard?.faceUp && lifeCard.name
             ? lifeCard.name
             : "Life Card";
         img.className = "life-card-img";
@@ -1029,12 +1345,14 @@ function renderPlayerLife(player, lifeAreaId) {
         lifeArea.appendChild(cardElement);
     });
 
-    const count = document.createElement("div");
+    if (!hidden) {
+        const count = document.createElement("div");
 
-    count.className = "life-count";
-    count.textContent = player.life.length;
+        count.className = "life-count";
+        count.textContent = player.life.length;
 
-    lifeArea.appendChild(count);
+        lifeArea.appendChild(count);
+    }
 
     setupCardPreview();
 }
@@ -1566,6 +1884,7 @@ function showSelectedCardActions() {
         clearReplaceTargets();
 
         pendingReplacePlay = null;
+        queueMultiplayerStateSync();
 
     });
 
@@ -1647,6 +1966,7 @@ function showSelectedCounterActions() {
         }
 
         clearHandSelection();
+        queueMultiplayerStateSync();
     });
 
     selectedHandCard.appendChild(counterButton);
@@ -1660,6 +1980,7 @@ function applyCounterPowerToCurrentAttack(counterPower) {
 
     renderLeaders();
     renderCharacters();
+    queueMultiplayerStateSync();
 }
 
 function clearSelectedCardActions() {
@@ -1889,6 +2210,8 @@ function createAttachDonButton(player, card) {
         } else {
             clearBoardSelection();
         }
+
+        queueMultiplayerStateSync();
     });
 
     return attachDonButton;
@@ -2032,6 +2355,7 @@ async function resolveActivateMainBoardEffect(player, card, effect) {
     addGameLog(`${player.name} activated ${card.name}'s Activate: Main effect. ${result.message}`);
 
     showSelectedBoardActions();
+    queueMultiplayerStateSync();
 }
 
 function resolveBoardActionEffect(player, card, effect) {
@@ -2303,6 +2627,14 @@ function clearBattleControls() {
     battleControls.innerHTML = "";
 }
 
+function isLocalMultiplayerPlayerKey(playerKey) {
+    return playerKey === "player1";
+}
+
+function canLocalPlayerControlDefense(defenderPlayerKey) {
+    return isLocalMultiplayerPlayerKey(defenderPlayerKey);
+}
+
 function createBattleButton(text, onClick, disabled = false, extraClass = "") {
     const button = document.createElement("button");
 
@@ -2331,6 +2663,15 @@ function createSkipBlockButton(onSkipBlock) {
     );
 }
 
+function createWaitingDefenseButton(defenderName, phaseLabel = "Waiting") {
+    return createBattleButton(
+        `${phaseLabel}: ${defenderName}`,
+        () => {},
+        true,
+        "counter-phase"
+    );
+}
+
 function showResolveAttackButton(defenderPlayerKey, onResolve) {
     const battleControls = document.getElementById("battleControls");
 
@@ -2356,6 +2697,15 @@ function showResolveAttackButton(defenderPlayerKey, onResolve) {
     }
 
     enterBlockerStep(defenderPlayerKey, onResolve);
+
+    const defenderName = gameState[defenderPlayerKey]?.name ?? "Defender";
+
+    if (!canLocalPlayerControlDefense(defenderPlayerKey)) {
+        battleControls.appendChild(
+            createWaitingDefenseButton(defenderName, "Waiting for Block")
+        );
+        return;
+    }
 
     const skipBlockButton = createSkipBlockButton(() => {
         skipCurrentBlockStep(defenderPlayerKey, onResolve);
@@ -2389,9 +2739,12 @@ function showCounterPhaseControls(defenderPlayerKey, onResolve) {
         : "player2-resolve";
 
     const defenderName = gameState[defenderPlayerKey]?.name ?? "Defender";
+    const localPlayerControlsDefense = canLocalPlayerControlDefense(defenderPlayerKey);
 
     const resolveButton = createBattleButton(
-        `${defenderName}: Resolve Attack`,
+        localPlayerControlsDefense
+            ? `${defenderName}: Resolve Attack`
+            : `Waiting for ${defenderName}`,
         async () => {
             if (typeof onResolve === "function") {
                 await onResolve();
@@ -2399,7 +2752,7 @@ function showCounterPhaseControls(defenderPlayerKey, onResolve) {
 
             clearBattleControls();
         },
-        false,
+        !localPlayerControlsDefense,
         colorClass
     );
 
@@ -2419,9 +2772,12 @@ function showResolveOnlyButton(defenderPlayerKey, onResolve) {
         : "player2-resolve";
 
     const defenderName = gameState[defenderPlayerKey]?.name ?? "Defender";
+    const localPlayerControlsDefense = canLocalPlayerControlDefense(defenderPlayerKey);
 
     const resolveButton = createBattleButton(
-        `${defenderName}: Resolve Attack`,
+        localPlayerControlsDefense
+            ? `${defenderName}: Resolve Attack`
+            : `Waiting for ${defenderName}`,
         async () => {
             if (typeof onResolve === "function") {
                 await onResolve();
@@ -2429,7 +2785,7 @@ function showResolveOnlyButton(defenderPlayerKey, onResolve) {
 
             clearBattleControls();
         },
-        false,
+        !localPlayerControlsDefense,
         colorClass
     );
 
@@ -2630,6 +2986,7 @@ function beginAttack(targetData) {
     });
 
     promptOnOpponentAttackCharacterEffects(defenderPlayer, continueAfterDefenderResponses);
+    queueMultiplayerStateSync();
 }
 
 function promptOnOpponentAttackCharacterEffects(defenderPlayer, onComplete) {
@@ -2817,6 +3174,7 @@ function promptTrashOneCardForAttack(player, sourceCard, effect, onComplete) {
     highlightTrashChoiceTargets(playerKey);
 
     addGameLog(`${player.name}: choose 1 card from hand to trash for ${sourceCard.name}'s When Attacking effect.`);
+    queueMultiplayerStateSync();
 }
 
 function highlightTrashChoiceTargets(playerKey) {
@@ -2874,12 +3232,14 @@ async function handlePendingTrashChoice(playerKey, cardInstanceId) {
     }
 
     ui.renderHands();
+    queueMultiplayerStateSync();
 }
 
 async function resolveCurrentAttack() {
     if (!currentAttack) {
         clearBattleControls();
         gameState.currentPhase = "main";
+        queueMultiplayerStateSync();
         return;
     }
 
@@ -2902,6 +3262,7 @@ async function resolveCurrentAttack() {
         clearAttackArrow();
 
         gameState.currentPhase = "main";
+        queueMultiplayerStateSync();
 
         return;
     }
@@ -2982,10 +3343,12 @@ async function resolveCurrentAttack() {
             "Final Attack",
             `${defenderPlayer.name} had no life cards left and took a successful leader attack.`
         );
+        queueMultiplayerStateSync();
         return;
     }
 
     gameState.currentPhase = "main";
+    queueMultiplayerStateSync();
 }
 
 function clearBattleOnlyEffectsForCurrentAttack(attackerCard, targetCard) {
@@ -3050,6 +3413,7 @@ function cancelPendingAttack() {
     clearCancelAttackButton();
 
     gameState.currentPhase = "main";
+    queueMultiplayerStateSync();
 }
 
 // =========================
@@ -3092,6 +3456,8 @@ function lookTopCardsAddToHand({
         if (typeof onComplete === "function") {
             onComplete(selection);
         }
+
+        queueMultiplayerStateSync();
     };
 
     const continueToBottomOrder = () => {
@@ -3379,6 +3745,8 @@ function showBoardCardChoice({
         if (typeof onComplete === "function") {
             await onComplete(getFreshChoice(selectedChoice));
         }
+
+        queueMultiplayerStateSync();
     });
 
     skipButton.addEventListener("click", async () => {
@@ -3387,6 +3755,8 @@ function showBoardCardChoice({
         if (typeof onComplete === "function") {
             await onComplete(null);
         }
+
+        queueMultiplayerStateSync();
     });
 
     buttonRow.appendChild(chooseButton);
@@ -3487,6 +3857,8 @@ function renderBottomOrderStep({
                 bottomOrder: selectedOrder
             });
         }
+
+        queueMultiplayerStateSync();
     });
 
     resetButton.addEventListener("click", () => {
@@ -3608,6 +3980,8 @@ function chooseEffectOption({
             if (typeof onComplete === "function") {
                 await onComplete(option.value);
             }
+
+            queueMultiplayerStateSync();
         });
 
         buttonRow.appendChild(button);
@@ -4235,6 +4609,155 @@ function getBoardActionButtonContainerFromData(boardCardData) {
 
     return null;
 }
+
+function exportMultiplayerSharedState() {
+    if (!gameState) {
+        return null;
+    }
+
+    return {
+        players: {
+            p1: serializePlayerState(
+                gameState[getLocalPlayerKeyForCanonicalSlot("p1")]
+            ),
+            p2: serializePlayerState(
+                gameState[getLocalPlayerKeyForCanonicalSlot("p2")]
+            )
+        },
+        diceWinnerSlot: gameState.diceWinner?.multiplayerSlot || null,
+        firstPlayerSlot: gameState.firstPlayer?.multiplayerSlot || null,
+        secondPlayerSlot: gameState.secondPlayer?.multiplayerSlot || null,
+        currentPlayerSlot: gameState.currentPlayer?.multiplayerSlot || null,
+        turnNumber: Number(gameState.turnNumber || 1),
+        currentPhase: gameState.currentPhase || "diceRoll",
+        battle: {
+            pendingAttack: pendingAttack
+                ? {
+                    ...cloneSerializableValue(pendingAttack),
+                    attacker: mapBoardCardDataToCanonical(pendingAttack.attacker),
+                    attackerPlayerKey: getCanonicalSlotForLocalPlayerKey(pendingAttack.attackerPlayerKey),
+                    defenderPlayerKey: getCanonicalSlotForLocalPlayerKey(pendingAttack.defenderPlayerKey)
+                }
+                : null,
+            currentAttack: currentAttack
+                ? {
+                    ...cloneSerializableValue(currentAttack),
+                    attacker: mapBoardCardDataToCanonical(currentAttack.attacker),
+                    target: mapBoardCardDataToCanonical(currentAttack.target),
+                    attackerPlayerKey: getCanonicalSlotForLocalPlayerKey(currentAttack.attackerPlayerKey),
+                    defenderPlayerKey: getCanonicalSlotForLocalPlayerKey(currentAttack.defenderPlayerKey)
+                }
+                : null,
+            pendingBlock: pendingBlock
+                ? {
+                    defenderPlayerKey: getCanonicalSlotForLocalPlayerKey(pendingBlock.defenderPlayerKey)
+                }
+                : null,
+            pendingTrashChoice: pendingTrashChoice
+                ? {
+                    ...cloneSerializableValue(pendingTrashChoice),
+                    playerKey: getCanonicalSlotForLocalPlayerKey(pendingTrashChoice.playerKey),
+                    onComplete: null
+                }
+                : null
+        },
+        logs: cloneSerializableValue(syncedLogMessages)
+    };
+}
+
+function applyMultiplayerSharedState(snapshot) {
+    if (!snapshot) {
+        return;
+    }
+
+    const localSlot = getMultiplayerLocalSlot();
+    const opponentSlot = getOpponentMultiplayerSlot(localSlot);
+    const localPlayer1 = hydratePlayerState(snapshot.players?.[localSlot], localSlot);
+    const localPlayer2 = hydratePlayerState(snapshot.players?.[opponentSlot], opponentSlot);
+    const localState = {
+        player1: localPlayer1,
+        player2: localPlayer2,
+        diceWinner: null,
+        firstPlayer: null,
+        secondPlayer: null,
+        currentPlayer: null,
+        turnNumber: Number(snapshot.turnNumber || 1),
+        currentPhase: snapshot.currentPhase || "diceRoll"
+    };
+
+    const localPlayerBySlot = {
+        [localSlot]: localPlayer1,
+        [opponentSlot]: localPlayer2
+    };
+
+    localState.diceWinner = snapshot.diceWinnerSlot
+        ? localPlayerBySlot[snapshot.diceWinnerSlot] || null
+        : null;
+    localState.firstPlayer = snapshot.firstPlayerSlot
+        ? localPlayerBySlot[snapshot.firstPlayerSlot] || null
+        : null;
+    localState.secondPlayer = snapshot.secondPlayerSlot
+        ? localPlayerBySlot[snapshot.secondPlayerSlot] || null
+        : null;
+    localState.currentPlayer = snapshot.currentPlayerSlot
+        ? localPlayerBySlot[snapshot.currentPlayerSlot] || null
+        : null;
+
+    isApplyingMultiplayerState = true;
+
+    try {
+        gameState = localState;
+        pendingAttack = snapshot.battle?.pendingAttack
+            ? {
+                ...cloneSerializableValue(snapshot.battle.pendingAttack),
+                attacker: mapBoardCardDataToLocal(snapshot.battle.pendingAttack.attacker),
+                attackerPlayerKey: getLocalPlayerKeyForCanonicalSlot(snapshot.battle.pendingAttack.attackerPlayerKey),
+                defenderPlayerKey: getLocalPlayerKeyForCanonicalSlot(snapshot.battle.pendingAttack.defenderPlayerKey)
+            }
+            : null;
+        currentAttack = snapshot.battle?.currentAttack
+            ? {
+                ...cloneSerializableValue(snapshot.battle.currentAttack),
+                attacker: mapBoardCardDataToLocal(snapshot.battle.currentAttack.attacker),
+                target: mapBoardCardDataToLocal(snapshot.battle.currentAttack.target),
+                attackerPlayerKey: getLocalPlayerKeyForCanonicalSlot(snapshot.battle.currentAttack.attackerPlayerKey),
+                defenderPlayerKey: getLocalPlayerKeyForCanonicalSlot(snapshot.battle.currentAttack.defenderPlayerKey)
+            }
+            : null;
+        pendingBlock = snapshot.battle?.pendingBlock
+            ? {
+                defenderPlayerKey: getLocalPlayerKeyForCanonicalSlot(snapshot.battle.pendingBlock.defenderPlayerKey),
+                onResolve: () => {
+                    resolveCurrentAttack();
+                    queueMultiplayerStateSync();
+                }
+            }
+            : null;
+        pendingTrashChoice = snapshot.battle?.pendingTrashChoice
+            ? {
+                ...cloneSerializableValue(snapshot.battle.pendingTrashChoice),
+                playerKey: getLocalPlayerKeyForCanonicalSlot(snapshot.battle.pendingTrashChoice.playerKey),
+                onComplete: null
+            }
+            : null;
+        syncedLogMessages = Array.isArray(snapshot.logs)
+            ? cloneSerializableValue(snapshot.logs)
+            : [];
+
+        renderGameLogMessages(syncedLogMessages);
+        renderFullGameState();
+    } finally {
+        isApplyingMultiplayerState = false;
+    }
+}
+
+window.queueMultiplayerStateSync = queueMultiplayerStateSync;
+window.multiplayerPageApi = {
+    applySharedState: applyMultiplayerSharedState,
+    exportSharedState: exportMultiplayerSharedState,
+    renderState: renderFullGameState,
+    normalizeLogMessage
+};
 
 // =========================
 // General Helpers
