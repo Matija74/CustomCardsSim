@@ -16,8 +16,6 @@ import {
     updatePublicState
 } from "../firebase/multiplayerService.js?v=settings-live-1";
 
-const deckSelectionStorageKey = "customCardsDeckSelection";
-
 let currentUser = null;
 let roomCode = null;
 let localSlot = null;
@@ -85,23 +83,13 @@ async function runPregameAction(prefix, action) {
 }
 
 function getSavedDeckDefinition() {
-    const availableDecks = window.getAvailableDecks?.() || [];
-    const defaultDeck = availableDecks[0] || null;
+    const savedSelection = window.getStoredDeckSelection?.() || {};
+    const fallbackDeckId = savedSelection.onlineDeckId || savedSelection.player1DeckId || savedSelection.player2DeckId || "";
 
-    if (availableDecks.length === 0) {
-        return null;
-    }
-
-    try {
-        const saved = JSON.parse(localStorage.getItem(deckSelectionStorageKey) || "{}");
-        const requestedDeckId = localSlot === "p2"
-            ? saved.player2DeckId || saved.player1DeckId
-            : saved.player1DeckId || saved.player2DeckId;
-
-        return window.getDeckById?.(requestedDeckId) || defaultDeck;
-    } catch (error) {
-        return defaultDeck;
-    }
+    return window.resolveDeckSelection?.(
+        savedSelection.onlineSelection,
+        fallbackDeckId
+    ) || null;
 }
 
 function createHiddenCards(count) {

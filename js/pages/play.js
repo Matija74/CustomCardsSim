@@ -1,84 +1,112 @@
 // play.js
 
-const deckSelectionStorageKey = "customCardsDeckSelection";
-
-function getSavedDeckSelection() {
-    try {
-        return JSON.parse(localStorage.getItem(deckSelectionStorageKey)) || {};
-    } catch (error) {
-        return {};
+function updateDeckSummary(summaryElement, selection, fallbackLabel) {
+    if (!summaryElement) {
+        return;
     }
-}
 
-function saveDeckSelection(player1DeckId, player2DeckId) {
-    localStorage.setItem(
-        deckSelectionStorageKey,
-        JSON.stringify({
-            player1DeckId,
-            player2DeckId
-        })
-    );
-}
-
-function populateDeckSelect(selectElement, selectedDeckId) {
-    if (!selectElement || !window.getAvailableDecks) return;
-
-    selectElement.innerHTML = "";
-
-    window.getAvailableDecks().forEach(deck => {
-        const option = document.createElement("option");
-
-        option.value = deck.id;
-        option.textContent = deck.name;
-        option.selected = deck.id === selectedDeckId;
-
-        selectElement.appendChild(option);
-    });
+    const deck = window.resolveDeckSelection?.(selection);
+    summaryElement.textContent = deck
+        ? `${deck.name} | Leader ${deck.leaderKey}`
+        : fallbackLabel;
 }
 
 function updateSingleplayerPlayLink() {
-    const player1DeckSelect = document.getElementById("player1DeckSelect");
-    const player2DeckSelect = document.getElementById("player2DeckSelect");
     const singleplayerPlayLink = document.getElementById("singleplayerPlayLink");
+    const storedSelection = window.getStoredDeckSelection?.() || {};
+    const player1Deck = window.resolveDeckSelection?.(storedSelection.player1Selection);
+    const player2Deck = window.resolveDeckSelection?.(storedSelection.player2Selection);
 
-    if (!player1DeckSelect || !player2DeckSelect || !singleplayerPlayLink) return;
-
-    const player1DeckId = player1DeckSelect.value;
-    const player2DeckId = player2DeckSelect.value;
-
-    saveDeckSelection(player1DeckId, player2DeckId);
+    if (!singleplayerPlayLink || !player1Deck || !player2Deck) {
+        return;
+    }
 
     const params = new URLSearchParams({
-        player1Deck: player1DeckId,
-        player2Deck: player2DeckId
+        player1Deck: player1Deck.id,
+        player2Deck: player2Deck.id
     });
 
     singleplayerPlayLink.href = `singleplayer.html?${params.toString()}`;
 }
 
-function initializeDeckPicker() {
-    const player1DeckSelect = document.getElementById("player1DeckSelect");
-    const player2DeckSelect = document.getElementById("player2DeckSelect");
+function savePlayDeckSelection(key, selection) {
+    const storedSelection = window.getStoredDeckSelection?.() || {};
+    const nextSelection = {
+        ...storedSelection,
+        [key]: selection
+    };
+    const deck = window.resolveDeckSelection?.(selection);
 
-    if (!player1DeckSelect || !player2DeckSelect || !window.getAvailableDecks) return;
+    if (key === "player1Selection") {
+        nextSelection.player1DeckId = deck?.id || "";
+    }
 
-    const savedSelection = getSavedDeckSelection();
-    const defaultDeckId = window.getAvailableDecks()[0]?.id || "";
+    if (key === "player2Selection") {
+        nextSelection.player2DeckId = deck?.id || "";
+    }
 
-    populateDeckSelect(
-        player1DeckSelect,
-        savedSelection.player1DeckId || defaultDeckId
-    );
+    if (key === "onlineSelection") {
+        nextSelection.onlineDeckId = deck?.id || "";
+    }
 
-    populateDeckSelect(
-        player2DeckSelect,
-        savedSelection.player2DeckId || defaultDeckId
-    );
-
-    player1DeckSelect.addEventListener("change", updateSingleplayerPlayLink);
-    player2DeckSelect.addEventListener("change", updateSingleplayerPlayLink);
-
-    updateSingleplayerPlayLink();
+    window.saveStoredDeckSelection?.(nextSelection);
 }
 
-document.addEventListener("DOMContentLoaded", initializeDeckPicker);
+function initializePlayPage() {
+    const player1DeckButton = document.getElementById("player1DeckButton");
+    const player2DeckButton = document.getElementById("player2DeckButton");
+    const player1DeckSummary = document.getElementById("player1DeckSummary");
+    const player2DeckSummary = document.getElementById("player2DeckSummary");
+    const defaultDeck = window.getAvailableDecks?.()[0] || null;
+
+    if (!player1DeckButton || !player2DeckButton || !defaultDeck) {
+        return;
+    }
+
+    const storedSelection = window.getStoredDeckSelection?.() || {};
+    const player1Selection = storedSelection.player1Selection || window.createPresetSelection?.(storedSelection.player1DeckId || defaultDeck.id);
+    const player2Selection = storedSelection.player2Selection || window.createPresetSelection?.(storedSelection.player2DeckId || defaultDeck.id);
+
+    savePlayDeckSelection("player1Selection", player1Selection);
+    savePlayDeckSelection("player2Selection", player2Selection);
+
+    updateDeckSummary(player1DeckSummary, player1Selection, "No deck selected");
+    updateDeckSummary(player2DeckSummary, player2Selection, "No deck selected");
+    updateSingleplayerPlayLink();
+
+    player1DeckButton.addEventListener("click", () => {
+        window.openDeckPickerPopup?.({
+            title: "Player 1 Deck",
+            initialSelection: (window.getStoredDeckSelection?.() || {}).player1Selection,
+            onConfirm: selection => {
+                savePlayDeckSelection("player1Selection", selection);
+                updateDeckSummary(player1DeckSummary, selection, "No deck selected");
+                updateSingleplayerPlayLink();
+            }
+        });
+    });
+
+    player2DeckButton.addEventListener("click", () => {
+        window.openDeckPickerPopup?.({
+            title: "Player 2 Deck",
+            initialSelection: (window.getStoredDeckSelection?.() || {}).player2Selection,
+            onConfirm: selection => {
+                savePlayDeckSelection("player2Selection", selection);
+                updateDeckSummary(player2DeckSummary, selection, "No deck selected");
+                updateSingleplayerPlayLink();
+            }
+        });
+    });
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+    try {
+        if (window.loadCardDatabase) {
+            await window.loadCardDatabase();
+        }
+    } catch (error) {
+        console.error("Failed to load card database for play page:", error);
+    }
+
+    initializePlayPage();
+});

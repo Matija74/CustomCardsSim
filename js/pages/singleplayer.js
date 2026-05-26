@@ -42,13 +42,20 @@ let ui = null;
 // Game Initialization
 // =========================
 
-function getSelectedDeckIds() {
+function getSelectedDeckDefinitions() {
     const params = new URLSearchParams(window.location.search);
     const defaultDeckId = window.getAvailableDecks?.()[0]?.id;
+    const storedSelection = window.getStoredDeckSelection?.() || {};
 
     return {
-        player1DeckId: params.get("player1Deck") || defaultDeckId,
-        player2DeckId: params.get("player2Deck") || defaultDeckId
+        player1Deck: window.resolveDeckSelection?.(
+            storedSelection.player1Selection,
+            params.get("player1Deck") || storedSelection.player1DeckId || defaultDeckId
+        ),
+        player2Deck: window.resolveDeckSelection?.(
+            storedSelection.player2Selection,
+            params.get("player2Deck") || storedSelection.player2DeckId || defaultDeckId
+        )
     };
 }
 
@@ -79,9 +86,9 @@ function createInitialPlayerState(playerName, deckDefinition) {
 }
 
 function createInitialGameState() {
-    const selectedDeckIds = getSelectedDeckIds();
-    const player1Deck = window.getDeckById(selectedDeckIds.player1DeckId);
-    const player2Deck = window.getDeckById(selectedDeckIds.player2DeckId);
+    const selectedDeckDefinitions = getSelectedDeckDefinitions();
+    const player1Deck = selectedDeckDefinitions.player1Deck;
+    const player2Deck = selectedDeckDefinitions.player2Deck;
 
     return {
         player1: createInitialPlayerState("Player 1", player1Deck),

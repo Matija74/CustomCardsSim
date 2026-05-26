@@ -175,7 +175,14 @@ body {
     gap: 8px;
 }
 
+.saved-deck-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 .deck-name-box label,
+.saved-deck-box label,
 .filter-group label {
     color: #dddddd;
     font-size: 0.85rem;
@@ -212,6 +219,8 @@ body {
 }
 
 .deck-name-box input,
+.saved-deck-box select,
+.saved-deck-box textarea,
 .filter-group input,
 .filter-group select {
     width: 100%;
@@ -228,15 +237,24 @@ body {
 }
 
 .deck-name-box input::placeholder,
+.saved-deck-box textarea::placeholder,
 .filter-group input::placeholder {
     color: #a9a9a9;
 }
 
 .deck-name-box input:focus,
+.saved-deck-box select:focus,
+.saved-deck-box textarea:focus,
 .filter-group input:focus,
 .filter-group select:focus {
     border-color: rgba(255, 255, 255, 0.45);
     background: rgba(255, 255, 255, 0.13);
+}
+
+.saved-deck-box textarea {
+    min-height: 120px;
+    resize: vertical;
+    font-family: Consolas, 'Courier New', monospace;
 }
 
 .filter-group select option {
@@ -429,8 +447,14 @@ body {
 
 .deck-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 12px;
+}
+
+.saved-deck-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 10px;
 }
 
 .deck-action-button,
@@ -793,6 +817,10 @@ body {
     }
 
     .deck-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .saved-deck-row {
         grid-template-columns: 1fr;
     }
 }

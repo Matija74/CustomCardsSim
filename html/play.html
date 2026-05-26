@@ -25,15 +25,17 @@
                 <p>Play both sides yourself and test cards, effects, phases, and deck flow. Note that right now, all decks available are pre-set. We will add deck editor functionality in the future.</p>
 
                 <div class="deck-picker-group">
-                    <label class="deck-picker-field" for="player1DeckSelect">
+                    <div class="deck-picker-field">
                         <span>Player 1 Deck</span>
-                        <select id="player1DeckSelect" class="deck-picker-select"></select>
-                    </label>
+                        <button id="player1DeckButton" class="deck-picker-button" type="button">Choose Deck</button>
+                        <small id="player1DeckSummary" class="deck-picker-summary">No deck selected</small>
+                    </div>
 
-                    <label class="deck-picker-field" for="player2DeckSelect">
+                    <div class="deck-picker-field">
                         <span>Player 2 Deck</span>
-                        <select id="player2DeckSelect" class="deck-picker-select"></select>
-                    </label>
+                        <button id="player2DeckButton" class="deck-picker-button" type="button">Choose Deck</button>
+                        <small id="player2DeckSummary" class="deck-picker-summary">No deck selected</small>
+                    </div>
                 </div>
 
                 <a href="singleplayer.html" class="btn btn-primary" id="singleplayerPlayLink">
@@ -55,7 +57,9 @@
 
     </main>
 
+    <script src="../js/cards/cardDatabase.js?v=deck-tools-1"></script>
     <script src="../js/cards/decks.js?v=ry-ichigo-1"></script>
-    <script src="../js/pages/play.js"></script>
+    <script src="../js/core/deckTools.js?v=deck-tools-1"></script>
+    <script src="../js/pages/play.js?v=deck-tools-1"></script>
 </body>
 </html>

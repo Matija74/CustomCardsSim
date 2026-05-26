@@ -29,10 +29,11 @@
                     <h2>Create Room</h2>
                     <p>Host a room, share the code, then start when both players are connected.</p>
 
-                    <label class="deck-picker-field" for="queueDeckSelect">
+                    <div class="deck-picker-field">
                         <span>Your Deck</span>
-                        <select id="queueDeckSelect" class="deck-picker-select"></select>
-                    </label>
+                        <button id="queueDeckButton" class="deck-picker-button" type="button">Choose Deck</button>
+                        <small id="queueDeckSummary" class="deck-picker-summary">No deck selected</small>
+                    </div>
 
                     <button id="createRoomBtn" class="btn btn-primary" type="button">
                         Create Room
@@ -77,6 +78,7 @@
     <script src="../js/cards/cardDatabase.js?v=multiplayer-fix-3"></script>
     <script src="../js/cards/decks.js?v=multiplayer-fix-3"></script>
     <script src="../js/core/deckParser.js?v=multiplayer-fix-3"></script>
-    <script type="module" src="../js/pages/queue.js?v=multiplayer-fix-3"></script>
+    <script src="../js/core/deckTools.js?v=deck-tools-1"></script>
+    <script type="module" src="../js/pages/queue.js?v=deck-tools-1"></script>
 </body>
 </html>

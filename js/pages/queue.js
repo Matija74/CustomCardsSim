@@ -13,11 +13,11 @@ import {
     setPlayerReady
 } from "../firebase/multiplayerService.js";
 
-const deckSelectionStorageKey = "customCardsDeckSelection";
 const connectionStatus = document.getElementById("connectionStatus");
 const createRoomBtn = document.getElementById("createRoomBtn");
 const joinRoomBtn = document.getElementById("joinRoomBtn");
-const queueDeckSelect = document.getElementById("queueDeckSelect");
+const queueDeckButton = document.getElementById("queueDeckButton");
+const queueDeckSummary = document.getElementById("queueDeckSummary");
 const roomCodeInput = document.getElementById("roomCodeInput");
 const roomStatus = document.getElementById("roomStatus");
 const roomCodeDisplay = document.getElementById("roomCodeDisplay");
@@ -30,62 +30,64 @@ let currentRoomCode = null;
 let playerSlot = null;
 let unsubscribeMatch = null;
 
-function getSavedDeckSelection() {
-    try {
-        return JSON.parse(localStorage.getItem(deckSelectionStorageKey)) || {};
-    } catch (error) {
-        return {};
-    }
-}
-
-function saveQueueDeckSelection(deckId) {
-    const currentSelection = getSavedDeckSelection();
-
-    localStorage.setItem(
-        deckSelectionStorageKey,
-        JSON.stringify({
-            ...currentSelection,
-            player1DeckId: deckId,
-            player2DeckId: deckId
-        })
-    );
-}
-
 function initializeDeckPicker() {
-    if (!queueDeckSelect || !window.getAvailableDecks) {
+    if (!queueDeckButton || !window.getAvailableDecks) {
         return;
     }
 
-    const savedSelection = getSavedDeckSelection();
-    const availableDecks = window.getAvailableDecks();
-    const selectedDeckId = savedSelection.player1DeckId || savedSelection.player2DeckId || availableDecks[0]?.id || "";
+    const storedSelection = window.getStoredDeckSelection?.() || {};
+    const defaultDeckId = window.getAvailableDecks()?.[0]?.id || "";
+    const onlineSelection = storedSelection.onlineSelection || window.createPresetSelection?.(storedSelection.onlineDeckId || defaultDeckId);
 
-    queueDeckSelect.innerHTML = "";
-
-    availableDecks.forEach(deck => {
-        const option = document.createElement("option");
-
-        option.value = deck.id;
-        option.textContent = deck.name;
-        option.selected = deck.id === selectedDeckId;
-        queueDeckSelect.appendChild(option);
-    });
-
-    if (selectedDeckId) {
-        saveQueueDeckSelection(selectedDeckId);
+    if (onlineSelection) {
+        saveQueueDeckSelection(onlineSelection);
     }
 
-    queueDeckSelect.addEventListener("change", () => {
-        saveQueueDeckSelection(queueDeckSelect.value);
+    updateQueueDeckSummary();
+
+    queueDeckButton.addEventListener("click", () => {
+        window.openDeckPickerPopup?.({
+            title: "Online Deck",
+            initialSelection: (window.getStoredDeckSelection?.() || {}).onlineSelection,
+            onConfirm: selection => {
+                saveQueueDeckSelection(selection);
+                updateQueueDeckSummary();
+            }
+        });
     });
+}
+
+function saveQueueDeckSelection(selection) {
+    const currentSelection = window.getStoredDeckSelection?.() || {};
+    const deck = window.resolveDeckSelection?.(selection);
+
+    window.saveStoredDeckSelection?.({
+        ...currentSelection,
+        onlineSelection: selection,
+        onlineDeckId: deck?.id || "",
+        player1DeckId: deck?.id || currentSelection.player1DeckId || "",
+        player2DeckId: deck?.id || currentSelection.player2DeckId || ""
+    });
+}
+
+function updateQueueDeckSummary() {
+    if (!queueDeckSummary) {
+        return;
+    }
+
+    const onlineSelection = (window.getStoredDeckSelection?.() || {}).onlineSelection;
+    const deck = window.resolveDeckSelection?.(onlineSelection);
+    queueDeckSummary.textContent = deck
+        ? `${deck.name} | Leader ${deck.leaderKey}`
+        : "No deck selected";
 }
 
 function setQueueControlsDisabled(disabled) {
     createRoomBtn.disabled = disabled;
     joinRoomBtn.disabled = disabled;
     roomCodeInput.disabled = disabled;
-    if (queueDeckSelect) {
-        queueDeckSelect.disabled = disabled;
+    if (queueDeckButton) {
+        queueDeckButton.disabled = disabled;
     }
 }
 
@@ -95,7 +97,7 @@ function setRoomCode(roomCode) {
 }
 
 function getSelectedQueueDeck() {
-    return window.getDeckById?.(queueDeckSelect?.value) || null;
+    return window.resolveDeckSelection?.((window.getStoredDeckSelection?.() || {}).onlineSelection) || null;
 }
 
 async function saveCurrentPlayerDeckAndReady(roomCode, slot) {

@@ -102,7 +102,10 @@ body {
     font-weight: 700;
 }
 
-.deck-picker-select {
+.deck-picker-button,
+.deck-picker-select,
+.deck-picker-input,
+.deck-picker-textarea {
     width: 100%;
     min-width: 0;
     padding: 14px 12px;
@@ -112,6 +115,23 @@ body {
     color: white;
     font: inherit;
     font-weight: 700;
+}
+
+.deck-picker-button {
+    text-align: left;
+    cursor: pointer;
+}
+
+.deck-picker-summary {
+    color: #d0d0d0;
+    font-size: 0.82rem;
+    line-height: 1.4;
+}
+
+.deck-picker-textarea {
+    min-height: 160px;
+    resize: vertical;
+    font-family: Consolas, 'Courier New', monospace;
 }
 
 .queue-side h2 {
@@ -210,6 +230,82 @@ body {
     gap: 8px;
     color: #eeeeee;
     font-weight: 700;
+}
+
+.deck-picker-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.62);
+}
+
+.deck-picker-modal {
+    width: min(720px, 100%);
+    display: grid;
+    gap: 18px;
+    padding: 24px;
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(55, 55, 55, 0.98) 0%, rgba(31, 31, 31, 0.98) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 22px 70px rgba(0, 0, 0, 0.45);
+}
+
+.deck-picker-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.deck-picker-tab {
+    padding: 10px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.deck-picker-tab.active {
+    background: linear-gradient(135deg, #9ad7ff 0%, #5faee8 100%);
+    border-color: transparent;
+}
+
+.deck-picker-content {
+    display: grid;
+}
+
+.deck-picker-panel {
+    display: grid;
+    gap: 12px;
+}
+
+.deck-picker-popup-field {
+    display: grid;
+    gap: 8px;
+}
+
+.deck-picker-popup-field span {
+    color: #eeeeee;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.deck-picker-help {
+    color: #cdcdcd;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.deck-picker-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
 }
 
 @media (max-width: 700px) {

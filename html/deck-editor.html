@@ -49,12 +49,34 @@
                 <div class="deck-display" id="deckDisplay"></div>
 
                 <div class="deck-actions">
-                    <button class="deck-action-button save-button">
+                    <button class="deck-action-button save-button" id="saveDeckButton">
                         Save Deck
+                    </button>
+
+                    <button class="deck-action-button" id="copyDeckCodeButton">
+                        Copy Deck Code
                     </button>
 
                     <button class="deck-action-button clear-button" id="clearDeckButton">
                         Clear Deck
+                    </button>
+                </div>
+
+                <div class="saved-deck-box">
+                    <label for="savedDeckSelect">Locally Saved Decks</label>
+
+                    <div class="saved-deck-row">
+                        <select id="savedDeckSelect"></select>
+                        <button class="deck-action-button" id="loadSavedDeckButton">Load</button>
+                        <button class="deck-action-button clear-button" id="deleteSavedDeckButton">Delete</button>
+                    </div>
+                </div>
+
+                <div class="saved-deck-box">
+                    <label for="importDeckText">Import Deck Text</label>
+                    <textarea id="importDeckText" placeholder="2xDD01-002&#10;4xDD01-003"></textarea>
+                    <button class="deck-action-button" id="importDeckButton">
+                        Import Deck
                     </button>
                 </div>
             </section>
@@ -187,6 +209,7 @@
     </div>
 
     <script src="../js/cards/cardDatabase.js?v=ry-ichigo-1"></script>
-    <script src="../js/pages/deck-editor.js?v=rb-guts-1"></script>
+    <script src="../js/core/deckTools.js?v=deck-tools-1"></script>
+    <script src="../js/pages/deck-editor.js?v=deck-tools-1"></script>
 </body>
 </html>

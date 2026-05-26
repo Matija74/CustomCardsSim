@@ -18,6 +18,7 @@ class DeckEditor {
         this.deckDisplay = document.getElementById("deckDisplay");
         this.cardLibraryGrid = document.getElementById("cardLibraryGrid");
         this.deckCardCount = document.getElementById("deckCardCount");
+        this.deckNameInput = document.getElementById("deckName");
 
         this.cardSearch = document.getElementById("cardSearch");
         this.categoryFilter = document.getElementById("categoryFilter");
@@ -30,7 +31,14 @@ class DeckEditor {
         this.leaderColorFilterToggle = document.getElementById("leaderColorFilterToggle");
         this.leaderTypeFilterToggle = document.getElementById("leaderTypeFilterToggle");
 
+        this.saveDeckButton = document.getElementById("saveDeckButton");
+        this.copyDeckCodeButton = document.getElementById("copyDeckCodeButton");
         this.clearDeckButton = document.getElementById("clearDeckButton");
+        this.savedDeckSelect = document.getElementById("savedDeckSelect");
+        this.loadSavedDeckButton = document.getElementById("loadSavedDeckButton");
+        this.deleteSavedDeckButton = document.getElementById("deleteSavedDeckButton");
+        this.importDeckText = document.getElementById("importDeckText");
+        this.importDeckButton = document.getElementById("importDeckButton");
 
         this.cardPreviewModal = document.getElementById("cardPreviewModal");
         this.cardPreviewBackdrop = document.getElementById("cardPreviewBackdrop");
@@ -48,6 +56,7 @@ class DeckEditor {
     init() {
         this.populateFilterOptions();
         this.setupEvents();
+        this.renderSavedDeckOptions();
         this.renderLeaderSelection();
         this.renderDeck();
     }
@@ -64,7 +73,12 @@ class DeckEditor {
         this.leaderColorFilterToggle.addEventListener("change", () => this.renderCardLibrary());
         this.leaderTypeFilterToggle.addEventListener("change", () => this.renderCardLibrary());
 
+        this.saveDeckButton?.addEventListener("click", () => this.saveCurrentDeck());
+        this.copyDeckCodeButton?.addEventListener("click", () => this.copyDeckCode());
         this.clearDeckButton.addEventListener("click", () => this.clearDeck());
+        this.loadSavedDeckButton?.addEventListener("click", () => this.loadSelectedSavedDeck());
+        this.deleteSavedDeckButton?.addEventListener("click", () => this.deleteSelectedSavedDeck());
+        this.importDeckButton?.addEventListener("click", () => this.importDeckFromText());
 
         this.cardPreviewBackdrop.addEventListener("click", () => this.closeCardPreview());
         this.cardPreviewClose.addEventListener("click", () => this.closeCardPreview());
@@ -557,6 +571,199 @@ class DeckEditor {
 
         this.renderDeck();
         this.renderCardLibrary();
+    }
+
+    getCurrentDeckEntries() {
+        return this.deckCards.map(card => ({
+            cardId: card.id,
+            quantity: Number(card.amount || 0)
+        }));
+    }
+
+    getCurrentDeckDefinition() {
+        if (!this.selectedLeader) {
+            return null;
+        }
+
+        return window.createDeckDefinition?.({
+            id: `local-deck-${Date.now()}`,
+            name: this.deckNameInput?.value?.trim() || `${this.selectedLeader.name} Deck`,
+            leaderKey: this.selectedLeader.id,
+            entries: this.getCurrentDeckEntries(),
+            source: "local"
+        }) || null;
+    }
+
+    renderSavedDeckOptions() {
+        if (!this.savedDeckSelect) {
+            return;
+        }
+
+        const savedDecks = window.getLocalSavedDecks?.() || [];
+
+        this.savedDeckSelect.innerHTML = "";
+
+        if (savedDecks.length === 0) {
+            const option = document.createElement("option");
+            option.value = "";
+            option.textContent = "No saved decks";
+            this.savedDeckSelect.appendChild(option);
+            this.loadSavedDeckButton.disabled = true;
+            this.deleteSavedDeckButton.disabled = true;
+            return;
+        }
+
+        savedDecks.forEach(deck => {
+            const option = document.createElement("option");
+            option.value = deck.id;
+            option.textContent = deck.name;
+            this.savedDeckSelect.appendChild(option);
+        });
+
+        this.loadSavedDeckButton.disabled = false;
+        this.deleteSavedDeckButton.disabled = false;
+    }
+
+    loadDeckDefinition(deckDefinition) {
+        if (!deckDefinition) {
+            return;
+        }
+
+        const leader = this.leaders?.[deckDefinition.leaderKey];
+
+        if (!leader) {
+            alert(`Leader not found: ${deckDefinition.leaderKey}`);
+            return;
+        }
+
+        const entries = Array.isArray(deckDefinition.cards)
+            ? deckDefinition.cards
+            : window.parseDeckEntriesFromText?.(deckDefinition.deckText || "").entries || [];
+        const nextDeckCards = [];
+
+        for (const entry of entries) {
+            const card = this.cardDatabase?.[entry.cardId];
+
+            if (!card) {
+                continue;
+            }
+
+            nextDeckCards.push({
+                ...card,
+                amount: Number(entry.quantity || 0)
+            });
+        }
+
+        this.selectedLeader = leader;
+        this.deckCards = nextDeckCards;
+
+        if (this.deckNameInput) {
+            this.deckNameInput.value = deckDefinition.name || "";
+        }
+
+        this.renderDeck();
+        this.renderCardLibrary();
+    }
+
+    saveCurrentDeck() {
+        const deckDefinition = this.getCurrentDeckDefinition();
+
+        if (!deckDefinition) {
+            alert("Choose a Leader before saving.");
+            return;
+        }
+
+        const savedDeck = window.saveLocalDeck?.(deckDefinition);
+
+        this.renderSavedDeckOptions();
+
+        if (savedDeck && this.savedDeckSelect) {
+            this.savedDeckSelect.value = savedDeck.id;
+        }
+
+        alert(`Saved ${deckDefinition.name}.`);
+    }
+
+    async copyDeckCode() {
+        const deckDefinition = this.getCurrentDeckDefinition();
+
+        if (!deckDefinition) {
+            alert("Choose a Leader before copying deck text.");
+            return;
+        }
+
+        const deckText = deckDefinition.deckText;
+
+        if (!deckText.trim()) {
+            alert("Add cards to the deck before copying.");
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(deckText);
+            alert("Deck text copied.");
+        } catch (error) {
+            alert("Could not copy deck text.");
+        }
+    }
+
+    loadSelectedSavedDeck() {
+        const savedDeck = window.getLocalSavedDeckById?.(this.savedDeckSelect?.value);
+
+        if (!savedDeck) {
+            alert("Choose a saved deck first.");
+            return;
+        }
+
+        this.loadDeckDefinition(savedDeck);
+    }
+
+    deleteSelectedSavedDeck() {
+        const deckId = this.savedDeckSelect?.value;
+
+        if (!deckId) {
+            return;
+        }
+
+        const savedDeck = window.getLocalSavedDeckById?.(deckId);
+
+        if (!savedDeck) {
+            return;
+        }
+
+        if (!confirm(`Delete ${savedDeck.name}?`)) {
+            return;
+        }
+
+        window.deleteLocalSavedDeck?.(deckId);
+        this.renderSavedDeckOptions();
+    }
+
+    importDeckFromText() {
+        if (!this.selectedLeader) {
+            alert("Choose a Leader before importing deck text.");
+            return;
+        }
+
+        const parsedDeck = window.parseDeckEntriesFromText?.(this.importDeckText?.value || "");
+
+        if (!parsedDeck?.success) {
+            alert(parsedDeck?.errors?.[0] || "Invalid deck text.");
+            return;
+        }
+
+        const validation = window.validateDeckEntries?.(parsedDeck.entries);
+
+        if (!validation?.success) {
+            alert(validation.errors[0] || "Deck contains unknown cards.");
+            return;
+        }
+
+        this.loadDeckDefinition({
+            name: this.deckNameInput?.value?.trim() || `${this.selectedLeader.name} Deck`,
+            leaderKey: this.selectedLeader.id,
+            cards: parsedDeck.entries
+        });
     }
 
     // =========================
