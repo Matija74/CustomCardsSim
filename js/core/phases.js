@@ -158,6 +158,112 @@ function setupLifeCards(player) {
     renderDecks();
 }
 
+function shouldSkipCurrentTurnDraw(player = gameState?.currentPlayer) {
+    return Boolean(
+        player &&
+        gameState?.firstPlayer &&
+        gameState.turnNumber === 1 &&
+        player === gameState.firstPlayer
+    );
+}
+
+function getCurrentTurnDonAmount(player = gameState?.currentPlayer) {
+    return shouldSkipCurrentTurnDraw(player)
+        ? 1
+        : 2;
+}
+
+function setPhaseButtonState(phaseButton, text, disabled = false) {
+    if (!phaseButton) {
+        return;
+    }
+
+    phaseButton.style.display = "block";
+    phaseButton.disabled = disabled;
+    phaseButton.textContent = text;
+}
+
+function canCurrentClientAdvanceTurnPhases() {
+    if (window.__multiplayerRuntime?.isActive?.()) {
+        return gameState?.currentPlayer === gameState?.player1;
+    }
+
+    return true;
+}
+
+function maybeAutoAdvanceTurnPhases(phaseButton, phaseInfo) {
+    if (!window.isGameSettingEnabled?.("autoDraw")) {
+        return;
+    }
+
+    if (!canCurrentClientAdvanceTurnPhases()) {
+        return;
+    }
+
+    window.setTimeout(() => {
+        if (!gameState || !canCurrentClientAdvanceTurnPhases()) {
+            return;
+        }
+
+        if (gameState.currentPhase === "draw") {
+            advanceDrawPhase(phaseButton, phaseInfo);
+            return;
+        }
+
+        if (gameState.currentPhase === "don") {
+            advanceDonPhase(phaseButton, phaseInfo);
+        }
+    }, 0);
+}
+
+function beginTurnFlow(player, phaseButton, phaseInfo) {
+    phaseInfo.innerHTML += `<br><br>`;
+
+    runRefreshPhase(player, phaseInfo);
+
+    if (shouldSkipCurrentTurnDraw(player)) {
+        phaseInfo.innerHTML += `
+            <br><br>
+            ${player.name}'s Draw Phase:<br>
+            ${player.name} goes first and skips the draw on Turn 1.
+        `;
+
+        gameState.currentPhase = "don";
+        setPhaseButtonState(phaseButton, `Add ${getCurrentTurnDonAmount(player)} DON!!`);
+        window.queueMultiplayerStateSync?.();
+        maybeAutoAdvanceTurnPhases(phaseButton, phaseInfo);
+        return;
+    }
+
+    gameState.currentPhase = "draw";
+    setPhaseButtonState(phaseButton, "Draw Card");
+    window.queueMultiplayerStateSync?.();
+    maybeAutoAdvanceTurnPhases(phaseButton, phaseInfo);
+}
+
+function advanceDrawPhase(phaseButton, phaseInfo) {
+    const drawResult = runDrawPhase(gameState.currentPlayer, phaseInfo);
+
+    if (drawResult?.deckOut || gameState.currentPhase === "gameOver") {
+        setPhaseButtonState(phaseButton, "Game Over", true);
+        return;
+    }
+
+    gameState.currentPhase = "don";
+    setPhaseButtonState(
+        phaseButton,
+        `Add ${getCurrentTurnDonAmount(gameState.currentPlayer)} DON!!`
+    );
+    window.queueMultiplayerStateSync?.();
+    maybeAutoAdvanceTurnPhases(phaseButton, phaseInfo);
+}
+
+function advanceDonPhase(phaseButton, phaseInfo) {
+    runDonPhase(gameState.currentPlayer, getCurrentTurnDonAmount(gameState.currentPlayer), phaseInfo);
+    runMainPhase(gameState.currentPlayer, phaseButton);
+    window.queueMultiplayerStateSync?.();
+}
+
 // =========================
 // Turn Start
 // =========================
@@ -169,19 +275,7 @@ function startTurnOne(phaseButton, phaseInfo) {
     gameState.currentPlayer.turns++;
     gameState.currentPlayer.leaderAttacksThisTurn = 0;
 
-    phaseInfo.innerHTML += `<br><br>`;
-
-    runRefreshPhase(gameState.currentPlayer, phaseInfo);
-    runDonPhase(gameState.currentPlayer, 1, phaseInfo);
-
-    gameState.currentPhase = "main";
-
-    const nextPlayer = getNextPlayer(gameState.currentPlayer);
-
-    phaseButton.style.display = "block";
-    phaseButton.disabled = false;
-    phaseButton.textContent = `Pass to ${nextPlayer.name}`;
-    window.queueMultiplayerStateSync?.();
+    beginTurnFlow(gameState.currentPlayer, phaseButton, phaseInfo);
 }
 
 // =========================
@@ -280,7 +374,7 @@ function runMainPhase(player, phaseButton) {
 
     const nextPlayer = getNextPlayer(player);
 
-    phaseButton.textContent = `Pass to ${nextPlayer.name}`;
+    setPhaseButtonState(phaseButton, `Pass to ${nextPlayer.name}`);
 }
 
 // =========================
@@ -314,19 +408,7 @@ function passTurn(phaseButton, phaseInfo) {
         ${previousPlayer.name} ended their turn.${endOfTurnText}<br><br>
     `;
 
-    runRefreshPhase(gameState.currentPlayer, phaseInfo);
-
-    const drawResult = runDrawPhase(gameState.currentPlayer, phaseInfo);
-
-    if (drawResult?.deckOut || gameState.currentPhase === "gameOver") {
-        phaseButton.disabled = true;
-        phaseButton.textContent = "Game Over";
-        return;
-    }
-
-    runDonPhase(gameState.currentPlayer, 2, phaseInfo);
-    runMainPhase(gameState.currentPlayer, phaseButton);
-    window.queueMultiplayerStateSync?.();
+    beginTurnFlow(gameState.currentPlayer, phaseButton, phaseInfo);
 }
 
 // =========================

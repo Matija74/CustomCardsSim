@@ -234,6 +234,11 @@ function enterBlockerStep(defenderPlayerKey, onResolve) {
 
     clearBlockerTargets();
 
+    if (availableBlockers.length === 0 && window.isGameSettingEnabled?.("autoSkipBlock")) {
+        skipCurrentBlockStep(defenderPlayerKey, onResolve);
+        return;
+    }
+
     availableBlockers.forEach(({ slotIndex }) => {
         const blockerElement = document.querySelector(
             `.board-character-card[data-player="${defenderPlayerKey}"][data-character-slot="${slotIndex}"]`
@@ -546,7 +551,6 @@ function setupPhaseControls() {
             return;
         }
 
-
         if (gameState.currentPhase === "gameOver") {
             return;
         }
@@ -556,8 +560,22 @@ function setupPhaseControls() {
             return;
         }
 
+        if (gameState.currentPhase === "draw") {
+            advanceDrawPhase(phaseButton, phaseInfo);
+            return;
+        }
+
+        if (gameState.currentPhase === "don") {
+            advanceDonPhase(phaseButton, phaseInfo);
+            return;
+        }
+
         if (gameState.currentPhase === "main") {
-            passTurn(phaseButton, phaseInfo);
+            if (window.isGameSettingEnabled?.("confirmEndTurn")) {
+                showEndTurnConfirmation(phaseButton, phaseInfo);
+            } else {
+                passTurn(phaseButton, phaseInfo);
+            }
             return;
         }
     });
@@ -720,6 +738,43 @@ function removeChoiceButtons() {
     if (oldButtons) {
         oldButtons.remove();
     }
+}
+
+function showEndTurnConfirmation(phaseButton, phaseInfo) {
+    const controls = document.querySelector(".phase-controls");
+
+    if (!controls || !gameState?.currentPlayer) {
+        return;
+    }
+
+    removeChoiceButtons();
+    phaseButton.style.display = "none";
+
+    const choiceContainer = document.createElement("div");
+    choiceContainer.className = "choice-buttons";
+
+    const confirmButton = document.createElement("button");
+    confirmButton.className = "phase-button";
+    confirmButton.textContent = "Confirm End Turn";
+
+    const cancelButton = document.createElement("button");
+    cancelButton.className = "phase-button";
+    cancelButton.textContent = "Cancel";
+
+    confirmButton.addEventListener("click", () => {
+        removeChoiceButtons();
+        phaseButton.style.display = "block";
+        passTurn(phaseButton, phaseInfo);
+    });
+
+    cancelButton.addEventListener("click", () => {
+        removeChoiceButtons();
+        runMainPhase(gameState.currentPlayer, phaseButton);
+    });
+
+    choiceContainer.appendChild(confirmButton);
+    choiceContainer.appendChild(cancelButton);
+    controls.appendChild(choiceContainer);
 }
 
 // =========================
@@ -1621,6 +1676,13 @@ function showSelectedCounterActions() {
         event.stopPropagation();
 
         if (counterButton.disabled) return;
+
+        if (
+            window.isGameSettingEnabled?.("confirmCounter") &&
+            !window.confirm(`Use ${card.name} as counter?`)
+        ) {
+            return;
+        }
 
         const latestHandIndex = findHandCardIndexByInstanceId(
             player,
@@ -3563,6 +3625,17 @@ function chooseEffectOption({
     options,
     onComplete
 }) {
+    const autoSelectedOption = window.getAutoSelectMaxValueOption?.(options);
+
+    if (autoSelectedOption) {
+        Promise.resolve().then(async () => {
+            if (typeof onComplete === "function") {
+                await onComplete(autoSelectedOption.value);
+            }
+        });
+        return;
+    }
+
     removeEffectChoiceOverlay();
 
     const overlay = document.createElement("div");
@@ -3595,24 +3668,6 @@ function chooseEffectOption({
     const buttonRow = document.createElement("div");
     buttonRow.className = "look-top-buttons effect-choice-buttons";
 
-    options.forEach(option => {
-        const button = document.createElement("button");
-        button.className = option.secondary
-            ? "look-top-action-button secondary"
-            : "look-top-action-button";
-        button.textContent = option.label;
-
-        button.addEventListener("click", async () => {
-            removeEffectChoiceOverlay();
-
-            if (typeof onComplete === "function") {
-                await onComplete(option.value);
-            }
-        });
-
-        buttonRow.appendChild(button);
-    });
-
     content.appendChild(description);
     content.appendChild(buttonRow);
     body.appendChild(content);
@@ -3621,6 +3676,59 @@ function chooseEffectOption({
     popup.appendChild(body);
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
+
+    function renderEffectChoiceButtons(buttonOptions) {
+        buttonRow.innerHTML = "";
+
+        buttonOptions.forEach(option => {
+            const button = document.createElement("button");
+            button.className = option.secondary
+                ? "look-top-action-button secondary"
+                : "look-top-action-button";
+            button.textContent = option.label;
+            button.disabled = Boolean(option.disabled);
+
+            if (option.title) {
+                button.title = option.title;
+            }
+
+            button.addEventListener("click", async () => {
+                if (option.disabled) {
+                    return;
+                }
+
+                if (option.requiresConfirmation) {
+                    renderEffectChoiceButtons([
+                        {
+                            label: option.confirmText || "Confirm",
+                            value: option.value
+                        },
+                        {
+                            label: option.cancelText || "Back",
+                            value: null,
+                            secondary: true
+                        }
+                    ]);
+                    return;
+                }
+
+                if (option.value === null) {
+                    renderEffectChoiceButtons(options);
+                    return;
+                }
+
+                removeEffectChoiceOverlay();
+
+                if (typeof onComplete === "function") {
+                    await onComplete(option.value);
+                }
+            });
+
+            buttonRow.appendChild(button);
+        });
+    }
+
+    renderEffectChoiceButtons(options);
 }
 
 function removeEffectChoiceOverlay() {

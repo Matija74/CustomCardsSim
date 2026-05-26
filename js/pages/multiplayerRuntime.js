@@ -14,7 +14,7 @@ import {
     subscribeToMatch,
     subscribeToPrivateState,
     updatePublicState
-} from "../firebase/multiplayerService.js";
+} from "../firebase/multiplayerService.js?v=settings-live-1";
 
 const deckSelectionStorageKey = "customCardsDeckSelection";
 
@@ -483,11 +483,13 @@ async function maybeInitializeServiceMatch(match) {
 }
 
 async function maybeCreateSharedState(match) {
+    const phase = match?.public?.phase;
+
     if (
         initializingSharedState ||
         localSlot !== "p1" ||
         match?.public?.sharedState ||
-        match?.public?.phase !== "main"
+        !["draw", "don", "main"].includes(phase)
     ) {
         return;
     }

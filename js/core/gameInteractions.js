@@ -3547,10 +3547,15 @@ function takeLifeDamage(player, amount, ui) {
         const triggerEffects = topLifeCard.effects
             ?.filter(effect => effect.type === "trigger") ?? [];
 
-        if (triggerEffects.length > 0) {
-            triggerMessages.push(...resolveTriggerEffects(player, topLifeCard, triggerEffects, ui));
-        } else {
-            player.hand.push(topLifeCard);
+        const triggerMessage = promptLifeCardTriggerChoice(
+            player,
+            topLifeCard,
+            triggerEffects,
+            ui
+        );
+
+        if (triggerMessage) {
+            triggerMessages.push(triggerMessage);
         }
 
         lifeTaken++;
@@ -3573,9 +3578,85 @@ function takeLifeDamage(player, amount, ui) {
     };
 }
 
-function resolveTriggerEffects(player, card, triggerEffects, ui) {
-    const messages = [];
+function promptLifeCardTriggerChoice(player, card, triggerEffects, ui) {
+    const hasTrigger = triggerEffects.length > 0;
+    const autoSkipNoTrigger = !hasTrigger && window.isGameSettingEnabled?.("autoSkipTrigger");
+    const confirmTrigger = hasTrigger && window.isGameSettingEnabled?.("confirmTrigger");
 
+    const activateTrigger = () => {
+        resolveTriggerEffects(player, card, triggerEffects, ui, {
+            skipChoicePrompt: true
+        });
+    };
+
+    const addToHand = () => {
+        player.hand.push(card);
+
+        if (ui?.renderHands) {
+            ui.renderHands();
+        }
+
+        addGameLog(`${player.name} added ${card.name} from life to hand.`);
+    };
+
+    if (autoSkipNoTrigger) {
+        addToHand();
+        return "";
+    }
+
+    if (ui && typeof ui.chooseEffectOption === "function") {
+        ui.chooseEffectOption({
+            player,
+            sourceCard: card,
+            title: `${card.name} Trigger`,
+            prompt: hasTrigger
+                ? "Choose whether to use this Trigger or add the card to your hand."
+                : "This life card has no Trigger. Add it to your hand.",
+            options: [
+                {
+                    label: "Use Trigger",
+                    value: "trigger",
+                    disabled: !hasTrigger,
+                    requiresConfirmation: confirmTrigger,
+                    confirmText: "Confirm Trigger",
+                    cancelText: "Back",
+                    title: hasTrigger
+                        ? "Use this card's Trigger effect."
+                        : "This life card has no Trigger effect."
+                },
+                {
+                    label: "Add to Hand",
+                    value: "hand",
+                    secondary: true
+                }
+            ],
+            onComplete: (choice) => {
+                if (choice === "trigger") {
+                    activateTrigger();
+                    return;
+                }
+
+                addToHand();
+            }
+        });
+
+        return hasTrigger
+            ? `${player.name} is choosing whether to use ${card.name}'s Trigger.`
+            : `${player.name} is resolving ${card.name} from life.`;
+    }
+
+    if (hasTrigger) {
+        resolveTriggerEffects(player, card, triggerEffects, ui, {
+            skipChoicePrompt: true
+        });
+        return `${player.name} used ${card.name}'s Trigger.`;
+    }
+
+    addToHand();
+    return "";
+}
+
+function resolveTriggerEffects(player, card, triggerEffects, ui, options = {}) {
     triggerEffects.forEach(effect => {
         const activateTrigger = () => {
             const message = resolveSingleTriggerEffect(player, card, effect, ui);
@@ -3595,7 +3676,7 @@ function resolveTriggerEffects(player, card, triggerEffects, ui) {
             addGameLog(`${player.name} skipped ${card.name}'s Trigger and added it to hand.`);
         };
 
-        if (ui && typeof ui.chooseEffectActivation === "function") {
+        if (!options.skipChoicePrompt && ui && typeof ui.chooseEffectActivation === "function") {
             ui.chooseEffectActivation({
                 player,
                 sourceCard: card,
@@ -3612,15 +3693,11 @@ function resolveTriggerEffects(player, card, triggerEffects, ui) {
                     }
                 }
             });
-
-            messages.push(`${player.name} is choosing whether to activate ${card.name}'s Trigger.`);
             return;
         }
 
         activateTrigger();
     });
-
-    return messages;
 }
 
 function resolveSingleTriggerEffect(player, card, effect, ui) {

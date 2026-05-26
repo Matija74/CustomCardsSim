@@ -794,15 +794,11 @@ export async function setMultiplayerMulligan(roomCode, user, playerSlot, tookMul
     if (bothDone) {
         const firstPlayer = publicState.firstPlayer || publicState.setup?.turnChoice?.firstPlayer || "p1";
         const firstPublicKey = firstPlayer === "p1" ? "player1" : "player2";
-        const firstPlayerState = publicState[firstPublicKey] || {};
 
-        updates["public/phase"] = "main";
+        updates["public/phase"] = "don";
         updates["public/currentPlayer"] = firstPlayer;
         updates["public/turnNumber"] = 1;
         updates[`public/playerTurns/${firstPlayer}`] = 1;
-        updates[`public/${firstPublicKey}/activeDon`] = 1;
-        updates[`public/${firstPublicKey}/donDeckCount`] =
-            Math.max(0, Number(firstPlayerState.donDeckCount ?? 10) - 1);
         updates[`public/${firstPublicKey}/turns`] = 1;
     }
 
