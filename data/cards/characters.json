@@ -1260,5 +1260,153 @@
         "text": "End of Your Turn: If you control no other [Zegion] characters, set up to 1 of your {Twelve Guardian Lords} type characters active. Then draw 2 cards and trash 1 from your hand."
       }
     ]
+  },
+
+  "POG1-003": {
+    "id": "POG1-003",
+    "cardNumber": "POG1-003",
+    "name": "Mr. Jeremić",
+    "cardType": "character",
+    "type": "Director",
+    "color": "blue",
+    "cost": 10,
+    "power": 10000,
+    "counter": 0,
+    "attribute": "unknown",
+    "image": "../images/U Taglavnovič by Porentov/POG1-003.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "POG1-003-on-play",
+        "type": "onPlay",
+        "text": "On Play: Declare a card name; play that card from your deck. Then shuffle the deck."
+      }
+    ]
+  },
+
+  "POG1-005": {
+    "id": "POG1-005",
+    "cardNumber": "POG1-005",
+    "name": "Dejan Sigma",
+    "cardType": "character",
+    "type": "Film",
+    "color": "blue",
+    "cost": 4,
+    "power": 5000,
+    "counter": 1000,
+    "attribute": "strike",
+    "image": "../images/U Taglavnovič by Porentov/POG1-005.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "POG1-005-when-attacking",
+        "type": "whenAttacking",
+        "text": "When Attacking: Reveal 1 card from your deck. If that card is [Manifestirana žoga] or [Klobuk] up to 1 of your Leader or Characters gains +2000 power until the end of this turn. Then trash the revealed card."
+      },
+      {
+        "id": "POG1-005-on-opponent-attack",
+        "type": "onOpponentAttack",
+        "text": "When Opponent Attacks: Reveal 1 card from your deck. If that card is [Manifestirana žoga] or [Klobuk] up to 1 of your Leader or Characters gain +2000 power until the end of this turn. Then trash the revealed card."
+      }
+    ]
+  },
+
+  "POG1-006": {
+    "id": "POG1-006",
+    "cardNumber": "POG1-006",
+    "name": "David Taglavnovič",
+    "cardType": "character",
+    "type": "Film",
+    "color": "blue",
+    "cost": 2,
+    "power": 3000,
+    "counter": 1000,
+    "attribute": "wisdom",
+    "image": "../images/U Taglavnovič by Porentov/POG1-006.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "POG1-006-activate-main",
+        "type": "activateMain",
+        "text": "Activate: Main: You may trash this Character: If your Leader is [David Taglavnovič], play up to 1 [B.R.A.N.K.O.] from your hand or Trash with a cost thats is equal or less than the number of DON!! cards on your opponent's field."
+      }
+    ]
+  },
+
+  "POG1-007": {
+    "id": "POG1-007",
+    "cardNumber": "POG1-007",
+    "name": "Johan Johanović",
+    "cardType": "character",
+    "type": "Film",
+    "color": "blue",
+    "cost": 5,
+    "power": 6000,
+    "counter": 1000,
+    "attribute": "slash",
+    "image": "../images/U Taglavnovič by Porentov/POG1-007.jpg",
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "POG1-007-on-play",
+        "type": "onPlay",
+        "text": "On Play: Draw 3 cards and place 2 cards from your hand at the top or bottom of your deck."
+      }
+    ]
+  },
+
+  "POG1-012": {
+    "id": "POG1-012",
+    "cardNumber": "POG1-012",
+    "name": "B.R.A.N.K.O.",
+    "cardType": "character",
+    "type": "Film",
+    "color": "blue",
+    "cost": 8,
+    "power": 8000,
+    "counter": 1000,
+    "attribute": "unknown",
+    "image": "../images/U Taglavnovič by Porentov/POG1-012.jpg",
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "POG1-012-continuous",
+        "type": "continuous",
+        "text": "Your opponent's replacement effects are negated."
+      },
+      {
+        "id": "POG1-012-end-of-your-turn",
+        "type": "endOfYourTurn",
+        "text": "End Of Your Turn: Set this Character as active."
+      }
+    ]
+  },
+
+  "POG1-013": {
+    "id": "POG1-013",
+    "cardNumber": "POG1-013",
+    "name": "Magdalena",
+    "cardType": "character",
+    "type": "Film",
+    "color": "blue",
+    "cost": 3,
+    "power": 4000,
+    "counter": 1000,
+    "attribute": "wisdom",
+    "image": "../images/U Taglavnovič by Porentov/POG1-013.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "POG1-013-activate-main",
+        "type": "activateMain",
+        "oncePerTurn": true,
+        "text": "Activate: Main Once Per Turn: Place 2 cards from your Trash at the bottom of your deck; draw 1 card."
+      },
+      {
+        "id": "POG1-013-trigger",
+        "type": "trigger",
+        "text": "Trigger: Draw 2 cards and trash 1."
+      }
+    ]
   }
 }

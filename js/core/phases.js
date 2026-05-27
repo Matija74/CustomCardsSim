@@ -219,26 +219,50 @@ function maybeAutoAdvanceTurnPhases(phaseButton, phaseInfo) {
 function beginTurnFlow(player, phaseButton, phaseInfo) {
     phaseInfo.innerHTML += `<br><br>`;
 
-    runRefreshPhase(player, phaseInfo);
+    const continueAfterStartOfTurn = () => {
+        runRefreshPhase(player, phaseInfo);
 
-    if (shouldSkipCurrentTurnDraw(player)) {
-        phaseInfo.innerHTML += `
-            <br><br>
-            ${player.name}'s Draw Phase:<br>
-            ${player.name} goes first and skips the draw on Turn 1.
-        `;
+        if (shouldSkipCurrentTurnDraw(player)) {
+            phaseInfo.innerHTML += `
+                <br><br>
+                ${player.name}'s Draw Phase:<br>
+                ${player.name} goes first and skips the draw on Turn 1.
+            `;
 
-        gameState.currentPhase = "don";
-        setPhaseButtonState(phaseButton, `Add ${getCurrentTurnDonAmount(player)} DON!!`);
+            gameState.currentPhase = "don";
+            setPhaseButtonState(phaseButton, `Add ${getCurrentTurnDonAmount(player)} DON!!`);
+            window.queueMultiplayerStateSync?.();
+            maybeAutoAdvanceTurnPhases(phaseButton, phaseInfo);
+            return;
+        }
+
+        gameState.currentPhase = "draw";
+        setPhaseButtonState(phaseButton, "Draw Card");
         window.queueMultiplayerStateSync?.();
         maybeAutoAdvanceTurnPhases(phaseButton, phaseInfo);
-        return;
+    };
+
+    if (typeof resolveDavidTaglavnovicTurnStartSearch === "function") {
+        const davidResult = resolveDavidTaglavnovicTurnStartSearch(player, ui, () => {
+            continueAfterStartOfTurn();
+        });
+
+        if (davidResult?.activated && davidResult.message) {
+            phaseInfo.innerHTML += `
+                ${player.name}'s Start of Turn:<br>
+                ${davidResult.message}<br><br>
+            `;
+        }
+
+        if (davidResult?.pending) {
+            gameState.currentPhase = "startOfTurn";
+            setPhaseButtonState(phaseButton, "Resolve Start of Turn", true);
+            window.queueMultiplayerStateSync?.();
+            return;
+        }
     }
 
-    gameState.currentPhase = "draw";
-    setPhaseButtonState(phaseButton, "Draw Card");
-    window.queueMultiplayerStateSync?.();
-    maybeAutoAdvanceTurnPhases(phaseButton, phaseInfo);
+    continueAfterStartOfTurn();
 }
 
 function advanceDrawPhase(phaseButton, phaseInfo) {

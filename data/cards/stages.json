@@ -139,5 +139,28 @@
         "text": "Once Per Turn: If this stage would be removed by your Opponent's effects, you may give up to one of your Leaders -1000 power during this turn."
       }
     ]
+  },
+
+  "POG1-002": {
+    "id": "POG1-002",
+    "cardNumber": "POG1-002",
+    "name": "Parfum",
+    "cardType": "stage",
+    "type": "Film",
+    "color": "blue",
+    "cost": 3,
+    "image": "../images/U Taglavnovič by Porentov/POG1-002.jpg",
+    "effects": [
+      {
+        "id": "POG1-002-leader-cannot-attack",
+        "type": "continuous",
+        "text": "When this Stage card is in play, your Leader cannot attack."
+      },
+      {
+        "id": "POG1-002-on-play-mark-character",
+        "type": "onPlay",
+        "text": "On Play: Choose up to 1 of your Opponent's Characters and place it on your field. When that Character is removed from field; trash this Stage."
+      }
+    ]
   }
 }

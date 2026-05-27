@@ -266,5 +266,143 @@
         "powerModifier": 3000
       }
     ]
+  },
+
+  "POG1-004": {
+    "id": "POG1-004",
+    "cardNumber": "POG1-004",
+    "name": "Pogajanje",
+    "cardType": "event",
+    "type": "Film",
+    "color": "blue",
+    "cost": 1,
+    "image": "../images/U Taglavnovič by Porentov/POG1-004.jpg",
+    "effects": [
+      {
+        "id": "POG1-004-main",
+        "type": "main",
+        "text": "Main: Look at 4 cards from the top of your deck; reveal up to 1 [Film] type card and add it to your hand. Then place the rest at the bottom of your deck in any order."
+      },
+      {
+        "id": "POG1-004-trigger",
+        "type": "trigger",
+        "text": "Trigger: Draw 1 card."
+      }
+    ]
+  },
+
+  "POG1-008": {
+    "id": "POG1-008",
+    "cardNumber": "POG1-008",
+    "name": "Klobuk",
+    "cardType": "event",
+    "type": "Film",
+    "color": "blue",
+    "cost": 0,
+    "image": "../images/U Taglavnovič by Porentov/POG1-008.jpg",
+    "effects": [
+      {
+        "id": "POG1-008-main",
+        "type": "main",
+        "text": "Main: You may give 1 active DON!! card to 1 of your Leader: Your Leader or up to 1 of your Characters gains +1000 power during this turn."
+      },
+      {
+        "id": "POG1-008-counter",
+        "type": "counter",
+        "text": "Counter: Your Leader or up to one of your Characters gains +2000 power during this battle."
+      }
+    ]
+  },
+
+  "POG1-009": {
+    "id": "POG1-009",
+    "cardNumber": "POG1-009",
+    "name": "Bingo",
+    "cardType": "event",
+    "type": "Film",
+    "color": "blue",
+    "cost": 0,
+    "image": "../images/U Taglavnovič by Porentov/POG1-009.jpg",
+    "effects": [
+      {
+        "id": "POG1-009-main",
+        "type": "main",
+        "text": "Main: You may rest 2 of your DON!! cards: Declare a cost and reveal 1 card from the top of your deck. If the revealed cost is the same as the declared cost, draw 2 cards."
+      },
+      {
+        "id": "POG1-009-counter",
+        "type": "counter",
+        "text": "Counter: Your Leader or up to one of your Characters gains +2000 power during this battle."
+      }
+    ]
+  },
+
+  "POG1-010": {
+    "id": "POG1-010",
+    "cardNumber": "POG1-010",
+    "name": "Manifestirana žoga",
+    "cardType": "event",
+    "type": "Film",
+    "color": "blue",
+    "cost": 0,
+    "image": "../images/U Taglavnovič by Porentov/POG1-010.jpg",
+    "effects": [
+      {
+        "id": "POG1-010-main",
+        "type": "main",
+        "text": "Main: You may rest 3 of your DON!! cards: Up to 1 of your opponent's rested Character does not become active during next refresh phase."
+      },
+      {
+        "id": "POG1-010-counter",
+        "type": "counter",
+        "text": "Counter: Your Leader or up to one of your Characters gains +2000 power during this battle."
+      }
+    ]
+  },
+
+  "POG1-011": {
+    "id": "POG1-011",
+    "cardNumber": "POG1-011",
+    "name": "Banana Onemoglosti",
+    "cardType": "event",
+    "type": "Film",
+    "color": "blue",
+    "cost": 0,
+    "image": "../images/U Taglavnovič by Porentov/POG1-011.jpg",
+    "effects": [
+      {
+        "id": "POG1-011-main",
+        "type": "main",
+        "text": "Main: You may rest 3 of your DON!! cards: Negate the effects of up to 1 of opponents Leader or Characters."
+      },
+      {
+        "id": "POG1-011-counter",
+        "type": "counter",
+        "text": "Counter: Your Leader or up to one of your Characters gains +2000 power during this battle."
+      }
+    ]
+  },
+
+  "POG1-014": {
+    "id": "POG1-014",
+    "cardNumber": "POG1-014",
+    "name": "Hvala hvala hvala",
+    "cardType": "event",
+    "type": "Film",
+    "color": "blue",
+    "cost": 1,
+    "image": "../images/U Taglavnovič by Porentov/POG1-014.jpg",
+    "effects": [
+      {
+        "id": "POG1-014-counter",
+        "type": "counter",
+        "text": "Counter: Your leader or up to one of your Characters gains +2000 power. Then add up to 1 [Film] type card from your Trash to your hand."
+      },
+      {
+        "id": "POG1-014-trigger",
+        "type": "trigger",
+        "text": "Trigger: Add 1 card from your Trash to your hand."
+      }
+    ]
   }
 }

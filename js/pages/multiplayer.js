@@ -2383,6 +2383,9 @@ function showSelectedBoardActions() {
         } else if (!canCurrentPlayerAttack()) {
             attackButton.textContent = "No Attack";
             attackButton.title = `${player.name} cannot attack on their first turn.`;
+        } else if (selectedBoardCardData.cardType === "leader" && doesStagePreventLeaderAttacks(player)) {
+            attackButton.textContent = "Locked";
+            attackButton.title = `${player.stage.name} prevents ${player.name}'s leader from attacking.`;
         } else if (selectedBoardCardData.cardType === "character" && isCharacterPlayedThisTurn(player, card) && !CardEffects.canAttackOnTurnPlayed(card) && !CardEffects.canAttackCharactersOnTurnPlayed(card)) {
             attackButton.textContent = "New";
             attackButton.title = `${card.name} cannot attack on the turn it was played.`;
@@ -2638,6 +2641,29 @@ async function resolveActivateMainBoardEffect(player, card, effect) {
 }
 
 function resolveBoardActionEffect(player, card, effect) {
+    if (effect.id === "POG1-006-activate-main") {
+        if (player.leader?.cardNumber !== "POG1-001") {
+            return {
+                success: false,
+                message: `${card.name}'s effect requires David Taglavnovič as your leader.`
+            };
+        }
+
+        if (getFirstOpenCharacterSlotIndex(player) === -1) {
+            return {
+                success: false,
+                message: `${player.name}'s character area is full.`
+            };
+        }
+    }
+
+    if (effect.id === "POG1-013-activate-main" && player.trash.length < 2) {
+        return {
+            success: false,
+            message: `${card.name} needs at least 2 cards in trash.`
+        };
+    }
+
     if (effect.actionId === "drawOneCard") {
         const drawResult = drawCard(player, ui);
 
@@ -3331,7 +3357,7 @@ function promptOnOpponentAttackCharacterEffects(defenderPlayer) {
     const entries = defenderPlayer.characters
         .map((card, slotIndex) => ({
             slotIndex,
-            hasEffect: card?.effects?.some(effect => effect.type === "onOpponentAttack")
+            hasEffect: getCardAllEffects(card)?.some(effect => effect.type === "onOpponentAttack")
         }))
         .filter(entry => entry.hasEffect)
         .map(entry => ({ slotIndex: entry.slotIndex }));
@@ -3364,7 +3390,7 @@ function getCurrentPendingOnOpponentAttackEffect() {
     }
 
     const currentCard = defenderPlayer.characters?.[entry.slotIndex];
-    const effect = currentCard?.effects?.find(cardEffect => cardEffect.type === "onOpponentAttack");
+    const effect = getCardAllEffects(currentCard)?.find(cardEffect => cardEffect.type === "onOpponentAttack");
 
     if (!currentCard || !effect) {
         return null;
@@ -3468,13 +3494,18 @@ function showPendingOpponentAttackEffectChoice() {
                     defenderPlayer.characters[entry.slotIndex] = null;
                     moveCardToTrash(defenderPlayer, trashedCard, ui);
                     resolveGutsLeaderCharacterRemovedBonus(defenderPlayer, ui);
+                    const linkedStageMessage = trashLinkedParfumStageForCharacter(defenderPlayer, trashedCard, ui);
                     drawCard(defenderPlayer, ui);
 
                     renderCharacters();
                     renderTrash();
                     renderHands();
 
-                    addGameLog(`${defenderPlayer.name} trashed ${trashedCard.name} and drew 1 card.`);
+                    addGameLog(
+                        linkedStageMessage
+                            ? `${defenderPlayer.name} trashed ${trashedCard.name} and drew 1 card. ${linkedStageMessage}`
+                            : `${defenderPlayer.name} trashed ${trashedCard.name} and drew 1 card.`
+                    );
 
                     if (
                         currentAttack?.target?.playerKey === defenderPlayerKey &&
@@ -3483,7 +3514,18 @@ function showPendingOpponentAttackEffectChoice() {
                     ) {
                         addGameLog(`${trashedCard.name} left the field, so the attack target is gone.`);
                     }
+
+                    advancePendingOnOpponentAttackEffect();
+                    return;
                 }
+            }
+
+            const message = resolveEffectAction(defenderPlayer, currentCard, effect, ui, {
+                skipActivationPrompt: true
+            });
+
+            if (message) {
+                addGameLog(message);
             }
 
             advancePendingOnOpponentAttackEffect();
@@ -3866,7 +3908,8 @@ function lookTopCardsAddToHand({
     isSelectable,
     onComplete,
     revealSelected = true,
-    descriptionText = null
+    descriptionText = null,
+    allowTopOrBottomPlacement = false
 }) {
     removeLookTopOverlay();
 
@@ -3903,6 +3946,29 @@ function lookTopCardsAddToHand({
         const remainingCards = cards
             .map((card, index) => ({ card, index }))
             .filter(entry => entry.index !== selectedIndex);
+
+        if (allowTopOrBottomPlacement) {
+            if (remainingCards.length === 0) {
+                removeLookTopOverlay();
+
+                completeLookTopSelection({
+                    selectedIndex,
+                    orderedRemaining: [],
+                    topCount: 0
+                });
+
+                return;
+            }
+
+            renderTopBottomOrderStep({
+                player,
+                sourceCard,
+                remainingCards,
+                selectedIndex,
+                onComplete: completeLookTopSelection
+            });
+            return;
+        }
 
         if (remainingCards.length <= 1) {
             removeLookTopOverlay();
@@ -4011,6 +4077,139 @@ function lookTopCardsAddToHand({
 
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
+}
+
+function renderTopBottomOrderStep({
+    player,
+    sourceCard,
+    remainingCards,
+    selectedIndex,
+    onComplete
+}) {
+    const overlay = document.getElementById("lookTopOverlay");
+    const popup = overlay?.querySelector(".look-top-popup");
+
+    if (!overlay || !popup) return;
+
+    popup.innerHTML = "";
+
+    const title = document.createElement("h2");
+    title.textContent = sourceCard
+        ? `${sourceCard.name}`
+        : "Order cards";
+
+    const description = document.createElement("p");
+    description.textContent = "Click the remaining cards in the exact order you want to return them. Card 1 will be the top-most returned card.";
+
+    const cardGrid = document.createElement("div");
+    cardGrid.className = "look-top-card-grid";
+
+    const selectedOrder = [];
+    const confirmRow = document.createElement("div");
+    confirmRow.className = "look-top-buttons";
+    confirmRow.style.display = "none";
+
+    const updateConfirmButtons = () => {
+        confirmRow.innerHTML = "";
+
+        const topButton = document.createElement("button");
+        topButton.className = "look-top-action-button";
+        topButton.textContent = "Place on Top";
+        topButton.addEventListener("click", () => {
+            removeLookTopOverlay();
+            onComplete?.({
+                selectedIndex,
+                orderedRemaining: [...selectedOrder],
+                returnZone: "top"
+            });
+        });
+
+        const bottomButton = document.createElement("button");
+        bottomButton.className = "look-top-action-button secondary";
+        bottomButton.textContent = "Place on Bottom";
+        bottomButton.addEventListener("click", () => {
+            removeLookTopOverlay();
+            onComplete?.({
+                selectedIndex,
+                orderedRemaining: [...selectedOrder],
+                returnZone: "bottom"
+            });
+        });
+
+        confirmRow.appendChild(topButton);
+        confirmRow.appendChild(bottomButton);
+    };
+
+    const updateDoneState = () => {
+        const isComplete = selectedOrder.length === remainingCards.length;
+
+        confirmRow.style.display = isComplete ? "flex" : "none";
+
+        if (isComplete) {
+            updateConfirmButtons();
+        }
+    };
+
+    remainingCards.forEach(entry => {
+        const cardButton = document.createElement("button");
+        cardButton.className = "look-top-card-button bottom-order-card-button";
+
+        const orderBadge = document.createElement("span");
+        orderBadge.className = "bottom-order-badge";
+
+        const img = document.createElement("img");
+        img.src = entry.card.image;
+        img.alt = entry.card.name;
+        img.className = "look-top-card-img";
+
+        const name = document.createElement("span");
+        name.className = "look-top-card-name";
+        name.textContent = entry.card.name;
+
+        cardButton.appendChild(orderBadge);
+        cardButton.appendChild(img);
+        cardButton.appendChild(name);
+
+        cardButton.addEventListener("click", () => {
+            if (selectedOrder.includes(entry.index)) return;
+
+            selectedOrder.push(entry.index);
+            orderBadge.textContent = selectedOrder.length;
+            cardButton.classList.add("selected-look-card", "bottom-order-selected");
+            updateDoneState();
+        });
+
+        cardGrid.appendChild(cardButton);
+    });
+
+    const buttonRow = document.createElement("div");
+    buttonRow.className = "look-top-buttons";
+
+    const resetButton = document.createElement("button");
+    resetButton.className = "look-top-action-button secondary";
+    resetButton.textContent = "Reset Order";
+    resetButton.addEventListener("click", () => {
+        selectedOrder.splice(0, selectedOrder.length);
+
+        cardGrid.querySelectorAll(".bottom-order-card-button").forEach(cardButton => {
+            cardButton.classList.remove("selected-look-card", "bottom-order-selected");
+            const orderBadge = cardButton.querySelector(".bottom-order-badge");
+
+            if (orderBadge) {
+                orderBadge.textContent = "";
+            }
+        });
+
+        updateDoneState();
+    });
+
+    buttonRow.appendChild(resetButton);
+
+    popup.appendChild(title);
+    popup.appendChild(description);
+    popup.appendChild(cardGrid);
+    popup.appendChild(buttonRow);
+    popup.appendChild(confirmRow);
 }
 
 function showSearchCardImagePopup(card, options = {}) {
@@ -4548,6 +4747,13 @@ function canSelectedBoardCardAttack() {
     }
 
     if (
+        selectedBoardCardData.cardType === "leader" &&
+        doesStagePreventLeaderAttacks(player)
+    ) {
+        return false;
+    }
+
+    if (
         selectedBoardCardData.cardType === "character" &&
         isCharacterPlayedThisTurn(player, card) &&
         !CardEffects.canAttackOnTurnPlayed(card) &&
@@ -4603,6 +4809,10 @@ function getOpponentPlayerKey(playerKey) {
 
 function isCharacterPlayedThisTurn(player, card) {
     if (!player || !card) {
+        return false;
+    }
+
+    if (card.ignorePlayedThisTurnCheck) {
         return false;
     }
 

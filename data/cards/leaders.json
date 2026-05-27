@@ -120,5 +120,27 @@
         "actionId": "rimuruTurnStartSearch"
       }
     ]
+  },
+
+  "POG1-001": {
+    "id": "POG1-001",
+    "cardNumber": "POG1-001",
+    "name": "David Taglavnovič",
+    "cardType": "leader",
+    "type": "Film",
+    "color": "blue",
+    "attribute": "wisdom",
+    "power": 5000,
+    "life": 5,
+    "image": "../images/U Taglavnovič by Porentov/POG1-001.png",
+    "aliases": [],
+    "keywords": [],
+    "effects": [
+      {
+        "id": "POG1-001-start-of-turn-search",
+        "type": "startOfTurn",
+        "text": "Start of Your Turn: Look at 3 cards from the top of your deck; reveal up to 1 [Parfum] and add it to your hand. Then, place the rest on the top or bottom of your deck in any order."
+      }
+    ]
   }
 }

@@ -662,6 +662,35 @@ window.CardEffects = {
         };
     },
 
+    resolveDejanSigmaWhenAttacking(player, attackerData, ui) {
+        const character = attackerData?.cardType === "character"
+            ? player?.characters?.[attackerData.slotIndex]
+            : null;
+
+        if (!character || character.cardNumber !== "POG1-005") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const effect = getCardAllEffects(character)?.find(cardEffect => cardEffect.id === "POG1-005-when-attacking");
+
+        if (!effect || typeof resolveEffectAction !== "function") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        return {
+            activated: true,
+            message: resolveEffectAction(player, character, effect, ui, {
+                skipActivationPrompt: true
+            })
+        };
+    },
+
     // =========================
     // Stage Effects
     // =========================
@@ -669,7 +698,7 @@ window.CardEffects = {
     resolveWhenOpponentAttacksStageEffects(gameState, defendingPlayer, ui) {
         const stage = defendingPlayer?.stage;
 
-        if (!stage) {
+        if (!stage || (typeof areCardEffectsNegated === "function" && areCardEffectsNegated(stage))) {
             return [];
         }
 
@@ -729,6 +758,14 @@ window.CardEffects = {
     },
 
     resolveWhenAttackingEffects(gameState, player, attackerData, ui) {
+        const attackingCard = attackerData?.cardType === "leader"
+            ? player?.leader
+            : player?.characters?.[attackerData?.slotIndex];
+
+        if (typeof areCardEffectsNegated === "function" && areCardEffectsNegated(attackingCard)) {
+            return [];
+        }
+
         const results = [];
         const effectResults = [
             this.resolveTakakuraKenLeaderWhenAttacking(gameState, player, attackerData, ui),
@@ -739,7 +776,8 @@ window.CardEffects = {
             this.resolveEggmanLeaderWhenAttacking(player, attackerData, ui),
             this.resolveKisukeWhenAttacking(player, attackerData, ui),
             this.resolveYoruichiWhenAttacking(player, attackerData, ui),
-            this.resolveUryuWhenAttacking(player, attackerData, ui)
+            this.resolveUryuWhenAttacking(player, attackerData, ui),
+            this.resolveDejanSigmaWhenAttacking(player, attackerData, ui)
         ];
 
         effectResults.forEach(result => {

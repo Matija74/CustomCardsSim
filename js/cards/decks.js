@@ -85,6 +85,22 @@ const pbRimuruDeckText = `
 5xRIM1-011
 `;
 
+const uTaglavnovicDeckText = `
+4xPOG1-002
+3xPOG1-003
+4xPOG1-004
+4xPOG1-005
+4xPOG1-006
+4xPOG1-007
+4xPOG1-008
+4xPOG1-009
+4xPOG1-010
+3xPOG1-011
+4xPOG1-012
+4xPOG1-013
+4xPOG1-014
+`;
+
 const availableDecks = [
     {
         id: "okarun-deck",
@@ -109,6 +125,12 @@ const availableDecks = [
         name: "RY Ichigo by Mrki",
         leaderKey: "BL01-001",
         deckText: ryIchigoDeckText
+    },
+    {
+        id: "u-taglavnovic-deck",
+        name: "U Taglavnovič by Porentov",
+        leaderKey: "POG1-001",
+        deckText: uTaglavnovicDeckText
     }
 ];
 

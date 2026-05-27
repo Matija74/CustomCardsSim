@@ -22,6 +22,10 @@ function assignCardInstance(card) {
 }
 
 function getCardAllEffects(card) {
+    if (areCardEffectsNegated(card)) {
+        return [];
+    }
+
     return [
         ...(Array.isArray(card?.effects) ? card.effects : []),
         ...(Array.isArray(card?.temporaryCopiedEffects) ? card.temporaryCopiedEffects : [])
@@ -163,6 +167,750 @@ function getFirstOpenCharacterSlotIndex(player) {
     }
 
     return -1;
+}
+
+function isParfumStage(card) {
+    return card?.cardType === "stage" && (
+        card.cardNumber === "POG1-002" ||
+        CardEffects.hasCardName(card, "Parfum")
+    );
+}
+
+function doesStagePreventLeaderAttacks(player) {
+    return isParfumStage(player?.stage) && !areCardEffectsNegated(player?.stage);
+}
+
+function isTemporaryStatusEntryActive(entry) {
+    if (!entry) {
+        return false;
+    }
+
+    const expiresAtPlayer = entry.expiresAtPlayerKey
+        ? gameState?.[entry.expiresAtPlayerKey]
+        : null;
+
+    if (!expiresAtPlayer) {
+        return true;
+    }
+
+    return Number(expiresAtPlayer.turns || 0) <= Number(entry.expiresAtEndOfTurns ?? 0);
+}
+
+function areCardEffectsNegated(card) {
+    return Array.isArray(card?.effectNegationEntries) &&
+        card.effectNegationEntries.some(isTemporaryStatusEntryActive);
+}
+
+function addTemporaryEffectNegation(card, expiresAtPlayerKey, expiresAtEndOfTurns) {
+    if (!card) {
+        return;
+    }
+
+    if (!Array.isArray(card.effectNegationEntries)) {
+        card.effectNegationEntries = [];
+    }
+
+    card.effectNegationEntries.push({
+        expiresAtPlayerKey,
+        expiresAtEndOfTurns
+    });
+}
+
+function lockCardForNextRefresh(card) {
+    if (!card) {
+        return;
+    }
+
+    card.skipNextRefresh = true;
+}
+
+function chooseTrashCard(player, sourceCard, ui, options = {}) {
+    const validCards = (player?.trash || [])
+        .map((card, trashIndex) => ({
+            card,
+            value: trashIndex
+        }))
+        .filter(entry => entry.card && (!options.filter || options.filter(entry.card)));
+
+    if (validCards.length === 0) {
+        return options.emptyMessage || `${sourceCard.name} found no valid cards in trash.`;
+    }
+
+    const finishSelection = (selectedValue) => {
+        if (!selectedValue) {
+            if (typeof options.onSkip === "function") {
+                options.onSkip();
+            }
+
+            addGameLog(options.skipMessage || `${player.name} did not choose a trash card for ${sourceCard.name}.`);
+            return;
+        }
+
+        const trashIndex = Number(selectedValue);
+
+        if (!Number.isInteger(trashIndex) || trashIndex < 0 || trashIndex >= player.trash.length) {
+            addGameLog(`${sourceCard.name} could not find that trash card anymore.`);
+            return;
+        }
+
+        const card = player.trash[trashIndex];
+
+        options.onSelect?.({
+            card,
+            trashIndex
+        });
+    };
+
+    if (ui?.chooseEffectOption) {
+        ui.chooseEffectOption({
+            player,
+            sourceCard,
+            title: sourceCard.name,
+            prompt: options.prompt || "Choose a card from your trash.",
+            options: [
+                ...validCards.map(({ card, value }) => ({
+                    label: `${card.name} (${card.cardNumber})`,
+                    value
+                })),
+                {
+                    label: "Skip",
+                    value: null,
+                    secondary: true,
+                    disabled: !options.optional
+                }
+            ],
+            onComplete: finishSelection
+        });
+
+        return `${player.name} is choosing a card from trash for ${sourceCard.name}.`;
+    }
+
+    finishSelection(options.optional ? null : validCards[0].value);
+    return `${sourceCard.name}'s effect resolved.`;
+}
+
+function addCardFromTrashToHand(player, sourceCard, ui, options = {}) {
+    return chooseTrashCard(player, sourceCard, ui, {
+        ...options,
+        onSelect: ({ trashIndex, card }) => {
+            const addedCard = player.trash.splice(trashIndex, 1)[0];
+            player.hand.push(addedCard);
+
+            if (ui?.renderTrash) {
+                ui.renderTrash();
+            }
+
+            if (ui?.renderHands) {
+                ui.renderHands();
+            }
+
+            addGameLog(`${player.name} added ${card.name} from trash to hand with ${sourceCard.name}.`);
+        }
+    });
+}
+
+function chooseLeaderOrCharacterForPower(player, sourceCard, ui, amount, options = {}) {
+    return chooseOwnBoardCard(player, sourceCard, {
+        prompt: options.prompt || `Choose up to 1 of your leader or characters to give +${amount} power.`,
+        optional: options.optional !== false,
+        includeLeader: true,
+        filter: card => card.cardType === "leader" || card.cardType === "character",
+        onSelect: ({ card }) => {
+            if (options.duration === "battle") {
+                addBattlePowerBonus(card, amount);
+            } else {
+                addTemporaryPowerBonus(card, amount);
+            }
+
+            ui?.renderLeaders?.();
+            ui?.renderCharacters?.();
+            addGameLog(`${sourceCard.name} gave ${card.name} +${amount} power ${options.duration === "battle" ? "during this battle" : "this turn"}.`);
+            options.afterSelect?.(card);
+        },
+        skipMessage: options.skipMessage || `${player.name} did not choose a card for ${sourceCard.name}.`,
+        emptyMessage: options.emptyMessage || `${sourceCard.name} found no leader or character.`
+    });
+}
+
+function resolveBingoMain(player, sourceCard, ui) {
+    if (!restDonForCost(player, 2, ui)) {
+        return `${player.name} could not rest 2 active DON!! for ${sourceCard.name}.`;
+    }
+
+    const completeDeclaration = (declaredCost) => {
+        const topCard = player.deck[0];
+
+        if (!topCard) {
+            addGameLog(`${sourceCard.name} found no card to reveal because ${player.name}'s deck is empty.`);
+            return;
+        }
+
+        const revealedCost = Number(topCard.cost ?? topCard.playCost ?? 0);
+        const declared = Number(declaredCost ?? 0);
+
+        addGameLog(`${player.name} declared cost ${declared} with ${sourceCard.name} and revealed ${topCard.name} (cost ${revealedCost}).`);
+
+        if (revealedCost !== declared) {
+            return;
+        }
+
+        const drawResult = drawCards(player, 2, ui);
+
+        addGameLog(
+            drawResult?.deckOut
+                ? `${sourceCard.name} matched the declared cost, but ${player.name} lost by deck out while drawing 2 cards.`
+                : `${sourceCard.name} matched the declared cost, so ${player.name} drew 2 cards.`
+        );
+    };
+
+    const options = Array.from({ length: 11 }, (_, value) => ({
+        label: String(value),
+        value
+    }));
+
+    if (ui?.chooseEffectOption) {
+        ui.chooseEffectOption({
+            player,
+            sourceCard,
+            title: sourceCard.name,
+            prompt: "Declare a cost from 0 to 10.",
+            options,
+            onComplete: completeDeclaration
+        });
+
+        return `${player.name} rested 2 DON!! and is declaring a cost for ${sourceCard.name}.`;
+    }
+
+    completeDeclaration(0);
+    return `${sourceCard.name}'s effect resolved.`;
+}
+
+function chooseHandCard(player, sourceCard, options = {}) {
+    return chooseBoardCard(
+        player,
+        sourceCard,
+        getHandCardChoices(player, options.filter),
+        {
+            ...options,
+            filter: null
+        }
+    );
+}
+
+function chooseHandCardsToTopOrBottomOfDeck(player, sourceCard, ui, count, options = {}) {
+    const topCards = [];
+    const bottomCards = [];
+    const selectedCards = [];
+
+    const finishPlacement = () => {
+        player.deck = [...topCards, ...player.deck, ...bottomCards];
+
+        if (ui?.renderHands) {
+            ui.renderHands();
+        }
+
+        if (ui?.renderDecks) {
+            ui.renderDecks();
+        }
+
+        const message = `${player.name} placed ${selectedCards.length} card${selectedCards.length === 1 ? "" : "s"} from hand on the top or bottom of the deck with ${sourceCard.name}.`;
+        addGameLog(message);
+        options.onComplete?.();
+    };
+
+    const choosePlacementZone = (card) => {
+        if (!ui?.chooseEffectOption) {
+            bottomCards.push(card);
+            return;
+        }
+
+        ui.chooseEffectOption({
+            player,
+            sourceCard,
+            title: sourceCard.name,
+            prompt: `Where should ${card.name} go?`,
+            options: [
+                { label: "Top", value: "top" },
+                { label: "Bottom", value: "bottom", secondary: true }
+            ],
+            onComplete: (zone) => {
+                if (zone === "top") {
+                    topCards.push(card);
+                } else {
+                    bottomCards.push(card);
+                }
+
+                chooseNextCard();
+            }
+        });
+    };
+
+    const chooseNextCard = () => {
+        if (selectedCards.length >= count) {
+            finishPlacement();
+            return;
+        }
+
+        const remainingChoices = getHandCardChoices(player, card => !selectedCards.includes(card));
+
+        if (remainingChoices.length === 0) {
+            finishPlacement();
+            return;
+        }
+
+        const message = chooseBoardCard(player, sourceCard, remainingChoices, {
+            prompt: `Choose card ${selectedCards.length + 1} of ${count} to place on the top or bottom of your deck.`,
+            optional: false,
+            onSelect: ({ handIndex, card }) => {
+                const selectedCard = player.hand.splice(handIndex, 1)[0];
+
+                if (!selectedCard) {
+                    addGameLog(`${sourceCard.name} could not move that hand card.`);
+                    chooseNextCard();
+                    return;
+                }
+
+                selectedCards.push(card);
+
+                if (!ui?.chooseEffectOption) {
+                    bottomCards.push(selectedCard);
+                    chooseNextCard();
+                    return;
+                }
+
+                choosePlacementZone(selectedCard);
+            },
+            emptyMessage: `${sourceCard.name} found no cards in hand.`
+        });
+
+        if (message) {
+            addGameLog(message);
+        }
+    };
+
+    chooseNextCard();
+    return `${player.name} is choosing cards from hand for ${sourceCard.name}.`;
+}
+
+function chooseCardsFromTrashToBottomOfDeck(player, sourceCard, ui, count, options = {}) {
+    const movedCards = [];
+
+    const finishMove = () => {
+        player.deck.push(...movedCards);
+
+        if (ui?.renderTrash) {
+            ui.renderTrash();
+        }
+
+        if (ui?.renderDecks) {
+            ui.renderDecks();
+        }
+
+        options.onComplete?.(movedCards);
+    };
+
+    const chooseNext = () => {
+        if (movedCards.length >= count) {
+            finishMove();
+            return;
+        }
+
+        const message = chooseTrashCard(player, sourceCard, ui, {
+            prompt: `Choose card ${movedCards.length + 1} of ${count} from your trash to place on the bottom of your deck.`,
+            optional: false,
+            filter: card => !movedCards.includes(card) && (!options.filter || options.filter(card)),
+            onSelect: ({ trashIndex }) => {
+                const movedCard = player.trash.splice(trashIndex, 1)[0];
+
+                if (!movedCard) {
+                    addGameLog(`${sourceCard.name} could not move that trash card.`);
+                    chooseNext();
+                    return;
+                }
+
+                movedCards.push(movedCard);
+                chooseNext();
+            },
+            emptyMessage: options.emptyMessage || `${sourceCard.name} found no valid cards in trash.`
+        });
+
+        if (message) {
+            addGameLog(message);
+        }
+    };
+
+    chooseNext();
+    return `${player.name} is choosing cards from trash for ${sourceCard.name}.`;
+}
+
+function controlsReplacementNegation(player) {
+    return Boolean(player?.characters?.some(card => {
+        return card?.cardNumber === "POG1-012" && !areCardEffectsNegated(card);
+    }));
+}
+
+function areOpponentReplacementEffectsNegated(targetPlayer, actingPlayer) {
+    return Boolean(targetPlayer && actingPlayer && targetPlayer !== actingPlayer && controlsReplacementNegation(actingPlayer));
+}
+
+function playCardFromDeckWithoutCost(player, sourceCard, card, ui) {
+    if (!player || !card) {
+        return `${sourceCard.name} could not play that card from the deck.`;
+    }
+
+    if (card.cardType === "character") {
+        const slotIndex = getFirstOpenCharacterSlotIndex(player);
+
+        if (slotIndex === -1) {
+            return `${sourceCard.name} found ${card.name}, but ${player.name}'s character area is full.`;
+        }
+
+        card.state = "active";
+        card.playedOnTurn = player.turns;
+        card.uiAnimation = "played";
+        player.characters[slotIndex] = card;
+
+        const effectMessages = resolveOnPlayEffects(player, card, ui);
+
+        ui?.renderCharacters?.();
+        return effectMessages.length > 0
+            ? `${sourceCard.name} played ${card.name} from the deck. ${effectMessages.join(" ")}`
+            : `${sourceCard.name} played ${card.name} from the deck.`;
+    }
+
+    if (card.cardType === "stage") {
+        const oldStage = player.stage;
+
+        card.state = "active";
+        card.uiAnimation = "played";
+        player.stage = card;
+
+        if (oldStage) {
+            const returnMessage = trashStageFromField(player, oldStage, ui);
+
+            if (returnMessage) {
+                addGameLog(returnMessage);
+            }
+        }
+
+        const effectMessages = resolveOnPlayEffects(player, card, ui);
+
+        ui?.renderStages?.();
+        return effectMessages.length > 0
+            ? `${sourceCard.name} played ${card.name} from the deck. ${effectMessages.join(" ")}`
+            : `${sourceCard.name} played ${card.name} from the deck.`;
+    }
+
+    if (card.cardType === "event") {
+        const effectMessages = resolveMainEffects(player, card, ui, {
+            skipActivationPrompt: true
+        });
+
+        moveCardToTrash(player, card, ui);
+
+        return effectMessages.length > 0
+            ? `${sourceCard.name} played ${card.name} from the deck. ${effectMessages.join(" ")}`
+            : `${sourceCard.name} played ${card.name} from the deck.`;
+    }
+
+    return `${sourceCard.name} found ${card.name}, but that card type cannot be played from the deck.`;
+}
+
+function resolveJeremicOnPlay(player, sourceCard, ui) {
+    const seenNames = new Set();
+    const deckNameOptions = player.deck
+        .filter(Boolean)
+        .map(card => ({
+            label: card.name,
+            value: CardEffects.normalizeCardName(card.name)
+        }))
+        .filter(option => {
+            if (seenNames.has(option.value)) {
+                return false;
+            }
+
+            seenNames.add(option.value);
+            return true;
+        });
+
+    if (deckNameOptions.length === 0) {
+        shuffleDeck(player.deck);
+        ui?.renderDecks?.();
+        return `${sourceCard.name} found no cards in ${player.name}'s deck.`;
+    }
+
+    const finishDeclaration = (declaredName) => {
+        const deckIndex = player.deck.findIndex(card => {
+            return CardEffects.normalizeCardName(card.name) === declaredName;
+        });
+
+        if (deckIndex === -1) {
+            shuffleDeck(player.deck);
+            ui?.renderDecks?.();
+            addGameLog(`${sourceCard.name} declared a card name, but no matching card was found before the shuffle.`);
+            return;
+        }
+
+        const playedCard = player.deck.splice(deckIndex, 1)[0];
+        const message = playCardFromDeckWithoutCost(player, sourceCard, playedCard, ui);
+
+        shuffleDeck(player.deck);
+        ui?.renderDecks?.();
+        addGameLog(`${message} ${player.name} then shuffled the deck.`);
+    };
+
+    if (ui?.chooseEffectOption) {
+        ui.chooseEffectOption({
+            player,
+            sourceCard,
+            title: sourceCard.name,
+            prompt: "Declare a card name to play from your deck.",
+            options: deckNameOptions,
+            onComplete: finishDeclaration
+        });
+
+        return `${player.name} is declaring a card name for ${sourceCard.name}.`;
+    }
+
+    finishDeclaration(deckNameOptions[0].value);
+    return `${sourceCard.name}'s effect resolved.`;
+}
+
+function resolveSigmaRevealEffect(player, sourceCard, ui) {
+    const revealedCard = player?.deck?.shift();
+
+    if (!revealedCard) {
+        return `${sourceCard.name} found no card to reveal because ${player.name}'s deck is empty.`;
+    }
+
+    const isHit = CardEffects.hasCardName(revealedCard, "Manifestirana žoga") ||
+        CardEffects.hasCardName(revealedCard, "Klobuk");
+    const finishTrash = () => {
+        moveCardToTrash(player, revealedCard, ui);
+        ui?.renderDecks?.();
+        ui?.renderTrash?.();
+    };
+
+    if (!isHit) {
+        finishTrash();
+        return `${sourceCard.name} revealed ${revealedCard.name}, which did not match, then trashed it.`;
+    }
+
+    const message = chooseLeaderOrCharacterForPower(player, sourceCard, ui, 2000, {
+        prompt: `Choose up to 1 of your leader or characters to give +2000 power this turn after revealing ${revealedCard.name}.`,
+        duration: "turn",
+        optional: true
+    });
+
+    finishTrash();
+    return `${sourceCard.name} revealed ${revealedCard.name}. ${message} Then it was trashed.`;
+}
+
+function clearParfumControlState(character) {
+    if (!character) {
+        return;
+    }
+
+    character.parfumControl = null;
+    character.ignorePlayedThisTurnCheck = false;
+}
+
+function getParfumControlledCharacter(stageOwner, stage) {
+    const control = stage?.parfumControlledCharacter;
+
+    if (!stageOwner || !control?.characterInstanceId) {
+        return null;
+    }
+
+    const slotIndex = stageOwner.characters.findIndex(card => {
+        return card?.instanceId === control.characterInstanceId;
+    });
+
+    if (slotIndex === -1) {
+        return null;
+    }
+
+    return {
+        slotIndex,
+        card: stageOwner.characters[slotIndex],
+        control
+    };
+}
+
+function setReturnedParfumCharacterAttackLock(owner, character) {
+    const ownerKey = getPlayerKey(owner);
+
+    if (!ownerKey || !character) {
+        return;
+    }
+
+    character.cannotAttackUntil = {
+        expiresAtPlayerKey: ownerKey,
+        expiresAtEndOfTurns: Number(owner.turns || 0)
+    };
+}
+
+function returnParfumControlledCharacter(stageOwner, stage, ui) {
+    if (!isParfumStage(stage || stageOwner?.stage)) {
+        return "";
+    }
+
+    const controlledEntry = getParfumControlledCharacter(stageOwner, stage);
+
+    if (!controlledEntry) {
+        if (stage) {
+            stage.parfumControlledCharacter = null;
+        }
+
+        return "";
+    }
+
+    const { slotIndex, card, control } = controlledEntry;
+    const originalOwner = gameState?.[control.originalOwnerPlayerKey];
+
+    if (!originalOwner) {
+        clearParfumControlState(card);
+
+        if (stage) {
+            stage.parfumControlledCharacter = null;
+        }
+
+        return "";
+    }
+
+    const preferredSlotIndex = Number(control.originalOwnerSlotIndex);
+    const returnSlotIndex = (
+        preferredSlotIndex >= 0 &&
+        preferredSlotIndex < 5 &&
+        !originalOwner.characters[preferredSlotIndex]
+    )
+        ? preferredSlotIndex
+        : getFirstOpenCharacterSlotIndex(originalOwner);
+
+    if (returnSlotIndex === -1) {
+        return `${card.name} could not return because ${originalOwner.name}'s field is full.`;
+    }
+
+    stageOwner.characters[slotIndex] = null;
+    originalOwner.characters[returnSlotIndex] = card;
+
+    clearParfumControlState(card);
+    setReturnedParfumCharacterAttackLock(originalOwner, card);
+    stage.parfumControlledCharacter = null;
+
+    if (ui?.renderCharacters) {
+        ui.renderCharacters();
+    }
+
+    return `${card.name} returned to ${originalOwner.name}'s field when ${stage.name} left play.`;
+}
+
+function trashStageFromField(player, stage, ui, options = {}) {
+    const stageCard = stage || player?.stage;
+
+    if (!player || !stageCard) {
+        return "";
+    }
+
+    let returnMessage = "";
+
+    if (isParfumStage(stageCard)) {
+        if (options.skipParfumReturn) {
+            stageCard.parfumControlledCharacter = null;
+        } else {
+            returnMessage = returnParfumControlledCharacter(player, stageCard, ui);
+        }
+    }
+
+    if (player.stage?.instanceId === stageCard.instanceId) {
+        player.stage = null;
+    }
+
+    moveCardToTrash(player, stageCard, ui);
+
+    if (ui?.renderStages) {
+        ui.renderStages();
+    }
+
+    return returnMessage;
+}
+
+function trashLinkedParfumStageForCharacter(player, character, ui) {
+    const control = character?.parfumControl;
+    const stageOwner = control?.stageOwnerPlayerKey
+        ? gameState?.[control.stageOwnerPlayerKey]
+        : null;
+    const stage = stageOwner?.stage;
+
+    clearParfumControlState(character);
+
+    if (!stageOwner || !stage || stage.instanceId !== control?.stageInstanceId) {
+        return "";
+    }
+
+    stage.parfumControlledCharacter = null;
+    trashStageFromField(stageOwner, stage, ui, { skipParfumReturn: true });
+
+    return `${stage.name} was trashed because ${character.name} left the field.`;
+}
+
+function placeOpponentCharacterWithParfum(player, sourceCard, ui) {
+    if (!player || !sourceCard) {
+        return "";
+    }
+
+    if (getFirstOpenCharacterSlotIndex(player) === -1) {
+        return `${sourceCard.name} could not place a character because ${player.name}'s character area is full.`;
+    }
+
+    return chooseOpponentCharacter(player, sourceCard, {
+        prompt: "Choose up to 1 opposing character to place on your field.",
+        optional: true,
+        onSelect: ({ playerKey, slotIndex, card }) => {
+            const opponent = gameState?.[playerKey];
+            const controllerKey = getPlayerKey(player);
+            const ownerKey = getPlayerKey(opponent);
+            const openSlotIndex = getFirstOpenCharacterSlotIndex(player);
+
+            if (!opponent || !ownerKey || !controllerKey || openSlotIndex === -1) {
+                addGameLog(`${sourceCard.name} could not place that character.`);
+                return;
+            }
+
+            opponent.characters[slotIndex] = null;
+            player.characters[openSlotIndex] = card;
+
+            // Parfum always places the stolen character onto your field in a usable state.
+            card.state = "active";
+            card.uiAnimation = "played";
+            card.parfumControl = {
+                originalOwnerPlayerKey: ownerKey,
+                originalOwnerSlotIndex: slotIndex,
+                stageOwnerPlayerKey: controllerKey,
+                stageInstanceId: sourceCard.instanceId
+            };
+            card.ignorePlayedThisTurnCheck = true;
+            card.cannotAttackUntil = null;
+
+            sourceCard.parfumControlledCharacter = {
+                characterInstanceId: card.instanceId,
+                originalOwnerPlayerKey: ownerKey,
+                originalOwnerSlotIndex: slotIndex
+            };
+
+            if (ui?.renderCharacters) {
+                ui.renderCharacters();
+            }
+
+            if (ui?.renderStages) {
+                ui.renderStages();
+            }
+
+            addGameLog(`${player.name} placed ${card.name} on their field with ${sourceCard.name}.`);
+        },
+        skipMessage: `${player.name} did not place a character with ${sourceCard.name}.`,
+        emptyMessage: `${sourceCard.name} found no opposing characters to place.`
+    });
 }
 
 function getBoardCardFromData(boardCardData) {
@@ -596,6 +1344,11 @@ function playCharacterCard(player, handIndex, ui, targetSlotIndex = null) {
     if (replacedCard) {
         moveCardToTrash(player, replacedCard, ui);
         resolveGutsLeaderCharacterRemovedBonus(player, ui);
+        const linkedStageMessage = trashLinkedParfumStageForCharacter(player, replacedCard, ui);
+
+        if (linkedStageMessage) {
+            addGameLog(linkedStageMessage);
+        }
     }
 
     const effectMessages = resolveOnPlayEffects(player, playedCard, ui);
@@ -664,7 +1417,11 @@ function playStageCard(player, handIndex, ui) {
     player.stage = playedStage;
 
     if (oldStage) {
-        moveCardToTrash(player, oldStage, ui);
+        const returnMessage = trashStageFromField(player, oldStage, ui);
+
+        if (returnMessage) {
+            addGameLog(returnMessage);
+        }
     }
 
     const effectMessages = resolveOnPlayEffects(player, playedStage, ui);
@@ -689,6 +1446,10 @@ function playStageCard(player, handIndex, ui) {
 
 function resolveOnPlayEffects(player, card, ui) {
     if (!player || !card) {
+        return [];
+    }
+
+    if (areCardEffectsNegated(card)) {
         return [];
     }
 
@@ -799,6 +1560,10 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
         return "";
     }
 
+    if (sourceCard.cardType !== "event" && areCardEffectsNegated(sourceCard)) {
+        return `${sourceCard.name}'s effects are negated.`;
+    }
+
     if (effect.actionId === "drawOneCard") {
         const drawResult = drawCard(player, ui);
 
@@ -825,6 +1590,191 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
 
     if (effect.actionId === "lookTopFiveHuman") {
         return lookTopCardsForType(player, sourceCard, 5, "Human", ui);
+    }
+
+    if (effect.id === "POG1-004-main") {
+        return lookTopCardsForType(player, sourceCard, 4, "Film", ui);
+    }
+
+    if (effect.id === "POG1-004-trigger") {
+        const drawResult = drawCard(player, ui);
+
+        return drawResult?.deckOut
+            ? `${sourceCard.name}'s Trigger tried to draw 1 card, but ${player.name} lost by deck out.`
+            : `${sourceCard.name}'s Trigger drew 1 card.`;
+    }
+
+    if (effect.id === "POG1-008-main") {
+        const attachedResult = attachActiveDonToCard(player, player.leader, ui);
+
+        if (!attachedResult.success) {
+            return `${sourceCard.name} could not attach 1 active DON!! to ${player.leader.name}.`;
+        }
+
+        const powerMessage = chooseLeaderOrCharacterForPower(player, sourceCard, ui, 1000, {
+            prompt: "Choose your leader or up to 1 of your characters to give +1000 power this turn.",
+            duration: "turn",
+            optional: true
+        });
+
+        return `${attachedResult.message} ${powerMessage}`;
+    }
+
+    if (effect.id === "POG1-008-counter") {
+        return chooseLeaderOrCharacterForPower(player, sourceCard, ui, 2000, {
+            prompt: "Choose your leader or up to 1 of your characters to give +2000 power during this battle.",
+            duration: "battle",
+            optional: true
+        });
+    }
+
+    if (effect.id === "POG1-009-main") {
+        return resolveBingoMain(player, sourceCard, ui);
+    }
+
+    if (effect.id === "POG1-009-counter") {
+        return chooseLeaderOrCharacterForPower(player, sourceCard, ui, 2000, {
+            prompt: "Choose your leader or up to 1 of your characters to give +2000 power during this battle.",
+            duration: "battle",
+            optional: true
+        });
+    }
+
+    if (effect.id === "POG1-010-main") {
+        if (!restDonForCost(player, 3, ui)) {
+            return `${player.name} could not rest 3 active DON!! for ${sourceCard.name}.`;
+        }
+
+        return chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing rested character that will not become active during its next Refresh Phase.",
+            optional: true,
+            filter: card => card.cardType === "character" && (card.state || "active") === "rested",
+            onSelect: ({ card }) => {
+                lockCardForNextRefresh(card);
+                ui?.renderCharacters?.();
+                addGameLog(`${sourceCard.name} made ${card.name} stay rested during its next Refresh Phase.`);
+            },
+            skipMessage: `${player.name} did not choose a character for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no rested opposing characters.`
+        });
+    }
+
+    if (effect.id === "POG1-010-counter") {
+        return chooseLeaderOrCharacterForPower(player, sourceCard, ui, 2000, {
+            prompt: "Choose your leader or up to 1 of your characters to give +2000 power during this battle.",
+            duration: "battle",
+            optional: true
+        });
+    }
+
+    if (effect.id === "POG1-011-main") {
+        if (!restDonForCost(player, 3, ui)) {
+            return `${player.name} could not rest 3 active DON!! for ${sourceCard.name}.`;
+        }
+
+        return chooseBoardCard(player, sourceCard, getOpponentBoardChoices(player, {
+            includeLeader: true,
+            filter: card => card.cardType === "leader" || card.cardType === "character"
+        }), {
+            prompt: "Choose up to 1 opposing leader or character to negate its effects this turn.",
+            optional: true,
+            onSelect: ({ card }) => {
+                addTemporaryEffectNegation(card, getPlayerKey(player), Number(player.turns || 0));
+                ui?.renderLeaders?.();
+                ui?.renderCharacters?.();
+                ui?.renderStages?.();
+                addGameLog(`${sourceCard.name} negated ${card.name}'s effects this turn.`);
+            },
+            skipMessage: `${player.name} did not negate a card with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no opposing leader or character.`
+        });
+    }
+
+    if (effect.id === "POG1-011-counter") {
+        return chooseLeaderOrCharacterForPower(player, sourceCard, ui, 2000, {
+            prompt: "Choose your leader or up to 1 of your characters to give +2000 power during this battle.",
+            duration: "battle",
+            optional: true
+        });
+    }
+
+    if (effect.id === "POG1-014-counter") {
+        const chooseTrashCardAfterPower = () => {
+            const trashMessage = addCardFromTrashToHand(player, sourceCard, ui, {
+                prompt: "Choose up to 1 Film card from your trash to add to your hand.",
+                optional: true,
+                filter: card => hasTypeText(card, "Film"),
+                skipMessage: `${player.name} did not add a Film card from trash with ${sourceCard.name}.`,
+                emptyMessage: `${sourceCard.name} found no Film cards in trash.`
+            });
+
+            if (trashMessage) {
+                addGameLog(trashMessage);
+            }
+        };
+
+        return chooseOwnBoardCard(player, sourceCard, {
+            prompt: "Choose your leader or up to 1 of your characters to give +2000 power during this battle.",
+            optional: true,
+            includeLeader: true,
+            filter: card => card.cardType === "leader" || card.cardType === "character",
+            onSelect: ({ card }) => {
+                addBattlePowerBonus(card, 2000);
+                ui?.renderLeaders?.();
+                ui?.renderCharacters?.();
+                addGameLog(`${sourceCard.name} gave ${card.name} +2000 power during this battle.`);
+                chooseTrashCardAfterPower();
+            },
+            onSkip: chooseTrashCardAfterPower,
+            onEmpty: chooseTrashCardAfterPower,
+            skipMessage: `${player.name} did not choose a card for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no leader or character.`
+        });
+    }
+
+    if (effect.id === "POG1-014-trigger") {
+        return addCardFromTrashToHand(player, sourceCard, ui, {
+            prompt: "Choose 1 card from your trash to add to your hand.",
+            optional: false,
+            emptyMessage: `${sourceCard.name} found no cards in trash.`
+        });
+    }
+
+    if (effect.id === "POG1-003-on-play") {
+        return resolveJeremicOnPlay(player, sourceCard, ui);
+    }
+
+    if (
+        effect.id === "POG1-005-when-attacking" ||
+        effect.id === "POG1-005-on-opponent-attack"
+    ) {
+        return resolveSigmaRevealEffect(player, sourceCard, ui);
+    }
+
+    if (effect.id === "POG1-007-on-play") {
+        const drawResult = drawCards(player, 3, ui);
+
+        if (drawResult?.deckOut) {
+            return `${sourceCard.name} caused ${player.name} to lose by deck out while drawing 3 cards.`;
+        }
+
+        if (player.hand.length < 2) {
+            return `${sourceCard.name} drew 3 cards, but ${player.name} has fewer than 2 cards to place back.`;
+        }
+
+        return chooseHandCardsToTopOrBottomOfDeck(player, sourceCard, ui, 2);
+    }
+
+    if (effect.id === "POG1-006-activate-main") {
+        return resolveDavidTaglavnovicCharacterMain(player, sourceCard, ui);
+    }
+
+    if (effect.id === "POG1-013-activate-main") {
+        return resolveMagdalenaActivateMain(player, sourceCard, ui);
+    }
+
+    if (effect.id === "POG1-013-trigger") {
+        return resolveMagdalenaTrigger(player, sourceCard, ui);
     }
 
     if (effect.id === "RIM1-004-on-play") {
@@ -1617,6 +2567,7 @@ function resolveImmediateCopiedOnOpponentAttackEffect(player, sourceCard, copied
         player.characters[sourceSlotIndex] = null;
         moveCardToTrash(player, trashedCard, ui);
         resolveGutsLeaderCharacterRemovedBonus(player, ui);
+        const linkedStageMessage = trashLinkedParfumStageForCharacter(player, trashedCard, ui);
         drawCard(player, ui);
 
         if (ui?.renderCharacters) {
@@ -1631,7 +2582,9 @@ function resolveImmediateCopiedOnOpponentAttackEffect(player, sourceCard, copied
             ui.renderHands();
         }
 
-        return `${sourceCard.name} copied ${copiedFromCard.name}'s effect, trashed itself, and drew 1 card.`;
+        return linkedStageMessage
+            ? `${sourceCard.name} copied ${copiedFromCard.name}'s effect, trashed itself, and drew 1 card. ${linkedStageMessage}`
+            : `${sourceCard.name} copied ${copiedFromCard.name}'s effect, trashed itself, and drew 1 card.`;
     }
 
     const message = resolveEffectAction(player, sourceCard, copiedEffect, ui, {
@@ -1783,11 +2736,16 @@ function trashOwnCharacterForMetalSonicPower(player, sourceCard, ui) {
             player.characters[slotIndex] = null;
             moveCardToTrash(player, card, ui);
             resolveGutsLeaderCharacterRemovedBonus(player, ui);
+            const linkedStageMessage = trashLinkedParfumStageForCharacter(player, card, ui);
             addTemporaryPowerBonus(metalSonic, bonus);
 
             ui.renderCharacters();
             ui.renderTrash();
-            addGameLog(`${metalSonic.name} trashed ${card.name} and gained +${bonus} power this turn.`);
+            addGameLog(
+                linkedStageMessage
+                    ? `${metalSonic.name} trashed ${card.name} and gained +${bonus} power this turn. ${linkedStageMessage}`
+                    : `${metalSonic.name} trashed ${card.name} and gained +${bonus} power this turn.`
+            );
         },
         skipMessage: `${player.name} did not trash a character for ${sourceCard.name}.`,
         emptyMessage: `${sourceCard.name} found no other characters to trash.`
@@ -2264,6 +3222,12 @@ function lookTopCardsForType(player, sourceCard, amount, typeText, ui, options =
         const bottomOrder = typeof selection === "object" && selection !== null
             ? selection.bottomOrder
             : null;
+        const orderedRemaining = typeof selection === "object" && selection !== null
+            ? selection.orderedRemaining
+            : null;
+        const returnZone = typeof selection === "object" && selection !== null
+            ? selection.returnZone
+            : null;
         let selectedCard = null;
 
         if (
@@ -2278,6 +3242,36 @@ function lookTopCardsForType(player, sourceCard, amount, typeText, ui, options =
             addGameLog(`${player.name} revealed ${selectedCard.name} and added it to hand.`);
         } else {
             addGameLog(`${player.name} did not add a card with ${sourceCard.name}'s effect.`);
+        }
+
+        if (Array.isArray(orderedRemaining)) {
+            const finalOrderedCards = orderedRemaining
+                .map(index => originalCardsToLookAt[index])
+                .filter(card => cardsToLookAt.includes(card))
+                .filter(Boolean);
+            const orderedSet = new Set(finalOrderedCards);
+            const unorderedRemainingCards = cardsToLookAt.filter(card => !orderedSet.has(card));
+            const allOrderedCards = [...finalOrderedCards, ...unorderedRemainingCards];
+            const placeOnTop = returnZone === "top";
+
+            player.deck = placeOnTop
+                ? [...allOrderedCards, ...player.deck]
+                : [...player.deck, ...allOrderedCards];
+
+            if (ui?.renderHands) {
+                ui.renderHands();
+            }
+
+            if (ui?.renderDecks) {
+                ui.renderDecks();
+            }
+
+            addGameLog(
+                `${player.name} placed the remaining card${allOrderedCards.length === 1 ? "" : "s"} on the ${placeOnTop ? "top" : "bottom"} of the deck.`
+            );
+
+            options.onResolved?.();
+            return;
         }
 
         const orderedBottomCards = Array.isArray(bottomOrder)
@@ -2301,6 +3295,7 @@ function lookTopCardsForType(player, sourceCard, amount, typeText, ui, options =
         }
 
         addGameLog(`${player.name} placed the remaining card${cardsToLookAt.length === 1 ? "" : "s"} on the bottom of the deck.`);
+        options.onResolved?.();
     };
 
     if (ui && typeof ui.lookTopCardsAddToHand === "function") {
@@ -2309,6 +3304,7 @@ function lookTopCardsForType(player, sourceCard, amount, typeText, ui, options =
             sourceCard,
             cards: cardsToLookAt,
             isSelectable,
+            allowTopOrBottomPlacement: Boolean(options.allowTopOrBottomPlacement),
             onComplete: finishSelection
         });
 
@@ -2351,6 +3347,32 @@ function resolveRimuruTurnStartSearch(player, ui) {
     return {
         activated: true,
         message
+    };
+}
+
+function resolveDavidTaglavnovicTurnStartSearch(player, ui, onResolved = null) {
+    const leader = player?.leader;
+
+    if (!leader || leader.cardNumber !== "POG1-001") {
+        return { activated: false, message: "" };
+    }
+
+    const effect = leader.effects?.find(cardEffect => cardEffect.id === "POG1-001-start-of-turn-search");
+
+    if (!effect) {
+        return { activated: false, message: "" };
+    }
+
+    const message = lookTopCardsForType(player, leader, 3, "", ui, {
+        isSelectable: card => CardEffects.hasCardName(card, "Parfum"),
+        allowTopOrBottomPlacement: true,
+        onResolved
+    });
+
+    return {
+        activated: true,
+        message,
+        pending: Boolean(ui && typeof ui.lookTopCardsAddToHand === "function")
     };
 }
 
@@ -2530,7 +3552,11 @@ function playZangetsuStageFromDeck(player, sourceCard, ui, targetCost) {
     player.stage = stage;
 
     if (oldStage) {
-        moveCardToTrash(player, oldStage, ui);
+        const returnMessage = trashStageFromField(player, oldStage, ui);
+
+        if (returnMessage) {
+            addGameLog(returnMessage);
+        }
     }
 
     shuffleDeck(player.deck);
@@ -2958,6 +3984,10 @@ function addCostModifier(card, amount) {
     card.costModifiers.push({
         amount: Number(amount || 0)
     });
+
+    if (typeof renderCharacters === "function") {
+        renderCharacters();
+    }
 }
 
 function giveRestedDonToCard(player, sourceCard, targetCard, ui) {
@@ -3107,6 +4137,10 @@ function getAvailableUryuLifeFlipReplacement(targetPlayer, actingPlayer) {
         return null;
     }
 
+    if (areOpponentReplacementEffectsNegated(targetPlayer, actingPlayer)) {
+        return null;
+    }
+
     if (gameState.currentPlayer !== actingPlayer) {
         return null;
     }
@@ -3179,19 +4213,18 @@ function removeStageByOpponentEffect(actingPlayer, targetPlayer, sourceCard, ui)
         return "Stage removal was not caused by an opponent effect.";
     }
 
-    const replacementEffect = stage.effects?.find(effect => {
+    const replacementEffect = areOpponentReplacementEffectsNegated(targetPlayer, actingPlayer)
+        ? null
+        : stage.effects?.find(effect => {
         return effect.type === "replacement" && effect.id?.includes("stage-removal-replace");
     });
 
     const finishRemoval = () => {
-        targetPlayer.stage = null;
-        moveCardToTrash(targetPlayer, stage, ui);
+        const returnMessage = trashStageFromField(targetPlayer, stage, ui);
 
-        if (ui?.renderStages) {
-            ui.renderStages();
-        }
-
-        return `${sourceCard.name} removed ${stage.name}.`;
+        return returnMessage
+            ? `${sourceCard.name} removed ${stage.name}. ${returnMessage}`
+            : `${sourceCard.name} removed ${stage.name}.`;
     };
 
     if (!replacementEffect || CardEffects.hasUsedOncePerTurnEffect(stage, replacementEffect.id, targetPlayer.turns)) {
@@ -3231,6 +4264,10 @@ function removeStageByOpponentEffect(actingPlayer, targetPlayer, sourceCard, ui)
 
 function getAvailableSageRemovalReplacement(targetPlayer, targetCard, actingPlayer) {
     if (!targetPlayer || !targetCard || !actingPlayer || targetPlayer === actingPlayer) {
+        return null;
+    }
+
+    if (areOpponentReplacementEffectsNegated(targetPlayer, actingPlayer)) {
         return null;
     }
 
@@ -3433,7 +4470,11 @@ function playTurboGrannyFormFromDeck(player, sourceCard, ui) {
     player.stage = stage;
 
     if (oldStage) {
-        moveCardToTrash(player, oldStage, ui);
+        const returnMessage = trashStageFromField(player, oldStage, ui);
+
+        if (returnMessage) {
+            addGameLog(returnMessage);
+        }
     }
 
     shuffleDeck(player.deck);
@@ -3488,6 +4529,16 @@ function resolveOnPlayEffects(player, card, ui) {
     card.effects
         ?.filter(effect => effect.type === "onPlay")
         .forEach(effect => {
+            if (effect.id === "POG1-002-on-play-mark-character") {
+                const message = placeOpponentCharacterWithParfum(player, card, ui);
+
+                if (message) {
+                    messages.push(message);
+                }
+
+                return;
+            }
+
             const message = resolveEffectAction(player, card, effect, ui);
 
             if (message) {
@@ -3500,6 +4551,10 @@ function resolveOnPlayEffects(player, card, ui) {
 
 function resolveOnKOEffects(player, card, ui) {
     if (!player || !card) {
+        return [];
+    }
+
+    if (areCardEffectsNegated(card)) {
         return [];
     }
 
@@ -3562,6 +4617,10 @@ function resolveMainEffects(player, card, ui, options = {}) {
         return [];
     }
 
+    if (card.cardType !== "event" && areCardEffectsNegated(card)) {
+        return [`${card.name}'s effects are negated.`];
+    }
+
     const messages = [];
 
     card.effects
@@ -3575,6 +4634,131 @@ function resolveMainEffects(player, card, ui, options = {}) {
         });
 
     return messages;
+}
+
+function resolveBrankoEndOfTurn(player, sourceCard, ui) {
+    if (!sourceCard) {
+        return "";
+    }
+
+    sourceCard.state = "active";
+
+    if (ui?.renderCharacters) {
+        ui.renderCharacters();
+    }
+
+    return `${sourceCard.name} set itself active at the end of the turn.`;
+}
+
+function resolveDavidTaglavnovicCharacterMain(player, sourceCard, ui) {
+    const sourceSlotIndex = player?.characters?.findIndex(card => card?.instanceId === sourceCard?.instanceId) ?? -1;
+
+    if (sourceSlotIndex === -1) {
+        return `${sourceCard.name} is not on the field.`;
+    }
+
+    if (player.leader?.cardNumber !== "POG1-001") {
+        return `${sourceCard.name}'s effect did not resolve because ${player.name}'s leader is not David Taglavnovič.`;
+    }
+
+    if (getFirstOpenCharacterSlotIndex(player) === -1) {
+        return `${sourceCard.name}'s effect could not play B.R.A.N.K.O. because ${player.name}'s character area is full.`;
+    }
+
+    const opponent = getOpponentPlayer(player);
+    const maxCost = getTotalDonInPlay(opponent);
+    const handChoices = getHandCardChoices(player, card => card?.cardNumber === "POG1-012" && Number(card.cost ?? 0) <= maxCost);
+    const trashChoices = getCharacterTrashChoices(player, card => card?.cardNumber === "POG1-012" && Number(card.cost ?? 0) <= maxCost);
+    const choices = [...handChoices, ...trashChoices];
+
+    if (choices.length === 0) {
+        return `${sourceCard.name} found no B.R.A.N.K.O. in hand or trash with cost ${maxCost} or less.`;
+    }
+
+    const trashedSource = player.characters[sourceSlotIndex];
+    player.characters[sourceSlotIndex] = null;
+    moveCardToTrash(player, trashedSource, ui);
+    resolveGutsLeaderCharacterRemovedBonus(player, ui);
+    const linkedStageMessage = trashLinkedParfumStageForCharacter(player, trashedSource, ui);
+
+    const completePlay = (choice) => {
+        if (!choice) {
+            addGameLog(`${player.name} trashed ${sourceCard.name} but did not choose a B.R.A.N.K.O. to play.`);
+            return;
+        }
+
+        let playedCard = null;
+
+        if (choice.cardType === "hand") {
+            playedCard = player.hand.splice(choice.handIndex, 1)[0];
+        } else if (choice.cardType === "trash") {
+            playedCard = player.trash.splice(choice.trashIndex, 1)[0];
+        }
+
+        if (!playedCard) {
+            addGameLog(`${sourceCard.name} could not find the chosen B.R.A.N.K.O..`);
+            return;
+        }
+
+        const message = playCardFromDeckWithoutCost(player, sourceCard, playedCard, ui);
+        addGameLog(
+            linkedStageMessage
+                ? `${message} ${linkedStageMessage}`
+                : message
+        );
+    };
+
+    if (ui?.chooseBoardCard) {
+        ui.chooseBoardCard({
+            player,
+            sourceCard,
+            prompt: `Choose up to 1 B.R.A.N.K.O. from your hand or trash with cost ${maxCost} or less to play.`,
+            choices,
+            optional: true,
+            onComplete: completePlay
+        });
+
+        ui?.renderCharacters?.();
+        ui?.renderTrash?.();
+        ui?.renderHands?.();
+        return `${player.name} trashed ${sourceCard.name} and is choosing a B.R.A.N.K.O. to play.`;
+    }
+
+    completePlay(choices[0]);
+    return `${sourceCard.name}'s effect resolved.`;
+}
+
+function resolveMagdalenaActivateMain(player, sourceCard, ui) {
+    if ((player?.trash || []).length < 2) {
+        return `${sourceCard.name} needs at least 2 cards in trash.`;
+    }
+
+    return chooseCardsFromTrashToBottomOfDeck(player, sourceCard, ui, 2, {
+        onComplete: () => {
+            addGameLog(`${player.name} placed 2 cards from trash on the bottom of the deck with ${sourceCard.name}.`);
+            const drawResult = drawCard(player, ui);
+
+            addGameLog(
+                drawResult?.deckOut
+                    ? `${sourceCard.name} then caused ${player.name} to lose by deck out while drawing 1 card.`
+                    : `${sourceCard.name} then drew 1 card.`
+            );
+        }
+    });
+}
+
+function resolveMagdalenaTrigger(player, sourceCard, ui) {
+    const drawResult = drawCards(player, 2, ui);
+
+    if (drawResult?.deckOut) {
+        return `${sourceCard.name}'s Trigger caused ${player.name} to lose by deck out while drawing 2 cards.`;
+    }
+
+    chooseCardsFromHandToTrash(player, sourceCard, ui, 1, () => {
+        addGameLog(`${sourceCard.name}'s Trigger drew 2 cards and trashed 1 card.`);
+    });
+
+    return `${player.name} is resolving ${sourceCard.name}'s Trigger.`;
 }
 
 // =========================
@@ -3693,6 +4877,7 @@ function KOCharacter(player, slotIndex, ui, options = {}) {
 
     moveCardToTrash(player, character, ui);
     resolveGutsLeaderCharacterRemovedBonus(player, ui);
+    const linkedStageMessage = trashLinkedParfumStageForCharacter(player, character, ui);
 
     const effectMessages = resolveOnKOEffects(player, character, ui);
 
@@ -3703,10 +4888,13 @@ function KOCharacter(player, slotIndex, ui, options = {}) {
     const effectText = effectMessages.length > 0
         ? ` ${effectMessages.join(" ")}`
         : "";
+    const linkedStageText = linkedStageMessage
+        ? ` ${linkedStageMessage}`
+        : "";
 
     return {
         success: true,
-        message: `${character.name} was K.O.'d and placed in the trash.${effectText}`
+        message: `${character.name} was K.O.'d and placed in the trash.${linkedStageText}${effectText}`
     };
 }
 
@@ -4009,7 +5197,11 @@ function playCardFromTrigger(player, card, ui) {
         player.stage = card;
 
         if (oldStage) {
-            moveCardToTrash(player, oldStage, ui);
+            const returnMessage = trashStageFromField(player, oldStage, ui);
+
+            if (returnMessage) {
+                addGameLog(returnMessage);
+            }
         }
 
         const effectMessages = resolveOnPlayEffects(player, card, ui);
@@ -4142,9 +5334,13 @@ function refreshPlayerCards(player, ui) {
     player.leaderAttacksThisTurn = 0;
 
     player.characters.forEach(character => {
-        if (character && character.state === "rested") {
-            character.state = "active";
-            refreshedCharacters++;
+        if (character) {
+            if (character.skipNextRefresh) {
+                character.skipNextRefresh = false;
+            } else if (character.state === "rested") {
+                character.state = "active";
+                refreshedCharacters++;
+            }
         }
     });
 
@@ -4206,7 +5402,7 @@ function resolveEndOfTurnEffects(player, ui) {
             return;
         }
 
-        character.effects
+        getCardAllEffects(character)
             ?.filter(effect => effect.type === "endOfYourTurn")
             .forEach(effect => {
                 if (effect.id === "RIM1-008-end-turn-don") {
@@ -4272,6 +5468,14 @@ function resolveEndOfTurnEffects(player, ui) {
                         message
                     });
 
+                    return;
+                }
+
+                if (effect.id === "POG1-012-end-of-your-turn") {
+                    results.push({
+                        activated: true,
+                        message: resolveBrankoEndOfTurn(player, character, ui)
+                    });
                     return;
                 }
 
