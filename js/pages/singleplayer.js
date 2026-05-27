@@ -993,10 +993,7 @@ function renderPlayerHand(player, handElementId, hidden) {
         sortButton.className = "hand-sort-button";
         sortButton.type = "button";
         sortButton.textContent = "Sort";
-        sortButton.title = canSortPlayerHand(player)
-            ? "Sort hand by category, cost, then card ID."
-            : "Finish current effect or combat step before sorting your hand.";
-        sortButton.disabled = !canSortPlayerHand(player);
+        sortButton.title = "Sort hand by category, cost, then card ID.";
 
         sortButton.addEventListener("click", async (event) => {
             event.stopPropagation();
@@ -1018,33 +1015,8 @@ function renderPlayerHand(player, handElementId, hidden) {
     setupHandCardSelection();
 }
 
-function canSortPlayerHand(player) {
-    if (!player || !Array.isArray(player.hand)) {
-        return false;
-    }
-
-    if (player !== gameState?.player1) {
-        return false;
-    }
-
-    if (
-        pendingReplacePlay ||
-        pendingAttack ||
-        currentAttack ||
-        pendingBlock ||
-        pendingTrashChoice
-    ) {
-        return false;
-    }
-
-    return !document.getElementById("effectChoiceOverlay") &&
-        !document.getElementById("lookTopOverlay") &&
-        !document.getElementById("boardChoiceOverlay");
-}
-
 async function sortPlayerHand(player) {
-    if (!canSortPlayerHand(player)) {
-        addGameLog("Finish current effect or combat step before sorting your hand.");
+    if (!player || !Array.isArray(player.hand)) {
         return;
     }
 
@@ -1064,6 +1036,8 @@ async function sortPlayerHand(player) {
 
     clearHandSelection();
     renderHands();
+
+    addGameLog(`${player.name}'s hand was sorted.`);
 
 }
 
@@ -2431,14 +2405,6 @@ function showResolveAttackButton(defenderPlayerKey, onResolve) {
 
     if (!battleControls) return;
 
-    if (currentAttack?.resolutionStep && currentAttack.resolutionStep !== "readyForDefense") {
-        clearBattleControls();
-        battleControls.appendChild(
-            createBattleButton("Resolving Effects", () => {}, true, "counter-phase")
-        );
-        return;
-    }
-
     clearBattleControls();
 
     const attackerCard = currentAttack
@@ -2471,14 +2437,6 @@ function showCounterPhaseControls(defenderPlayerKey, onResolve) {
     const battleControls = document.getElementById("battleControls");
 
     if (!battleControls) return;
-
-    if (currentAttack?.resolutionStep && currentAttack.resolutionStep !== "readyForDefense") {
-        clearBattleControls();
-        battleControls.appendChild(
-            createBattleButton("Resolving Effects", () => {}, true, "counter-phase")
-        );
-        return;
-    }
 
     if (currentAttack) {
         currentAttack.counterPhaseStarted = true;
@@ -2696,8 +2654,7 @@ function beginAttack(targetData) {
         target: { ...targetData },
         attackerPlayerKey: pendingAttack.attackerPlayerKey,
         defenderPlayerKey: pendingAttack.defenderPlayerKey,
-        targetPowerBonus: 0,
-        resolutionStep: "defenderResponses"
+        targetPowerBonus: 0
     };
 
     if (attackerData.cardType === "leader") {
@@ -2722,21 +2679,10 @@ function beginAttack(targetData) {
     );
 
     const continueAfterDefenderResponses = () => {
-        if (!currentAttack || currentAttack.resolutionStep === "readyForDefense") {
-            return;
-        }
-
-        currentAttack.resolutionStep = "attackerEffects";
-
         resolveWhenAttackingEffectsBeforeBattle(
             attackerPlayer,
             attackerData,
             () => {
-                if (!currentAttack) {
-                    return;
-                }
-
-                currentAttack.resolutionStep = "readyForDefense";
                 showResolveAttackButton(currentAttack.defenderPlayerKey, () => {
                     resolveCurrentAttack();
                 });
@@ -2766,10 +2712,6 @@ function promptOnOpponentAttackCharacterEffects(defenderPlayer, onComplete) {
         const entry = effects[index];
 
         if (!entry) {
-            if (currentAttack) {
-                currentAttack.resolutionStep = "attackerEffects";
-            }
-
             if (typeof onComplete === "function") {
                 onComplete();
             }
