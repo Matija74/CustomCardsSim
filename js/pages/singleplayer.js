@@ -118,6 +118,7 @@ function createUiBridge() {
         chooseBoardCard: showBoardCardChoice,
         chooseEffectActivation,
         chooseEffectOption,
+        chooseNumberValue,
         revealCards: () => {}
     };
 }
@@ -2139,7 +2140,10 @@ function resolveBoardActionEffect(player, card, effect) {
             };
         }
 
-        if (getFirstOpenCharacterSlotIndex(player) === -1) {
+        const sourceSlotIndex = player.characters.findIndex(character => character?.instanceId === card.instanceId);
+        const openSlotIndex = getFirstOpenCharacterSlotIndex(player);
+
+        if (openSlotIndex === -1 && sourceSlotIndex === -1) {
             return {
                 success: false,
                 message: `${player.name}'s character area is full.`
@@ -3963,6 +3967,110 @@ function chooseEffectOption({
     }
 
     renderEffectChoiceButtons(options);
+}
+
+function chooseNumberValue({
+    sourceCard,
+    title,
+    prompt,
+    min = 0,
+    max = 10,
+    initialValue = 0,
+    onComplete
+}) {
+    removeEffectChoiceOverlay();
+
+    const overlay = document.createElement("div");
+    overlay.className = "look-top-overlay";
+    overlay.id = "effectChoiceOverlay";
+
+    const popup = document.createElement("div");
+    popup.className = "look-top-popup effect-choice-popup";
+
+    const heading = document.createElement("h2");
+    heading.textContent = title || sourceCard?.name || "Choose Value";
+
+    const body = document.createElement("div");
+    body.className = "effect-choice-body";
+
+    if (sourceCard?.image) {
+        const image = document.createElement("img");
+        image.src = sourceCard.image;
+        image.alt = sourceCard.name;
+        image.className = "effect-choice-card-img";
+        body.appendChild(image);
+    }
+
+    const content = document.createElement("div");
+    content.className = "effect-choice-content";
+
+    const description = document.createElement("p");
+    description.textContent = prompt || "Choose a value.";
+
+    const pickerRow = document.createElement("div");
+    pickerRow.className = "look-top-buttons effect-choice-buttons";
+
+    const currentValue = document.createElement("span");
+    currentValue.className = "look-top-action-button secondary";
+
+    let value = Math.min(max, Math.max(min, Number(initialValue || 0)));
+
+    const updateValue = () => {
+        currentValue.textContent = `${value} cost`;
+        minusButton.disabled = value <= min;
+        plusButton.disabled = value >= max;
+    };
+
+    const minusButton = document.createElement("button");
+    minusButton.className = "look-top-action-button secondary";
+    minusButton.textContent = "-";
+    minusButton.addEventListener("click", () => {
+        if (value > min) {
+            value -= 1;
+            updateValue();
+        }
+    });
+
+    const plusButton = document.createElement("button");
+    plusButton.className = "look-top-action-button secondary";
+    plusButton.textContent = "+";
+    plusButton.addEventListener("click", () => {
+        if (value < max) {
+            value += 1;
+            updateValue();
+        }
+    });
+
+    pickerRow.appendChild(minusButton);
+    pickerRow.appendChild(currentValue);
+    pickerRow.appendChild(plusButton);
+
+    const buttonRow = document.createElement("div");
+    buttonRow.className = "look-top-buttons effect-choice-buttons";
+
+    const confirmButton = document.createElement("button");
+    confirmButton.className = "look-top-action-button";
+    confirmButton.textContent = "Confirm";
+    confirmButton.addEventListener("click", async () => {
+        removeEffectChoiceOverlay();
+
+        if (typeof onComplete === "function") {
+            await onComplete(value);
+        }
+    });
+
+    buttonRow.appendChild(confirmButton);
+
+    updateValue();
+
+    content.appendChild(description);
+    content.appendChild(pickerRow);
+    content.appendChild(buttonRow);
+    body.appendChild(content);
+    popup.appendChild(heading);
+    popup.appendChild(body);
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
 }
 
 function removeEffectChoiceOverlay() {

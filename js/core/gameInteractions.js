@@ -363,18 +363,15 @@ function resolveBingoMain(player, sourceCard, ui) {
         );
     };
 
-    const options = Array.from({ length: 11 }, (_, value) => ({
-        label: String(value),
-        value
-    }));
-
-    if (ui?.chooseEffectOption) {
-        ui.chooseEffectOption({
+    if (ui?.chooseNumberValue) {
+        ui.chooseNumberValue({
             player,
             sourceCard,
             title: sourceCard.name,
             prompt: "Declare a cost from 0 to 10.",
-            options,
+            min: 0,
+            max: 10,
+            initialValue: 0,
             onComplete: completeDeclaration
         });
 
@@ -4663,7 +4660,9 @@ function resolveDavidTaglavnovicCharacterMain(player, sourceCard, ui) {
         return `${sourceCard.name}'s effect did not resolve because ${player.name}'s leader is not David Taglavnovič.`;
     }
 
-    if (getFirstOpenCharacterSlotIndex(player) === -1) {
+    const openSlotIndex = getFirstOpenCharacterSlotIndex(player);
+
+    if (openSlotIndex === -1 && player.characters[sourceSlotIndex] !== sourceCard) {
         return `${sourceCard.name}'s effect could not play B.R.A.N.K.O. because ${player.name}'s character area is full.`;
     }
 
