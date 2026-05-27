@@ -2988,6 +2988,10 @@ function showResolveAttackButton(defenderPlayerKey, onResolve) {
 
     enterBlockerStep(defenderPlayerKey, onResolve);
 
+    if (gameState.currentPhase === "counterPhase" || !pendingBlock) {
+        return;
+    }
+
     const defenderName = gameState[defenderPlayerKey]?.name ?? "Defender";
 
     if (!canLocalPlayerControlDefense(defenderPlayerKey)) {

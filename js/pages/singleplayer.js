@@ -2450,6 +2450,10 @@ function showResolveAttackButton(defenderPlayerKey, onResolve) {
 
     enterBlockerStep(defenderPlayerKey, onResolve);
 
+    if (gameState.currentPhase === "counterPhase" || !pendingBlock) {
+        return;
+    }
+
     const skipBlockButton = createSkipBlockButton(() => {
         skipCurrentBlockStep(defenderPlayerKey, onResolve);
     });
