@@ -1148,7 +1148,9 @@ function canUseCounterEffect(card, player, effect) {
         return true;
     }
 
-    return Boolean(effect.actionId) || Number(effect.powerModifier ?? 0) > 0;
+    return Boolean(effect.actionId) ||
+        Number(effect.powerModifier ?? 0) > 0 ||
+        /during\s+this\s+battle/i.test(String(effect.text || ""));
 }
 
 function getCounterEffects(card, player) {
@@ -4507,12 +4509,12 @@ function resolveCounterEffects(player, card, ui) {
     const messages = [];
 
     getCounterEffects(card, player).forEach(effect => {
-        if (effect.actionId) {
-            const message = resolveEffectAction(player, card, effect, ui);
+        const message = resolveEffectAction(player, card, effect, ui, {
+            skipActivationPrompt: true
+        });
 
-            if (message) {
-                messages.push(message);
-            }
+        if (message) {
+            messages.push(message);
         }
     });
 
