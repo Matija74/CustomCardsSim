@@ -993,7 +993,10 @@ function renderPlayerHand(player, handElementId, hidden) {
         sortButton.className = "hand-sort-button";
         sortButton.type = "button";
         sortButton.textContent = "Sort";
-        sortButton.title = "Sort hand by category, cost, then card ID.";
+        sortButton.title = canSortPlayerHand(player)
+            ? "Sort hand by category, cost, then card ID."
+            : "Finish current effect or combat step before sorting this hand.";
+        sortButton.disabled = !canSortPlayerHand(player);
 
         sortButton.addEventListener("click", async (event) => {
             event.stopPropagation();
@@ -1020,6 +1023,10 @@ async function sortPlayerHand(player) {
         return;
     }
 
+    if (!canSortPlayerHand(player)) {
+        return;
+    }
+
     const indexedHand = player.hand.map((card, index) => ({ card, index }));
 
     indexedHand.sort((left, right) => {
@@ -1036,9 +1043,26 @@ async function sortPlayerHand(player) {
 
     clearHandSelection();
     renderHands();
+}
 
-    addGameLog(`${player.name}'s hand was sorted.`);
+function canSortPlayerHand(player) {
+    if (!player) {
+        return false;
+    }
 
+    if (
+        pendingReplacePlay ||
+        pendingAttack ||
+        currentAttack ||
+        pendingBlock ||
+        pendingTrashChoice
+    ) {
+        return false;
+    }
+
+    return !document.getElementById("lookTopOverlay") &&
+        !document.getElementById("boardChoiceOverlay") &&
+        !document.getElementById("effectChoiceOverlay");
 }
 
 function getHandSortKey(card) {
@@ -4268,12 +4292,15 @@ function renderBasePowerBadge(card, container) {
         return;
     }
 
-    const basePower = getPrintedPower(card);
+    const basePower = Number(card?.power ?? 0);
+    const effectiveBasePower = getPrintedPower(card);
     const badge = document.createElement("div");
 
     badge.className = "base-power-badge";
     badge.textContent = `Base ${basePower}`;
-    badge.title = `Base power: ${basePower}`;
+    badge.title = effectiveBasePower !== basePower
+        ? `Printed base power: ${basePower}. Current effect base power: ${effectiveBasePower}.`
+        : `Base power: ${basePower}`;
 
     container.appendChild(badge);
 }

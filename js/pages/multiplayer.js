@@ -23,6 +23,7 @@ let pendingAttack = null;
 let currentAttack = null;
 let pendingBlock = null;
 let pendingTrashChoice = null;
+let pendingOpponentAttackEffect = null;
 
 const renderedBoardCardStates = new Map();
 
@@ -34,6 +35,9 @@ let gameState = null;
 let syncedLogMessages = [];
 let isApplyingMultiplayerState = false;
 let lastAutoPhaseAdvanceKey = null;
+let gameOverState = null;
+let pendingDeferredCombatChoices = 0;
+let deferredAttackCleanup = null;
 
 // =========================
 // UI Bridge
@@ -73,6 +77,18 @@ function getLocalPlayerKeyForCanonicalSlot(slot) {
     const localSlot = getMultiplayerLocalSlot();
 
     return slot === localSlot ? "player1" : "player2";
+}
+
+function getPlayerKeyForPlayer(player) {
+    if (player === gameState?.player1) {
+        return "player1";
+    }
+
+    if (player === gameState?.player2) {
+        return "player2";
+    }
+
+    return null;
 }
 
 function mapBoardCardDataToCanonical(boardCardData) {
@@ -304,6 +320,51 @@ function restoreBattleUiFromSyncedState() {
     if (currentAttack) {
         drawAttackArrow(currentAttack.attacker, currentAttack.target);
 
+        if (pendingOpponentAttackEffect) {
+            const defenderName = gameState[currentAttack.defenderPlayerKey]?.name ?? "Defender";
+
+            if (canLocalPlayerControlDefense(pendingOpponentAttackEffect.defenderPlayerKey)) {
+                showPendingOpponentAttackEffectChoice();
+            } else {
+                clearBattleControls();
+                const battleControls = document.getElementById("battleControls");
+
+                if (battleControls) {
+                    battleControls.appendChild(
+                        createWaitingDefenseButton(defenderName, "Waiting for Effects")
+                    );
+                }
+            }
+
+            return;
+        }
+
+        if (currentAttack.resolutionStep === "attackerEffects") {
+            if (isLocalMultiplayerPlayerKey(currentAttack.attackerPlayerKey)) {
+                continueAttackAfterDefenderResponses();
+            } else {
+                clearBattleControls();
+                const battleControls = document.getElementById("battleControls");
+                const attackerName = gameState[currentAttack.attackerPlayerKey]?.name ?? "Attacker";
+
+                if (battleControls) {
+                    battleControls.appendChild(
+                        createWaitingDefenseButton(attackerName, "Waiting for Attack Effects")
+                    );
+                }
+            }
+
+            return;
+        }
+
+        if (currentAttack.resolutionStep === "resolvingAttackerEffects") {
+            return;
+        }
+
+        if (currentAttack.resolutionStep && currentAttack.resolutionStep !== "readyForDefense") {
+            return;
+        }
+
         if (gameState.currentPhase === "counterPhase" || currentAttack.counterPhaseStarted) {
             showCounterPhaseControls(currentAttack.defenderPlayerKey, async () => {
                 await resolveCurrentAttack();
@@ -337,6 +398,7 @@ function renderFullGameState() {
     setupBoardLeaderSelection();
     setupCardPreview();
     syncPhaseButtonForCurrentState();
+    syncGameOverPopupForCurrentState();
 
     clearLocalSelectionsAndOverlays();
     restoreBattleUiFromSyncedState();
@@ -467,6 +529,20 @@ function createUiBridge() {
         chooseBoardCard: showBoardCardChoice,
         chooseEffectActivation,
         chooseEffectOption,
+        beginDeferredCombatResolution: () => {
+            pendingDeferredCombatChoices += 1;
+        },
+        endDeferredCombatResolution: () => {
+            pendingDeferredCombatChoices = Math.max(0, pendingDeferredCombatChoices - 1);
+
+            if (pendingDeferredCombatChoices === 0 && typeof deferredAttackCleanup === "function") {
+                const finalizeCleanup = deferredAttackCleanup;
+
+                deferredAttackCleanup = null;
+                finalizeCleanup();
+            }
+        },
+        hasDeferredCombatResolution: () => pendingDeferredCombatChoices > 0,
         revealCards: () => {}
     };
 }
@@ -718,9 +794,17 @@ function showGameOverPopup(winnerPlayer, reasonTitle = "Victory", reasonText = "
 
     const playAgainButton = document.createElement("button");
     playAgainButton.className = "game-over-button play-again";
+    playAgainButton.id = "playAgainButton";
     playAgainButton.textContent = "Play Again";
 
     playAgainButton.addEventListener("click", () => {
+        const runtime = getMultiplayerRuntime();
+
+        if (runtime?.isActive?.() && typeof runtime.handlePlayAgainClick === "function") {
+            runtime.handlePlayAgainClick();
+            return;
+        }
+
         window.location.reload();
     });
 
@@ -746,14 +830,39 @@ function removeGameOverPopup() {
     }
 }
 
+function syncGameOverPopupForCurrentState() {
+    if (gameState?.currentPhase !== "gameOver" || !gameOverState?.winnerPlayerKey) {
+        removeGameOverPopup();
+        return;
+    }
+
+    const winnerPlayer = gameState[gameOverState.winnerPlayerKey];
+
+    if (!winnerPlayer) {
+        return;
+    }
+
+    showGameOverPopup(
+        winnerPlayer,
+        gameOverState.reasonTitle || "Victory",
+        gameOverState.reasonText || ""
+    );
+}
+
 function endGame(winnerPlayer, reasonTitle = "Victory", reasonText = "") {
     gameState.currentPhase = "gameOver";
+    gameOverState = {
+        winnerPlayerKey: getPlayerKeyForPlayer(winnerPlayer),
+        reasonTitle,
+        reasonText
+    };
 
     pendingAttack = null;
     currentAttack = null;
     pendingBlock = null;
     pendingTrashChoice = null;
     pendingReplacePlay = null;
+    pendingOpponentAttackEffect = null;
 
     clearAttackTargets();
     clearBlockerTargets();
@@ -768,7 +877,7 @@ function endGame(winnerPlayer, reasonTitle = "Victory", reasonText = "") {
     addGameLog(`${winnerPlayer.name} wins the game! ${reasonTitle}: ${reasonText}`);
 
     showGameOverPopup(winnerPlayer, reasonTitle, reasonText);
-
+    queueMultiplayerStateSync();
 }
 
 // =========================
@@ -1371,7 +1480,10 @@ function renderPlayerHand(player, handElementId, hidden) {
         sortButton.className = "hand-sort-button";
         sortButton.type = "button";
         sortButton.textContent = "Sort";
-        sortButton.title = "Sort hand by category, cost, then card ID.";
+        sortButton.title = canSortPlayerHand(player)
+            ? "Sort hand by category, cost, then card ID."
+            : "Finish current effect or combat step before sorting your hand.";
+        sortButton.disabled = !canSortPlayerHand(player);
 
         sortButton.addEventListener("click", async (event) => {
             event.stopPropagation();
@@ -1400,6 +1512,10 @@ async function sortPlayerHand(player) {
         return;
     }
 
+    if (!canSortPlayerHand(player)) {
+        return;
+    }
+
     const indexedHand = player.hand.map((card, index) => ({ card, index }));
 
     indexedHand.sort((left, right) => {
@@ -1417,9 +1533,27 @@ async function sortPlayerHand(player) {
     clearHandSelection();
     renderHands();
 
-    addGameLog(`${player.name}'s hand was sorted.`);
-    queueMultiplayerStateSync();
+}
 
+function canSortPlayerHand(player) {
+    if (!player || player !== gameState?.player1) {
+        return false;
+    }
+
+    if (
+        pendingReplacePlay ||
+        pendingAttack ||
+        currentAttack ||
+        pendingBlock ||
+        pendingTrashChoice ||
+        pendingOpponentAttackEffect
+    ) {
+        return false;
+    }
+
+    return !document.getElementById("effectChoiceOverlay") &&
+        !document.getElementById("lookTopOverlay") &&
+        !document.getElementById("boardChoiceOverlay");
 }
 
 function getHandSortKey(card) {
@@ -2228,6 +2362,7 @@ function showSelectedBoardActions() {
     const card = getSelectedBoardCardObject();
 
     if (!player || !card) return;
+    if (!isLocalMultiplayerPlayerKey(selectedBoardCardData.playerKey)) return;
 
     const actionButtons = [];
     const attackButton = document.createElement("button");
@@ -2298,6 +2433,10 @@ function showSelectedBoardActions() {
 
 function canAttachDonToBoardCard(player, card) {
     if (!player || !card) {
+        return false;
+    }
+
+    if (!isLocalMultiplayerPlayerKey(getPlayerKeyForPlayer(player))) {
         return false;
     }
 
@@ -2388,6 +2527,10 @@ function getActivateMainEffect(card) {
 
 function canUseActivateMainEffect(player, card, effect) {
     if (!player || !card || !effect) {
+        return false;
+    }
+
+    if (!isLocalMultiplayerPlayerKey(getPlayerKeyForPlayer(player))) {
         return false;
     }
 
@@ -2815,6 +2958,17 @@ function showResolveAttackButton(defenderPlayerKey, onResolve) {
 
     clearBattleControls();
 
+    if (currentAttack?.resolutionStep && currentAttack.resolutionStep !== "readyForDefense") {
+        const waitingOn = currentAttack.resolutionStep === "attackerEffects"
+            ? gameState[currentAttack.attackerPlayerKey]?.name ?? "Attacker"
+            : gameState[defenderPlayerKey]?.name ?? "Defender";
+
+        battleControls.appendChild(
+            createWaitingDefenseButton(waitingOn, "Waiting")
+        );
+        return;
+    }
+
     const attackerCard = currentAttack
         ? getBoardCardFromData(currentAttack.attacker)
         : null;
@@ -2854,6 +3008,17 @@ function showCounterPhaseControls(defenderPlayerKey, onResolve) {
     const battleControls = document.getElementById("battleControls");
 
     if (!battleControls) return;
+
+    if (currentAttack?.resolutionStep && currentAttack.resolutionStep !== "readyForDefense") {
+        clearBattleControls();
+        battleControls.appendChild(
+            createWaitingDefenseButton(
+                gameState[currentAttack.attackerPlayerKey]?.name ?? "Attacker",
+                "Waiting"
+            )
+        );
+        return;
+    }
 
     if (currentAttack) {
         currentAttack.counterPhaseStarted = true;
@@ -3077,7 +3242,8 @@ function beginAttack(targetData) {
         target: { ...targetData },
         attackerPlayerKey: pendingAttack.attackerPlayerKey,
         defenderPlayerKey: pendingAttack.defenderPlayerKey,
-        targetPowerBonus: 0
+        targetPowerBonus: 0,
+        resolutionStep: "defenderResponses"
     };
 
     if (attackerData.cardType === "leader") {
@@ -3101,18 +3267,6 @@ function beginAttack(targetData) {
         `${attackerPlayer.name}'s ${attackerCard.name} attacks ${defenderPlayer.name}'s ${targetCard.name}.`
     );
 
-    const continueAfterDefenderResponses = () => {
-        resolveWhenAttackingEffectsBeforeBattle(
-            attackerPlayer,
-            attackerData,
-            () => {
-                showResolveAttackButton(currentAttack.defenderPlayerKey, () => {
-                    resolveCurrentAttack();
-                });
-            }
-        );
-    };
-
     CardEffects.resolveWhenOpponentAttacksStageEffects(
         gameState,
         defenderPlayer,
@@ -3121,54 +3275,192 @@ function beginAttack(targetData) {
         addGameLog(result.message);
     });
 
-    promptOnOpponentAttackCharacterEffects(defenderPlayer, continueAfterDefenderResponses);
+    promptOnOpponentAttackCharacterEffects(defenderPlayer);
     queueMultiplayerStateSync();
 }
 
-function promptOnOpponentAttackCharacterEffects(defenderPlayer, onComplete) {
-    const playerKey = defenderPlayer === gameState.player1 ? "player1" : "player2";
+function continueAttackAfterDefenderResponses() {
+    if (
+        !currentAttack ||
+        currentAttack.resolutionStep === "readyForDefense" ||
+        currentAttack.resolutionStep === "resolvingAttackerEffects"
+    ) {
+        return;
+    }
 
-    const effects = defenderPlayer.characters
-        .map((card, slotIndex) => ({ card, slotIndex }))
-        .filter(entry => entry.card?.effects?.some(effect => effect.type === "onOpponentAttack"));
+    currentAttack.resolutionStep = "resolvingAttackerEffects";
 
-    const promptNext = (index) => {
-        const entry = effects[index];
+    const attackerPlayer = gameState[currentAttack.attackerPlayerKey];
+    const attackerData = currentAttack.attacker
+        ? { ...currentAttack.attacker }
+        : null;
 
-        if (!entry) {
-            if (typeof onComplete === "function") {
-                onComplete();
+    if (!attackerPlayer || !attackerData) {
+        return;
+    }
+
+    resolveWhenAttackingEffectsBeforeBattle(
+        attackerPlayer,
+        attackerData,
+        () => {
+            if (!currentAttack) {
+                return;
             }
 
+            currentAttack.resolutionStep = "readyForDefense";
+            showResolveAttackButton(currentAttack.defenderPlayerKey, () => {
+                resolveCurrentAttack();
+            });
+            queueMultiplayerStateSync();
+        }
+    );
+}
+
+function promptOnOpponentAttackCharacterEffects(defenderPlayer) {
+    const defenderPlayerKey = getPlayerKeyForPlayer(defenderPlayer);
+
+    if (!defenderPlayerKey) {
+        continueAttackAfterDefenderResponses();
+        return;
+    }
+
+    const entries = defenderPlayer.characters
+        .map((card, slotIndex) => ({
+            slotIndex,
+            hasEffect: card?.effects?.some(effect => effect.type === "onOpponentAttack")
+        }))
+        .filter(entry => entry.hasEffect)
+        .map(entry => ({ slotIndex: entry.slotIndex }));
+
+    if (entries.length === 0) {
+        continueAttackAfterDefenderResponses();
+        return;
+    }
+
+    pendingOpponentAttackEffect = {
+        defenderPlayerKey,
+        entries,
+        currentIndex: 0
+    };
+
+    showPendingOpponentAttackEffectChoice();
+    queueMultiplayerStateSync();
+}
+
+function getCurrentPendingOnOpponentAttackEffect() {
+    if (!pendingOpponentAttackEffect) {
+        return null;
+    }
+
+    const defenderPlayer = gameState?.[pendingOpponentAttackEffect.defenderPlayerKey];
+    const entry = pendingOpponentAttackEffect.entries[pendingOpponentAttackEffect.currentIndex];
+
+    if (!defenderPlayer || !entry) {
+        return null;
+    }
+
+    const currentCard = defenderPlayer.characters?.[entry.slotIndex];
+    const effect = currentCard?.effects?.find(cardEffect => cardEffect.type === "onOpponentAttack");
+
+    if (!currentCard || !effect) {
+        return null;
+    }
+
+    return {
+        defenderPlayer,
+        entry,
+        currentCard,
+        effect
+    };
+}
+
+function finishPendingOnOpponentAttackEffects() {
+    pendingOpponentAttackEffect = null;
+    removeEffectChoiceOverlay();
+
+    if (!currentAttack) {
+        queueMultiplayerStateSync();
+        return;
+    }
+
+    currentAttack.resolutionStep = "attackerEffects";
+
+    if (currentAttack.attackerPlayerKey === "player1") {
+        continueAttackAfterDefenderResponses();
+        return;
+    }
+
+    queueMultiplayerStateSync();
+}
+
+function advancePendingOnOpponentAttackEffect() {
+    if (!pendingOpponentAttackEffect) {
+        return;
+    }
+
+    pendingOpponentAttackEffect.currentIndex += 1;
+
+    while (pendingOpponentAttackEffect) {
+        if (getCurrentPendingOnOpponentAttackEffect()) {
+            showPendingOpponentAttackEffectChoice();
+            queueMultiplayerStateSync();
             return;
         }
 
-        const currentCard = defenderPlayer.characters[entry.slotIndex];
-        const effect = currentCard?.effects?.find(cardEffect => cardEffect.type === "onOpponentAttack");
-
-        if (!currentCard || !effect) {
-            promptNext(index + 1);
-            return;
+        if (pendingOpponentAttackEffect.currentIndex >= pendingOpponentAttackEffect.entries.length - 1) {
+            break;
         }
 
-        chooseEffectActivation({
-            player: defenderPlayer,
-            sourceCard: currentCard,
-            effect,
-            title: currentCard.name,
-            prompt: effect.text || "Activate this On Your Opponent's Attack effect?",
-            activateText: "Activate",
-            skipText: "Skip",
-            onComplete: (shouldActivate) => {
-                if (!shouldActivate) {
-                    addGameLog(`${defenderPlayer.name} skipped ${currentCard.name}'s On Your Opponent's Attack effect.`);
-                    promptNext(index + 1);
-                    return;
-                }
+        pendingOpponentAttackEffect.currentIndex += 1;
+    }
 
-                if (effect.actionId === "trashThisDrawOne") {
-                    const trashedCard = defenderPlayer.characters[entry.slotIndex];
+    finishPendingOnOpponentAttackEffects();
+}
 
+function showPendingOpponentAttackEffectChoice() {
+    if (!pendingOpponentAttackEffect) {
+        return;
+    }
+
+    if (!canLocalPlayerControlDefense(pendingOpponentAttackEffect.defenderPlayerKey)) {
+        removeEffectChoiceOverlay();
+        return;
+    }
+
+    const effectState = getCurrentPendingOnOpponentAttackEffect();
+
+    if (!effectState) {
+        advancePendingOnOpponentAttackEffect();
+        return;
+    }
+
+    const {
+        defenderPlayer,
+        entry,
+        currentCard,
+        effect
+    } = effectState;
+    const defenderPlayerKey = pendingOpponentAttackEffect.defenderPlayerKey;
+
+    chooseEffectActivation({
+        player: defenderPlayer,
+        sourceCard: currentCard,
+        effect,
+        title: currentCard.name,
+        prompt: effect.text || "Activate this On Your Opponent's Attack effect?",
+        activateText: "Activate",
+        skipText: "Skip",
+        onComplete: (shouldActivate) => {
+            if (!shouldActivate) {
+                addGameLog(`${defenderPlayer.name} skipped ${currentCard.name}'s On Your Opponent's Attack effect.`);
+                advancePendingOnOpponentAttackEffect();
+                return;
+            }
+
+            if (effect.actionId === "trashThisDrawOne") {
+                const trashedCard = defenderPlayer.characters[entry.slotIndex];
+
+                if (trashedCard) {
                     defenderPlayer.characters[entry.slotIndex] = null;
                     moveCardToTrash(defenderPlayer, trashedCard, ui);
                     resolveGutsLeaderCharacterRemovedBonus(defenderPlayer, ui);
@@ -3181,20 +3473,18 @@ function promptOnOpponentAttackCharacterEffects(defenderPlayer, onComplete) {
                     addGameLog(`${defenderPlayer.name} trashed ${trashedCard.name} and drew 1 card.`);
 
                     if (
-                        currentAttack?.target?.playerKey === playerKey &&
+                        currentAttack?.target?.playerKey === defenderPlayerKey &&
                         currentAttack.target.cardType === "character" &&
                         currentAttack.target.slotIndex === entry.slotIndex
                     ) {
                         addGameLog(`${trashedCard.name} left the field, so the attack target is gone.`);
                     }
                 }
-
-                promptNext(index + 1);
             }
-        });
-    };
 
-    promptNext(0);
+            advancePendingOnOpponentAttackEffect();
+        }
+    });
 }
 
 function resolveWhenAttackingEffectsBeforeBattle(attackerPlayer, attackerData, onComplete) {
@@ -3459,32 +3749,41 @@ async function resolveCurrentAttack() {
         ${battleResultText}
     `);
 
-    clearBattleOnlyEffectsForCurrentAttack(attackerCard, targetCard);
+    const finalizeAttackResolution = () => {
+        clearBattleOnlyEffectsForCurrentAttack(attackerCard, targetCard);
 
-    currentAttack = null;
-    pendingAttack = null;
-    pendingBlock = null;
+        currentAttack = null;
+        pendingAttack = null;
+        pendingBlock = null;
 
-    clearAttackTargets();
-    clearBlockerTargets();
-    clearBattleControls();
-    clearAttackArrow();
+        clearAttackTargets();
+        clearBlockerTargets();
+        clearBattleControls();
+        clearAttackArrow();
 
-    renderLeaders();
-    renderCharacters();
+        renderLeaders();
+        renderCharacters();
 
-    if (gameWinner) {
-        endGame(
-            gameWinner,
-            "Final Attack",
-            `${defenderPlayer.name} had no life cards left and took a successful leader attack.`
-        );
+        if (gameWinner) {
+            endGame(
+                gameWinner,
+                "Final Attack",
+                `${defenderPlayer.name} had no life cards left and took a successful leader attack.`
+            );
+            queueMultiplayerStateSync();
+            return;
+        }
+
+        gameState.currentPhase = "main";
         queueMultiplayerStateSync();
+    };
+
+    if (ui?.hasDeferredCombatResolution?.()) {
+        deferredAttackCleanup = finalizeAttackResolution;
         return;
     }
 
-    gameState.currentPhase = "main";
-    queueMultiplayerStateSync();
+    finalizeAttackResolution();
 }
 
 function clearBattleOnlyEffectsForCurrentAttack(attackerCard, targetCard) {
@@ -4222,6 +4521,10 @@ function canSelectedBoardCardAttack() {
         return false;
     }
 
+    if (!isLocalMultiplayerPlayerKey(selectedBoardCardData.playerKey)) {
+        return false;
+    }
+
     if (gameState.currentPhase !== "main") {
         return false;
     }
@@ -4711,12 +5014,15 @@ function renderBasePowerBadge(card, container) {
         return;
     }
 
-    const basePower = getPrintedPower(card);
+    const basePower = Number(card?.power ?? 0);
+    const effectiveBasePower = getPrintedPower(card);
     const badge = document.createElement("div");
 
     badge.className = "base-power-badge";
     badge.textContent = `Base ${basePower}`;
-    badge.title = `Base power: ${basePower}`;
+    badge.title = effectiveBasePower !== basePower
+        ? `Printed base power: ${basePower}. Current effect base power: ${effectiveBasePower}.`
+        : `Base power: ${basePower}`;
 
     container.appendChild(badge);
 }
@@ -4814,6 +5120,9 @@ function exportMultiplayerSharedState() {
         currentPlayerSlot: gameState.currentPlayer?.multiplayerSlot || null,
         turnNumber: Number(gameState.turnNumber || 1),
         currentPhase: gameState.currentPhase || "diceRoll",
+        gameOver: gameOverState
+            ? cloneSerializableValue(gameOverState)
+            : null,
         battle: {
             pendingAttack: pendingAttack
                 ? {
@@ -4842,6 +5151,12 @@ function exportMultiplayerSharedState() {
                     ...cloneSerializableValue(pendingTrashChoice),
                     playerKey: getCanonicalSlotForLocalPlayerKey(pendingTrashChoice.playerKey),
                     onComplete: null
+                }
+                : null,
+            pendingOpponentAttackEffect: pendingOpponentAttackEffect
+                ? {
+                    ...cloneSerializableValue(pendingOpponentAttackEffect),
+                    defenderPlayerKey: getCanonicalSlotForLocalPlayerKey(pendingOpponentAttackEffect.defenderPlayerKey)
                 }
                 : null
         },
@@ -4923,6 +5238,15 @@ function applyMultiplayerSharedState(snapshot) {
                 playerKey: getLocalPlayerKeyForCanonicalSlot(snapshot.battle.pendingTrashChoice.playerKey),
                 onComplete: null
             }
+            : null;
+        pendingOpponentAttackEffect = snapshot.battle?.pendingOpponentAttackEffect
+            ? {
+                ...cloneSerializableValue(snapshot.battle.pendingOpponentAttackEffect),
+                defenderPlayerKey: getLocalPlayerKeyForCanonicalSlot(snapshot.battle.pendingOpponentAttackEffect.defenderPlayerKey)
+            }
+            : null;
+        gameOverState = snapshot.gameOver
+            ? cloneSerializableValue(snapshot.gameOver)
             : null;
         syncedLogMessages = Array.isArray(snapshot.logs)
             ? cloneSerializableValue(snapshot.logs)

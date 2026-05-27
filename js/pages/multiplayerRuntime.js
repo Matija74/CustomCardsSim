@@ -8,6 +8,7 @@ import {
     rollMultiplayerDice,
     chooseMultiplayerTurnOrder,
     setMultiplayerMulligan,
+    requestRematch,
     setPlayerDeck,
     setPlayerReady,
     startMatch,
@@ -33,6 +34,9 @@ let lastDiceRenderKey = null;
 window.__multiplayerRuntime = {
     getLocalSlot: () => localSlot,
     isActive: () => Boolean(roomCode && localSlot),
+    handlePlayAgainClick: () => runPregameAction("Rematch failed", async () => {
+        await requestRematch(roomCode, localSlot);
+    }),
     scheduleStateSync
 };
 
@@ -150,11 +154,19 @@ function buildSnapshotFromRoom(match, privateState, options = {}) {
         currentPlayerSlot: publicState.currentPlayer || null,
         turnNumber: Number(publicState.turnNumber || 1),
         currentPhase: publicState.phase || "waiting",
+        gameOver: publicState.winner
+            ? {
+                winnerPlayerKey: publicState.winner === localSlot ? "player1" : "player2",
+                reasonTitle: publicState.gameOverReasonTitle || "Victory",
+                reasonText: publicState.gameOverReasonText || ""
+            }
+            : null,
         battle: {
             pendingAttack: null,
             currentAttack: null,
             pendingBlock: null,
-            pendingTrashChoice: null
+            pendingTrashChoice: null,
+            pendingOpponentAttackEffect: null
         },
         logs: options.logs || buildPregameLogs(match)
     };
@@ -178,14 +190,41 @@ function buildSharedSnapshotFromFullMatch(match) {
         currentPlayerSlot: publicState.currentPlayer || null,
         turnNumber: Number(publicState.turnNumber || 1),
         currentPhase: publicState.phase || "main",
+        gameOver: publicState.winner
+            ? {
+                winnerPlayerKey: publicState.winner === "p1" ? "player1" : "player2",
+                reasonTitle: publicState.gameOverReasonTitle || "Victory",
+                reasonText: publicState.gameOverReasonText || ""
+            }
+            : null,
         battle: {
             pendingAttack: null,
             currentAttack: null,
             pendingBlock: null,
-            pendingTrashChoice: null
+            pendingTrashChoice: null,
+            pendingOpponentAttackEffect: null
         },
         logs: buildPregameLogs(match)
     };
+}
+
+function syncRematchButtonState(match) {
+    const button = document.getElementById("playAgainButton");
+
+    if (!button || !localSlot) {
+        return;
+    }
+
+    const rematch = match?.public?.rematch || {};
+    const localReady = Boolean(rematch[localSlot]);
+    const opponentReady = Boolean(rematch[getOpponentSlot(localSlot)]);
+
+    button.disabled = localReady;
+    button.textContent = localReady
+        ? opponentReady
+            ? "Restarting..."
+            : "Waiting For Opponent"
+        : "Play Again";
 }
 
 function buildPregameLogs(match) {
@@ -600,11 +639,13 @@ async function handlePublicMatchUpdate(match) {
     await maybeInitializeServiceMatch(match);
 
     if (applySharedStateIfNeeded(match)) {
+        syncRematchButtonState(match);
         removeChoiceButtons();
         return;
     }
 
     applyPregameSnapshot(match);
+    syncRematchButtonState(match);
     renderPregameControls(match);
     await maybeCreateSharedState(match);
 }

@@ -484,11 +484,16 @@ export async function initializeMultiplayerGame(roomCode) {
         status: "started",
         updatedAt: serverTimestamp(),
         "public/phase": "diceRoll",
+        "public/sharedState": null,
         "public/currentPlayer": null,
         "public/turnNumber": 0,
         "public/winner": null,
         "public/gameOverReasonTitle": null,
         "public/gameOverReasonText": null,
+        "public/rematch": {
+            p1: false,
+            p2: false
+        },
         "public/firstPlayer": null,
         "public/secondPlayer": null,
         "public/playerTurns": {
@@ -873,6 +878,32 @@ export async function passTurn(roomCode, currentPlayer) {
 
 export async function startMatch(roomCode) {
     await initializeMultiplayerGame(roomCode);
+}
+
+export async function requestRematch(roomCode, playerSlot) {
+    if (playerSlot !== "p1" && playerSlot !== "p2") {
+        throw new Error("Invalid player slot.");
+    }
+
+    const matchRef = ref(database, `matches/${cleanRoomCode(roomCode)}`);
+
+    await update(matchRef, {
+        updatedAt: serverTimestamp(),
+        [`public/rematch/${playerSlot}`]: true
+    });
+
+    const snapshot = await get(matchRef);
+
+    if (!snapshot.exists()) {
+        throw new Error("Room does not exist.");
+    }
+
+    const match = snapshot.val();
+    const rematch = match.public?.rematch || {};
+
+    if (rematch.p1 && rematch.p2) {
+        await initializeMultiplayerGame(roomCode);
+    }
 }
 
 export async function deleteRoom(roomCode) {

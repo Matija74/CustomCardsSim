@@ -1349,6 +1349,18 @@ function resolveCopiedBoardAbility(player, sourceCard, copiedEffect, ui, copiedF
 
     const gainedKeywords = copyTemporaryRelevantKeywords(sourceCard, copiedFromCard);
 
+    if (copiedEffect.type === "whenAttacking") {
+        const message = resolveImmediateCopiedWhenAttackingEffect(
+            player,
+            sourceCard,
+            copiedEffect,
+            ui,
+            copiedFromCard
+        );
+
+        return appendCopiedKeywordMessage(message, gainedKeywords);
+    }
+
     if (
         copiedEffect.type === "continuous" ||
         copiedEffect.type === "yourTurn" ||
@@ -1437,11 +1449,114 @@ function resolveCopiedBoardAbility(player, sourceCard, copiedEffect, ui, copiedF
     }), gainedKeywords);
 }
 
+function resolveImmediateCopiedWhenAttackingEffect(player, sourceCard, copiedEffect, ui, copiedFromCard) {
+    if (copiedEffect.id === "DD01-001-when-attacking-active") {
+        sourceCard.state = "active";
+
+        if (ui?.renderLeaders) {
+            ui.renderLeaders();
+        }
+
+        if (ui?.renderCharacters) {
+            ui.renderCharacters();
+        }
+
+        return `${sourceCard.name} copied ${copiedFromCard.name}'s ability and set itself active.`;
+    }
+
+    if (copiedEffect.id === "DD01-006-when-attacking-active") {
+        sourceCard.state = "active";
+
+        if (ui?.renderCharacters) {
+            ui.renderCharacters();
+        }
+
+        return `${sourceCard.name} copied ${copiedFromCard.name}'s ability and set itself active.`;
+    }
+
+    if (copiedEffect.id === "EGG1-001-when-attacking-power") {
+        const message = giveSmallEggmanCharacterPower(player, sourceCard, ui);
+        return message || `${sourceCard.name} copied ${copiedFromCard.name}'s ability.`;
+    }
+
+    if (copiedEffect.id === "BL01-009-when-attacking-ichigo-power") {
+        const message = chooseOwnBoardCard(player, sourceCard, {
+            prompt: "Choose up to 1 Kurosaki Ichigo to give +1000 power this turn.",
+            optional: true,
+            includeLeader: true,
+            filter: card => CardEffects.hasCardName(card, "Kurosaki Ichigo"),
+            onSelect: ({ card }) => {
+                addTemporaryPowerBonus(card, 1000);
+                ui.renderLeaders();
+                ui.renderCharacters();
+                addGameLog(`${sourceCard.name} gave ${card.name} +1000 power this turn.`);
+            },
+            skipMessage: `${player.name} did not choose a Kurosaki Ichigo for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no Kurosaki Ichigo cards.`
+        });
+
+        return message || `${sourceCard.name} copied ${copiedFromCard.name}'s ability.`;
+    }
+
+    if (copiedEffect.id === "BL01-011-when-attacking-don-power") {
+        if (Number(sourceCard.attachedDon || 0) < 1) {
+            return `${sourceCard.name} copied ${copiedFromCard.name}'s ability but had no attached DON!! to meet the condition.`;
+        }
+
+        addTemporaryPowerBonus(sourceCard, 3000);
+
+        if (ui?.renderCharacters) {
+            ui.renderCharacters();
+        }
+
+        return `${sourceCard.name} copied ${copiedFromCard.name}'s ability and gained +3000 power this turn.`;
+    }
+
+    if (copiedEffect.id === "BL01-014-when-attacking-minus-ko") {
+        const chooseKOTarget = () => {
+            const koMessage = chooseOpponentCharacter(player, sourceCard, {
+                prompt: "Choose up to 1 opposing character with 4000 power or less to K.O.",
+                optional: true,
+                filter: card => getCardBattlePower(card, getPlayerForBoardCard(card)) <= 4000,
+                onSelect: ({ playerKey, slotIndex }) => {
+                    addGameLog(removeCharacterByOpponentEffect(player, gameState[playerKey], slotIndex, sourceCard, ui));
+                },
+                skipMessage: `${player.name} did not K.O. a character with ${sourceCard.name}.`,
+                emptyMessage: `${sourceCard.name} found no opposing characters with 4000 power or less.`
+            });
+
+            addGameLog(koMessage);
+        };
+
+        const message = chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing character to give -1000 power this turn.",
+            optional: true,
+            onSelect: ({ card }) => {
+                addTemporaryPowerBonus(card, -1000);
+                ui.renderCharacters();
+                addGameLog(`${sourceCard.name} gave ${card.name} -1000 power this turn.`);
+                chooseKOTarget();
+            },
+            onSkip: chooseKOTarget,
+            onEmpty: chooseKOTarget,
+            skipMessage: `${player.name} did not reduce a character's power with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no opposing characters for power reduction.`
+        });
+
+        return message || `${sourceCard.name} copied ${copiedFromCard.name}'s ability.`;
+    }
+
+    const message = resolveEffectAction(player, sourceCard, copiedEffect, ui, {
+        skipActivationPrompt: true
+    });
+
+    return message || `${sourceCard.name} copied ${copiedFromCard.name}'s ${getEffectLabel(copiedEffect)} effect.`;
+}
+
 function getCopyableEffects(card) {
     const excludedTypes = new Set([
         "gameStart",
-        "manualReview",
-        "onOpponentDealsDamage"
+        "manualReview"
     ]);
 
     return getCardAllEffects(card)
@@ -2436,10 +2551,15 @@ function searchGetsugaTenshoFromDeck(player, sourceCard, ui) {
     }
 
     const cardIndex = player.deck.findIndex(card => {
-        return card.cardType === "event" && CardEffects.hasCardName(card, "Getsuga Tensho");
+        return String(card?.cardType || "").toLowerCase() === "event" &&
+            CardEffects.hasCardName(card, "Getsuga Tensho");
     });
 
-    if (cardIndex === -1) {
+    const fallbackIndex = cardIndex !== -1
+        ? cardIndex
+        : player.deck.findIndex(card => CardEffects.hasCardName(card, "Getsuga Tensho"));
+
+    if (fallbackIndex === -1) {
         shuffleDeck(player.deck);
 
         if (ui?.renderDecks) {
@@ -2449,7 +2569,7 @@ function searchGetsugaTenshoFromDeck(player, sourceCard, ui) {
         return `${sourceCard.name} found no Getsuga Tensho in the deck. ${player.name} shuffled the deck.`;
     }
 
-    const foundCard = player.deck.splice(cardIndex, 1)[0];
+    const foundCard = player.deck.splice(fallbackIndex, 1)[0];
 
     player.hand.push(foundCard);
     shuffleDeck(player.deck);
@@ -3582,6 +3702,7 @@ function promptLifeCardTriggerChoice(player, card, triggerEffects, ui) {
     const hasTrigger = triggerEffects.length > 0;
     const autoSkipNoTrigger = !hasTrigger && window.isGameSettingEnabled?.("autoSkipTrigger");
     const confirmTrigger = hasTrigger && window.isGameSettingEnabled?.("confirmTrigger");
+    let deferredCombatResolution = false;
 
     const activateTrigger = () => {
         resolveTriggerEffects(player, card, triggerEffects, ui, {
@@ -3605,6 +3726,11 @@ function promptLifeCardTriggerChoice(player, card, triggerEffects, ui) {
     }
 
     if (ui && typeof ui.chooseEffectOption === "function") {
+        if (typeof currentAttack !== "undefined" && currentAttack && typeof ui.beginDeferredCombatResolution === "function") {
+            ui.beginDeferredCombatResolution();
+            deferredCombatResolution = true;
+        }
+
         ui.chooseEffectOption({
             player,
             sourceCard: card,
@@ -3631,12 +3757,18 @@ function promptLifeCardTriggerChoice(player, card, triggerEffects, ui) {
                 }
             ],
             onComplete: (choice) => {
-                if (choice === "trigger") {
-                    activateTrigger();
-                    return;
-                }
+                try {
+                    if (choice === "trigger") {
+                        activateTrigger();
+                        return;
+                    }
 
-                addToHand();
+                    addToHand();
+                } finally {
+                    if (deferredCombatResolution && typeof ui.endDeferredCombatResolution === "function") {
+                        ui.endDeferredCombatResolution();
+                    }
+                }
             }
         });
 
