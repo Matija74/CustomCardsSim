@@ -550,9 +550,9 @@ function areOpponentReplacementEffectsNegated(targetPlayer, actingPlayer) {
     return Boolean(targetPlayer && actingPlayer && targetPlayer !== actingPlayer && controlsReplacementNegation(actingPlayer));
 }
 
-function playCardFromDeckWithoutCost(player, sourceCard, card, ui) {
+function playCardFromDeckWithoutCost(player, sourceCard, card, ui, sourceZoneLabel = "deck") {
     if (!player || !card) {
-        return `${sourceCard.name} could not play that card from the deck.`;
+        return `${sourceCard.name} could not play that card from the ${sourceZoneLabel}.`;
     }
 
     if (card.cardType === "character") {
@@ -571,8 +571,8 @@ function playCardFromDeckWithoutCost(player, sourceCard, card, ui) {
 
         ui?.renderCharacters?.();
         return effectMessages.length > 0
-            ? `${sourceCard.name} played ${card.name} from the deck. ${effectMessages.join(" ")}`
-            : `${sourceCard.name} played ${card.name} from the deck.`;
+            ? `${sourceCard.name} played ${card.name} from the ${sourceZoneLabel}. ${effectMessages.join(" ")}`
+            : `${sourceCard.name} played ${card.name} from the ${sourceZoneLabel}.`;
     }
 
     if (card.cardType === "stage") {
@@ -594,8 +594,8 @@ function playCardFromDeckWithoutCost(player, sourceCard, card, ui) {
 
         ui?.renderStages?.();
         return effectMessages.length > 0
-            ? `${sourceCard.name} played ${card.name} from the deck. ${effectMessages.join(" ")}`
-            : `${sourceCard.name} played ${card.name} from the deck.`;
+            ? `${sourceCard.name} played ${card.name} from the ${sourceZoneLabel}. ${effectMessages.join(" ")}`
+            : `${sourceCard.name} played ${card.name} from the ${sourceZoneLabel}.`;
     }
 
     if (card.cardType === "event") {
@@ -606,11 +606,11 @@ function playCardFromDeckWithoutCost(player, sourceCard, card, ui) {
         moveCardToTrash(player, card, ui);
 
         return effectMessages.length > 0
-            ? `${sourceCard.name} played ${card.name} from the deck. ${effectMessages.join(" ")}`
-            : `${sourceCard.name} played ${card.name} from the deck.`;
+            ? `${sourceCard.name} played ${card.name} from the ${sourceZoneLabel}. ${effectMessages.join(" ")}`
+            : `${sourceCard.name} played ${card.name} from the ${sourceZoneLabel}.`;
     }
 
-    return `${sourceCard.name} found ${card.name}, but that card type cannot be played from the deck.`;
+    return `${sourceCard.name} found ${card.name}, but that card type cannot be played from the ${sourceZoneLabel}.`;
 }
 
 function resolveJeremicOnPlay(player, sourceCard, ui) {
@@ -649,7 +649,7 @@ function resolveJeremicOnPlay(player, sourceCard, ui) {
         }
 
         const playedCard = player.deck.splice(deckIndex, 1)[0];
-        const message = playCardFromDeckWithoutCost(player, sourceCard, playedCard, ui);
+        const message = playCardFromDeckWithoutCost(player, sourceCard, playedCard, ui, "deck");
 
         shuffleDeck(player.deck);
         ui?.renderDecks?.();
@@ -4502,6 +4502,10 @@ function getPlayerFieldDonCount(player) {
     return Number(player.don || 0) + Number(player.restedDon || 0) + attachedDon;
 }
 
+function getTotalDonInPlay(player) {
+    return getPlayerFieldDonCount(player);
+}
+
 function resolveCounterEffects(player, card, ui) {
     const messages = [];
 
@@ -4668,8 +4672,26 @@ function resolveDavidTaglavnovicCharacterMain(player, sourceCard, ui) {
 
     const opponent = getOpponentPlayer(player);
     const maxCost = getTotalDonInPlay(opponent);
-    const handChoices = getHandCardChoices(player, card => card?.cardNumber === "POG1-012" && Number(card.cost ?? 0) <= maxCost);
-    const trashChoices = getCharacterTrashChoices(player, card => card?.cardNumber === "POG1-012" && Number(card.cost ?? 0) <= maxCost);
+    const handChoices = player.hand
+        .map((card, handIndex) => ({
+            zone: "hand",
+            handIndex,
+            card
+        }))
+        .filter(entry => {
+            return entry.card?.cardNumber === "POG1-012" &&
+                Number(entry.card.cost ?? 0) <= maxCost;
+        });
+    const trashChoices = player.trash
+        .map((card, trashIndex) => ({
+            zone: "trash",
+            trashIndex,
+            card
+        }))
+        .filter(entry => {
+            return entry.card?.cardNumber === "POG1-012" &&
+                Number(entry.card.cost ?? 0) <= maxCost;
+        });
     const choices = [...handChoices, ...trashChoices];
 
     if (choices.length === 0) {
@@ -4690,9 +4712,9 @@ function resolveDavidTaglavnovicCharacterMain(player, sourceCard, ui) {
 
         let playedCard = null;
 
-        if (choice.cardType === "hand") {
+        if (choice.zone === "hand") {
             playedCard = player.hand.splice(choice.handIndex, 1)[0];
-        } else if (choice.cardType === "trash") {
+        } else if (choice.zone === "trash") {
             playedCard = player.trash.splice(choice.trashIndex, 1)[0];
         }
 
@@ -4701,7 +4723,13 @@ function resolveDavidTaglavnovicCharacterMain(player, sourceCard, ui) {
             return;
         }
 
-        const message = playCardFromDeckWithoutCost(player, sourceCard, playedCard, ui);
+        const message = playCardFromDeckWithoutCost(
+            player,
+            sourceCard,
+            playedCard,
+            ui,
+            choice.zone === "hand" ? "hand" : "trash"
+        );
         addGameLog(
             linkedStageMessage
                 ? `${message} ${linkedStageMessage}`
@@ -4709,14 +4737,32 @@ function resolveDavidTaglavnovicCharacterMain(player, sourceCard, ui) {
         );
     };
 
-    if (ui?.chooseBoardCard) {
-        ui.chooseBoardCard({
+    if (ui?.chooseEffectOption) {
+        ui.chooseEffectOption({
             player,
             sourceCard,
-            prompt: `Choose up to 1 B.R.A.N.K.O. from your hand or trash with cost ${maxCost} or less to play.`,
-            choices,
-            optional: true,
-            onComplete: completePlay
+            title: sourceCard.name,
+            prompt: `Choose a B.R.A.N.K.O. from your hand or trash with cost ${maxCost} or less to play.`,
+            options: [
+                ...choices.map((choice, index) => ({
+                    label: `${choice.zone === "hand" ? "Hand" : "Trash"}: ${choice.card.name} (${choice.card.cost})`,
+                    value: index
+                })),
+                {
+                    label: "Skip",
+                    value: null,
+                    secondary: true
+                }
+            ],
+            onComplete: (selectedIndex) => {
+                const selectedChoice = selectedIndex === null
+                    ? null
+                    : Number.isInteger(selectedIndex)
+                    ? choices[selectedIndex]
+                    : choices[Number(selectedIndex)];
+
+                completePlay(selectedChoice);
+            }
         });
 
         ui?.renderCharacters?.();
