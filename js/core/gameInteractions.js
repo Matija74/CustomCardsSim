@@ -216,6 +216,10 @@ function addTemporaryEffectNegation(card, expiresAtPlayerKey, expiresAtEndOfTurn
     });
 }
 
+function canPlayStageToArea(player) {
+    return !player?.stage;
+}
+
 function lockCardForNextRefresh(card) {
     if (!card) {
         return;
@@ -415,9 +419,46 @@ function chooseHandCardsToTopOrBottomOfDeck(player, sourceCard, ui, count, optio
         options.onComplete?.();
     };
 
+    const chooseSharedPlacementZone = () => {
+        if (!options.sameZoneForAll) {
+            finishPlacement();
+            return;
+        }
+
+        const placeCards = (zone) => {
+            if (zone === "top") {
+                topCards.push(...selectedCards);
+            } else {
+                bottomCards.push(...selectedCards);
+            }
+
+            finishPlacement();
+        };
+
+        if (!ui?.chooseEffectOption) {
+            placeCards("bottom");
+            return;
+        }
+
+        ui.chooseEffectOption({
+            player,
+            sourceCard,
+            title: sourceCard.name,
+            prompt: `Place all ${selectedCards.length} selected card${selectedCards.length === 1 ? "" : "s"} on the top or bottom of your deck?`,
+            options: [
+                { label: "Top", value: "top" },
+                { label: "Bottom", value: "bottom", secondary: true }
+            ],
+            onComplete: (zone) => {
+                placeCards(zone === "top" ? "top" : "bottom");
+            }
+        });
+    };
+
     const choosePlacementZone = (card) => {
         if (!ui?.chooseEffectOption) {
             bottomCards.push(card);
+            chooseNextCard();
             return;
         }
 
@@ -444,14 +485,14 @@ function chooseHandCardsToTopOrBottomOfDeck(player, sourceCard, ui, count, optio
 
     const chooseNextCard = () => {
         if (selectedCards.length >= count) {
-            finishPlacement();
+            chooseSharedPlacementZone();
             return;
         }
 
         const remainingChoices = getHandCardChoices(player, card => !selectedCards.includes(card));
 
         if (remainingChoices.length === 0) {
-            finishPlacement();
+            chooseSharedPlacementZone();
             return;
         }
 
@@ -468,6 +509,11 @@ function chooseHandCardsToTopOrBottomOfDeck(player, sourceCard, ui, count, optio
                 }
 
                 selectedCards.push(card);
+
+                if (options.sameZoneForAll) {
+                    chooseNextCard();
+                    return;
+                }
 
                 if (!ui?.chooseEffectOption) {
                     bottomCards.push(selectedCard);
@@ -576,19 +622,13 @@ function playCardFromDeckWithoutCost(player, sourceCard, card, ui, sourceZoneLab
     }
 
     if (card.cardType === "stage") {
-        const oldStage = player.stage;
+        if (!canPlayStageToArea(player)) {
+            return `${sourceCard.name} could not play ${card.name} from the ${sourceZoneLabel} because ${player.name}'s stage area is already occupied.`;
+        }
 
         card.state = "active";
         card.uiAnimation = "played";
         player.stage = card;
-
-        if (oldStage) {
-            const returnMessage = trashStageFromField(player, oldStage, ui);
-
-            if (returnMessage) {
-                addGameLog(returnMessage);
-            }
-        }
 
         const effectMessages = resolveOnPlayEffects(player, card, ui);
 
@@ -614,37 +654,41 @@ function playCardFromDeckWithoutCost(player, sourceCard, card, ui, sourceZoneLab
 }
 
 function resolveJeremicOnPlay(player, sourceCard, ui) {
-    const seenNames = new Set();
-    const deckNameOptions = player.deck
-        .filter(Boolean)
-        .map(card => ({
-            label: card.name,
-            value: CardEffects.normalizeCardName(card.name)
-        }))
-        .filter(option => {
-            if (seenNames.has(option.value)) {
-                return false;
-            }
+    const deckCards = player.deck.filter(Boolean);
 
-            seenNames.add(option.value);
-            return true;
-        });
-
-    if (deckNameOptions.length === 0) {
+    if (deckCards.length === 0) {
         shuffleDeck(player.deck);
         ui?.renderDecks?.();
         return `${sourceCard.name} found no cards in ${player.name}'s deck.`;
     }
 
     const finishDeclaration = (declaredName) => {
+        const normalizedDeclaredName = CardEffects.normalizeCardName(declaredName || "");
+
+        if (!normalizedDeclaredName) {
+            shuffleDeck(player.deck);
+            ui?.renderDecks?.();
+            addGameLog(`${player.name} did not declare a card name for ${sourceCard.name}. The deck was shuffled.`);
+            return;
+        }
+
         const deckIndex = player.deck.findIndex(card => {
-            return CardEffects.normalizeCardName(card.name) === declaredName;
+            return CardEffects.hasCardName(card, normalizedDeclaredName);
         });
 
         if (deckIndex === -1) {
             shuffleDeck(player.deck);
             ui?.renderDecks?.();
-            addGameLog(`${sourceCard.name} declared a card name, but no matching card was found before the shuffle.`);
+            addGameLog(`${sourceCard.name} declared "${declaredName}", but no matching card was found before the shuffle.`);
+            return;
+        }
+
+        const chosenCard = player.deck[deckIndex];
+
+        if (chosenCard?.cardType === "stage" && !canPlayStageToArea(player)) {
+            shuffleDeck(player.deck);
+            ui?.renderDecks?.();
+            addGameLog(`${sourceCard.name} found ${chosenCard.name}, but ${player.name}'s stage area is already occupied. The deck was shuffled.`);
             return;
         }
 
@@ -656,20 +700,16 @@ function resolveJeremicOnPlay(player, sourceCard, ui) {
         addGameLog(`${message} ${player.name} then shuffled the deck.`);
     };
 
-    if (ui?.chooseEffectOption) {
-        ui.chooseEffectOption({
-            player,
-            sourceCard,
-            title: sourceCard.name,
-            prompt: "Declare a card name to play from your deck.",
-            options: deckNameOptions,
-            onComplete: finishDeclaration
-        });
-
-        return `${player.name} is declaring a card name for ${sourceCard.name}.`;
+    if (typeof window !== "undefined" && typeof window.prompt === "function") {
+        const declaredName = window.prompt(
+            `${sourceCard.name}: declare a card name to play from your deck.`,
+            ""
+        );
+        finishDeclaration(declaredName);
+        return `${sourceCard.name}'s effect resolved.`;
     }
 
-    finishDeclaration(deckNameOptions[0].value);
+    finishDeclaration(deckCards[0].name);
     return `${sourceCard.name}'s effect resolved.`;
 }
 
@@ -1209,6 +1249,10 @@ function canUseCounterEffect(card, player, effect) {
         return false;
     }
 
+    if (effect.id === "POG1-014-counter") {
+        return true;
+    }
+
     if (effect.id === "DD01-013-counter") {
         if (!player.leader || (player.leader.state || "active") !== "rested") {
             return false;
@@ -1466,6 +1510,13 @@ function playStageCard(player, handIndex, ui) {
         };
     }
 
+    if (!canPlayStageToArea(player)) {
+        return {
+            success: false,
+            message: `${player.name} cannot play ${card.name} because a stage is already in play.`
+        };
+    }
+
     const cost = getCardPlayCost(card);
 
     if (player.don < cost) {
@@ -1484,20 +1535,11 @@ function playStageCard(player, handIndex, ui) {
         };
     }
 
-    const oldStage = player.stage;
     const playedStage = player.hand.splice(handIndex, 1)[0];
 
     playedStage.state = "active";
     playedStage.uiAnimation = "played";
     player.stage = playedStage;
-
-    if (oldStage) {
-        const returnMessage = trashStageFromField(player, oldStage, ui);
-
-        if (returnMessage) {
-            addGameLog(returnMessage);
-        }
-    }
 
     const effectMessages = resolveOnPlayEffects(player, playedStage, ui);
 
@@ -1513,9 +1555,7 @@ function playStageCard(player, handIndex, ui) {
 
     return {
         success: true,
-        message: oldStage
-            ? `${player.name} replaced ${oldStage.name} with ${playedStage.name}.${effectText}`
-            : `${player.name} played ${playedStage.name} to the stage area.${effectText}`
+        message: `${player.name} played ${playedStage.name} to the stage area.${effectText}`
     };
 }
 
@@ -1837,7 +1877,9 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
             return `${sourceCard.name} drew 3 cards, but ${player.name} has fewer than 2 cards to place back.`;
         }
 
-        return chooseHandCardsToTopOrBottomOfDeck(player, sourceCard, ui, 2);
+        return chooseHandCardsToTopOrBottomOfDeck(player, sourceCard, ui, 2, {
+            sameZoneForAll: true
+        });
     }
 
     if (effect.id === "POG1-006-activate-main") {
@@ -3599,6 +3641,16 @@ function playZangetsuStageFromDeck(player, sourceCard, ui, targetCost) {
         return "";
     }
 
+    if (!canPlayStageToArea(player)) {
+        shuffleDeck(player.deck);
+
+        if (ui?.renderDecks) {
+            ui.renderDecks();
+        }
+
+        return `${sourceCard.name} could not play a Zangetsu stage because ${player.name}'s stage area is already occupied. ${player.name} shuffled the deck.`;
+    }
+
     const stageLocation = findZangetsuStageInDeck(player, targetCost);
 
     if (!stageLocation) {
@@ -3611,7 +3663,6 @@ function playZangetsuStageFromDeck(player, sourceCard, ui, targetCost) {
         return `${sourceCard.name} found no cost ${targetCost} Zangetsu stage in ${player.name}'s deck. ${player.name} shuffled the deck.`;
     }
 
-    const oldStage = player.stage;
     const stage = stageLocation.zone.cards.splice(stageLocation.index, 1)[0];
 
     if (stageLocation.zone.name === "hand" && player.deck.length) {
@@ -3625,14 +3676,6 @@ function playZangetsuStageFromDeck(player, sourceCard, ui, targetCost) {
     stage.state = "active";
     stage.uiAnimation = "played";
     player.stage = stage;
-
-    if (oldStage) {
-        const returnMessage = trashStageFromField(player, oldStage, ui);
-
-        if (returnMessage) {
-            addGameLog(returnMessage);
-        }
-    }
 
     shuffleDeck(player.deck);
 
@@ -3656,9 +3699,7 @@ function playZangetsuStageFromDeck(player, sourceCard, ui, targetCost) {
         ui.renderTrash();
     }
 
-    return oldStage
-        ? `${sourceCard.name} played ${stage.name} from the deck, replacing ${oldStage.name}, then shuffled the deck.`
-        : `${sourceCard.name} played ${stage.name} from the deck, then shuffled the deck.`;
+    return `${sourceCard.name} played ${stage.name} from the deck, then shuffled the deck.`;
 }
 
 function resolveKurosakiIchigoGameStart(player, ui) {
@@ -4538,19 +4579,16 @@ function playTurboGrannyFormFromDeck(player, sourceCard, ui) {
         return `${sourceCard.name} found no Turbo Granny Form in the deck. ${player.name} shuffled the deck.`;
     }
 
-    const oldStage = player.stage;
+    if (!canPlayStageToArea(player)) {
+        shuffleDeck(player.deck);
+        ui.renderDecks();
+        return `${sourceCard.name} found Turbo Granny Form, but ${player.name}'s stage area is already occupied. ${player.name} shuffled the deck.`;
+    }
+
     const stage = player.deck.splice(stageIndex, 1)[0];
 
     stage.state = "active";
     player.stage = stage;
-
-    if (oldStage) {
-        const returnMessage = trashStageFromField(player, oldStage, ui);
-
-        if (returnMessage) {
-            addGameLog(returnMessage);
-        }
-    }
 
     shuffleDeck(player.deck);
 
@@ -4558,9 +4596,7 @@ function playTurboGrannyFormFromDeck(player, sourceCard, ui) {
     ui.renderStages();
     ui.renderTrash();
 
-    return oldStage
-        ? `${sourceCard.name} played ${stage.name} from the deck, replacing ${oldStage.name}, then shuffled the deck.`
-        : `${sourceCard.name} played ${stage.name} from the deck, then shuffled the deck.`;
+    return `${sourceCard.name} played ${stage.name} from the deck, then shuffled the deck.`;
 }
 
 function getPlayerFieldDonCount(player) {
@@ -5314,18 +5350,13 @@ function playCardFromTrigger(player, card, ui) {
     }
 
     if (card.cardType === "stage") {
-        const oldStage = player.stage;
+        if (!canPlayStageToArea(player)) {
+            player.hand.push(card);
+            return `${card.name}'s Trigger could not play it because ${player.name}'s stage area is already occupied, so it was added to hand.`;
+        }
 
         card.state = "active";
         player.stage = card;
-
-        if (oldStage) {
-            const returnMessage = trashStageFromField(player, oldStage, ui);
-
-            if (returnMessage) {
-                addGameLog(returnMessage);
-            }
-        }
 
         const effectMessages = resolveOnPlayEffects(player, card, ui);
 

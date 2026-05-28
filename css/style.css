@@ -15,14 +15,17 @@
 html,
 body {
     width: 100%;
-    height: 100%;
+    min-height: 100%;
 }
 
 body {
+    min-height: 100vh;
+    min-height: 100dvh;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #4d4d4d 0%, #292929 100%);
     color: white;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 /* =========================
@@ -30,9 +33,9 @@ body {
 ========================= */
 
 .main-menu {
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
 
     display: flex;
     flex-direction: column;
@@ -139,6 +142,10 @@ body {
 ========================= */
 
 @media (max-width: 700px) {
+    .main-menu {
+        justify-content: flex-start;
+    }
+
     .menu-panel {
         grid-template-columns: 1fr;
         gap: 18px;
@@ -147,5 +154,11 @@ body {
     .menu-divider {
         height: 2px;
         width: 100%;
+    }
+}
+
+@media (max-height: 760px) {
+    .main-menu {
+        justify-content: flex-start;
     }
 }

@@ -15,14 +15,17 @@
 html,
 body {
     width: 100%;
-    height: 100%;
-    overflow: hidden;
+    min-height: 100%;
 }
 
 body {
+    min-height: 100vh;
+    min-height: 100dvh;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #4d4d4d 0%, #292929 100%);
     color: white;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 :root {
@@ -35,8 +38,9 @@ body {
 ========================= */
 
 .deck-editor-page {
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
     padding: clamp(16px, 3vw, 36px);
 
     display: flex;
@@ -107,7 +111,7 @@ body {
     min-height: 0;
 
     display: grid;
-    grid-template-columns: minmax(320px, 430px) 1fr;
+    grid-template-columns: minmax(280px, 430px) minmax(0, 1fr);
     gap: 24px;
 }
 
@@ -118,6 +122,7 @@ body {
 .deck-panel,
 .library-panel {
     min-height: 0;
+    min-width: 0;
 
     background: rgba(20, 20, 20, 0.55);
     border: 2px solid rgba(255, 255, 255, 0.14);
@@ -135,12 +140,17 @@ body {
 
 .panel-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 16px;
 
     padding-bottom: 14px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.panel-header > div:first-child {
+    min-width: 0;
 }
 
 .panel-header h2 {
@@ -163,6 +173,7 @@ body {
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.12);
     border: 1px solid rgba(255, 255, 255, 0.18);
+    margin-left: auto;
 }
 
 /* =========================
@@ -298,7 +309,7 @@ body {
     min-height: 92px;
 
     display: grid;
-    grid-template-columns: 60px 1fr auto;
+    grid-template-columns: 60px minmax(0, 1fr) auto;
     align-items: center;
     gap: 14px;
 
@@ -350,11 +361,13 @@ body {
 .deck-card-info h3 {
     font-size: 0.98rem;
     margin-bottom: 5px;
+    overflow-wrap: anywhere;
 }
 
 .deck-card-info p {
     color: #bbbbbb;
     font-size: 0.82rem;
+    overflow-wrap: anywhere;
 }
 
 .deck-card-amount {
@@ -660,6 +673,7 @@ body {
     justify-content: center;
 
     padding: 24px;
+    overflow-y: auto;
 }
 
 .card-preview-modal.open {
@@ -773,14 +787,8 @@ body {
    Responsive Design
 ========================= */
 
-@media (max-width: 1000px) {
-    html,
-    body {
-        overflow: auto;
-    }
-
+@media (max-width: 1200px) {
     .deck-editor-page {
-        min-height: 100vh;
         height: auto;
     }
 
@@ -794,20 +802,24 @@ body {
     }
 }
 
-@media (max-width: 650px) {
+@media (max-width: 820px) {
     .deck-editor-header {
-        justify-content: flex-end;
+        min-height: auto;
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 16px;
     }
 
     .header-title-group {
-        text-align: right;
-        max-width: 70%;
+        text-align: left;
     }
 
     .btn-back {
-        left: 0;
+        position: static;
     }
+}
 
+@media (max-width: 650px) {
     .filter-row {
         grid-template-columns: 1fr;
     }
@@ -822,5 +834,29 @@ body {
 
     .saved-deck-row {
         grid-template-columns: 1fr;
+    }
+
+    .deck-card-item {
+        grid-template-columns: 60px minmax(0, 1fr);
+    }
+
+    .deck-card-controls {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .card-library-grid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    }
+}
+
+@media (max-width: 540px) {
+    .panel-header {
+        flex-direction: column;
+    }
+
+    .deck-count {
+        margin-left: 0;
     }
 }

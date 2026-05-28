@@ -59,6 +59,10 @@ window.CardEffects = {
 
         const wantedKeyword = this.normalizeKeyword(keywordName);
 
+        if (typeof areCardEffectsNegated === "function" && areCardEffectsNegated(card)) {
+            return false;
+        }
+
         if (card.cardNumber === "BK01-013" && wantedKeyword === "doubleattack") {
             const owner = typeof getPlayerForBoardCard === "function"
                 ? getPlayerForBoardCard(card)
