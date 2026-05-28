@@ -3473,6 +3473,7 @@ function finishPendingOnOpponentAttackEffects() {
     removeEffectChoiceOverlay();
 
     if (!currentAttack) {
+        clearBattleControls();
         queueMultiplayerStateSync();
         return;
     }
@@ -3482,6 +3483,17 @@ function finishPendingOnOpponentAttackEffects() {
     if (currentAttack.attackerPlayerKey === "player1") {
         continueAttackAfterDefenderResponses();
         return;
+    }
+
+    clearBattleControls();
+
+    const battleControls = document.getElementById("battleControls");
+    const attackerName = gameState[currentAttack.attackerPlayerKey]?.name ?? "Attacker";
+
+    if (battleControls) {
+        battleControls.appendChild(
+            createWaitingDefenseButton(attackerName, "Waiting for Attack Effects")
+        );
     }
 
     queueMultiplayerStateSync();

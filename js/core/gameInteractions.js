@@ -703,6 +703,82 @@ function resolveSigmaRevealEffect(player, sourceCard, ui) {
     return `${sourceCard.name} revealed ${revealedCard.name}. ${message} Then it was trashed.`;
 }
 
+function resolveSigmaDeckChoiceEffect(player, sourceCard, ui) {
+    const validDeckChoices = (player?.deck || [])
+        .map((card, index) => ({ card, index }))
+        .filter(entry => {
+            return entry.card?.cardNumber === "POG1-008" || entry.card?.cardNumber === "POG1-010";
+        });
+
+    if (validDeckChoices.length === 0) {
+        return `${sourceCard.name} found no valid Klobuk or Manifestirana žoga cards in ${player.name}'s deck.`;
+    }
+
+    const finishSelection = (selectedIndex) => {
+        const choice = validDeckChoices.find(entry => entry.index === Number(selectedIndex));
+
+        if (!choice) {
+            addGameLog(`${player.name} did not choose a valid card for ${sourceCard.name}.`);
+            return;
+        }
+
+        const revealedCard = player.deck.splice(choice.index, 1)[0];
+
+        if (!revealedCard) {
+            addGameLog(`${sourceCard.name} could not find the chosen card in ${player.name}'s deck.`);
+            return;
+        }
+
+        const finishTrash = () => {
+            moveCardToTrash(player, revealedCard, ui);
+            ui?.renderDecks?.();
+            ui?.renderTrash?.();
+            addGameLog(`${sourceCard.name} trashed ${revealedCard.name} after revealing it.`);
+        };
+
+        const powerMessage = chooseOwnBoardCard(player, sourceCard, {
+            prompt: `Choose up to 1 of your leader or characters to give +2000 power this turn after choosing ${revealedCard.name}.`,
+            optional: true,
+            includeLeader: true,
+            filter: card => card.cardType === "leader" || card.cardType === "character",
+            onSelect: ({ card }) => {
+                addTemporaryPowerBonus(card, 2000);
+                ui?.renderLeaders?.();
+                ui?.renderCharacters?.();
+                addGameLog(`${sourceCard.name} chose ${revealedCard.name} and gave ${card.name} +2000 power this turn.`);
+                finishTrash();
+            },
+            onSkip: finishTrash,
+            onEmpty: finishTrash,
+            skipMessage: `${player.name} did not choose a card to power up with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no leader or character to give +2000 power.`
+        });
+
+        if (powerMessage) {
+            addGameLog(powerMessage);
+        }
+    };
+
+    if (ui?.chooseEffectOption) {
+        ui.chooseEffectOption({
+            player,
+            sourceCard,
+            title: sourceCard.name,
+            prompt: "Choose a Klobuk or Manifestirana žoga from your deck.",
+            options: validDeckChoices.map(entry => ({
+                label: entry.card.name,
+                value: entry.index
+            })),
+            onComplete: finishSelection
+        });
+
+        return `${player.name} is choosing a card from the deck for ${sourceCard.name}.`;
+    }
+
+    finishSelection(validDeckChoices[0].index);
+    return `${sourceCard.name}'s effect resolved.`;
+}
+
 function clearParfumControlState(character) {
     if (!character) {
         return;
@@ -1747,7 +1823,7 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
         effect.id === "POG1-005-when-attacking" ||
         effect.id === "POG1-005-on-opponent-attack"
     ) {
-        return resolveSigmaRevealEffect(player, sourceCard, ui);
+        return resolveSigmaDeckChoiceEffect(player, sourceCard, ui);
     }
 
     if (effect.id === "POG1-007-on-play") {
