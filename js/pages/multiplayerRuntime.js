@@ -516,7 +516,7 @@ async function maybeCreateSharedState(match) {
         initializingSharedState ||
         localSlot !== "p1" ||
         match?.public?.sharedState ||
-        !["draw", "don", "main"].includes(phase)
+        !["startOfTurn", "draw", "don", "main"].includes(phase)
     ) {
         return;
     }

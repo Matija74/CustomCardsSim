@@ -800,7 +800,7 @@ export async function setMultiplayerMulligan(roomCode, user, playerSlot, tookMul
         const firstPlayer = publicState.firstPlayer || publicState.setup?.turnChoice?.firstPlayer || "p1";
         const firstPublicKey = firstPlayer === "p1" ? "player1" : "player2";
 
-        updates["public/phase"] = "don";
+        updates["public/phase"] = "startOfTurn";
         updates["public/currentPlayer"] = firstPlayer;
         updates["public/turnNumber"] = 1;
         updates[`public/playerTurns/${firstPlayer}`] = 1;
