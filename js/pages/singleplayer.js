@@ -1779,7 +1779,17 @@ function setupBoardCharacterSelection() {
                 return;
             }
 
-            if (pendingReplacePlay || pendingAttack) {
+            if (pendingReplacePlay) {
+                const parentSlot = cardElement.closest(".character-slot");
+
+                if (typeof parentSlot?.onclick === "function") {
+                    parentSlot.onclick();
+                }
+
+                return;
+            }
+
+            if (pendingAttack) {
                 return;
             }
 

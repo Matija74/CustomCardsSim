@@ -216,8 +216,23 @@ function maybeAutoAdvanceTurnPhases(phaseButton, phaseInfo) {
     }, 0);
 }
 
+function canCurrentClientResolveStartOfTurn(player) {
+    if (!window.__multiplayerRuntime?.isActive?.()) {
+        return true;
+    }
+
+    return player === gameState?.player1;
+}
+
 function beginTurnFlow(player, phaseButton, phaseInfo) {
     phaseInfo.innerHTML += `<br><br>`;
+
+    if (!canCurrentClientResolveStartOfTurn(player)) {
+        gameState.currentPhase = "startOfTurn";
+        setPhaseButtonState(phaseButton, `${player.name}'s Start of Turn`, true);
+        window.queueMultiplayerStateSync?.();
+        return;
+    }
 
     const continueAfterStartOfTurn = () => {
         runRefreshPhase(player, phaseInfo);

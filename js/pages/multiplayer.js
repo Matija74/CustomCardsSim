@@ -35,6 +35,7 @@ let gameState = null;
 let syncedLogMessages = [];
 let isApplyingMultiplayerState = false;
 let lastAutoPhaseAdvanceKey = null;
+let lastStartOfTurnResumeKey = null;
 let gameOverState = null;
 let pendingDeferredCombatChoices = 0;
 let deferredAttackCleanup = null;
@@ -208,6 +209,19 @@ function syncPhaseButtonForCurrentState() {
         phaseButton.textContent = isLocalTurn
             ? buttonText
             : `${currentPlayer?.name || "Opponent"}'s ${isDrawPhase ? "Draw" : "DON!!"} Phase`;
+        return;
+    }
+
+    if (gameState.currentPhase === "startOfTurn") {
+        const localPlayer = gameState.player1;
+        const currentPlayer = gameState.currentPlayer;
+        const isLocalTurn = currentPlayer === localPlayer;
+
+        phaseButton.style.display = "block";
+        phaseButton.disabled = true;
+        phaseButton.textContent = isLocalTurn
+            ? "Resolving Start of Turn"
+            : `${currentPlayer?.name || "Opponent"}'s Start of Turn`;
         return;
     }
 
@@ -403,6 +417,7 @@ function renderFullGameState() {
     clearLocalSelectionsAndOverlays();
     restoreBattleUiFromSyncedState();
     maybeAutoAdvancePhaseFromSyncedState();
+    maybeResumeStartOfTurnFromSyncedState();
 }
 
 function maybeAutoAdvancePhaseFromSyncedState() {
@@ -445,6 +460,41 @@ function maybeAutoAdvancePhaseFromSyncedState() {
             advanceDonPhase(phaseButton, phaseInfo);
         }
 
+        queueMultiplayerStateSync();
+    }, 0);
+}
+
+function maybeResumeStartOfTurnFromSyncedState() {
+    const isLocalTurn = gameState?.currentPlayer === gameState?.player1;
+    const phase = gameState?.currentPhase;
+
+    if (phase !== "startOfTurn" || !isLocalTurn) {
+        lastStartOfTurnResumeKey = null;
+        return;
+    }
+
+    const phaseKey = `${gameState.turnNumber}:startOfTurn:${gameState.currentPlayer?.multiplayerSlot || "local"}`;
+
+    if (phaseKey === lastStartOfTurnResumeKey) {
+        return;
+    }
+
+    lastStartOfTurnResumeKey = phaseKey;
+
+    window.setTimeout(() => {
+        if (
+            isApplyingMultiplayerState ||
+            !gameState ||
+            gameState.currentPhase !== "startOfTurn" ||
+            gameState.currentPlayer !== gameState.player1
+        ) {
+            return;
+        }
+
+        const phaseButton = document.getElementById("phaseButton");
+        const phaseInfo = createPhaseLogProxy();
+
+        beginTurnFlow(gameState.currentPlayer, phaseButton, phaseInfo);
         queueMultiplayerStateSync();
     }, 0);
 }
@@ -2277,7 +2327,17 @@ function setupBoardCharacterSelection() {
                 return;
             }
 
-            if (pendingReplacePlay || pendingAttack) {
+            if (pendingReplacePlay) {
+                const parentSlot = cardElement.closest(".character-slot");
+
+                if (typeof parentSlot?.onclick === "function") {
+                    parentSlot.onclick();
+                }
+
+                return;
+            }
+
+            if (pendingAttack) {
                 return;
             }
 
