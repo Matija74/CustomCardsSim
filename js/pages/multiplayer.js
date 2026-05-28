@@ -3468,12 +3468,35 @@ function getCurrentPendingOnOpponentAttackEffect() {
     };
 }
 
+function currentAttackHasPendingWhenAttackingEffects() {
+    if (!currentAttack) {
+        return false;
+    }
+
+    const attackerCard = getBoardCardFromData(currentAttack.attacker);
+
+    return Boolean(
+        getCardAllEffects(attackerCard)?.some(effect => effect.type === "whenAttacking")
+    );
+}
+
 function finishPendingOnOpponentAttackEffects() {
     pendingOpponentAttackEffect = null;
     removeEffectChoiceOverlay();
 
     if (!currentAttack) {
         clearBattleControls();
+        queueMultiplayerStateSync();
+        return;
+    }
+
+    if (!currentAttackHasPendingWhenAttackingEffects()) {
+        currentAttack.resolutionStep = "readyForDefense";
+        clearBattleControls();
+        showResolveAttackButton(currentAttack.defenderPlayerKey, async () => {
+            await resolveCurrentAttack();
+            queueMultiplayerStateSync();
+        });
         queueMultiplayerStateSync();
         return;
     }
@@ -3547,6 +3570,23 @@ function showPendingOpponentAttackEffectChoice() {
         effect
     } = effectState;
     const defenderPlayerKey = pendingOpponentAttackEffect.defenderPlayerKey;
+    const endAttackBecauseTargetLeftField = (cardName) => {
+        pendingOpponentAttackEffect = null;
+        removeEffectChoiceOverlay();
+        addGameLog(`${cardName} left the field, so the attack ends.`);
+
+        currentAttack = null;
+        pendingAttack = null;
+        pendingBlock = null;
+
+        clearAttackTargets();
+        clearBlockerTargets();
+        clearBattleControls();
+        clearAttackArrow();
+
+        gameState.currentPhase = "main";
+        queueMultiplayerStateSync();
+    };
 
     chooseEffectActivation({
         player: defenderPlayer,
@@ -3588,7 +3628,8 @@ function showPendingOpponentAttackEffectChoice() {
                         currentAttack.target.cardType === "character" &&
                         currentAttack.target.slotIndex === entry.slotIndex
                     ) {
-                        addGameLog(`${trashedCard.name} left the field, so the attack target is gone.`);
+                        endAttackBecauseTargetLeftField(trashedCard.name);
+                        return;
                     }
 
                     advancePendingOnOpponentAttackEffect();

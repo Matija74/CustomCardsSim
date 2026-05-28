@@ -2772,6 +2772,21 @@ function beginAttack(targetData) {
 function promptOnOpponentAttackCharacterEffects(defenderPlayer, onComplete) {
     const playerKey = defenderPlayer === gameState.player1 ? "player1" : "player2";
 
+    const endAttackBecauseTargetLeftField = (cardName) => {
+        addGameLog(`${cardName} left the field, so the attack ends.`);
+
+        currentAttack = null;
+        pendingAttack = null;
+        pendingBlock = null;
+
+        clearAttackTargets();
+        clearBlockerTargets();
+        clearBattleControls();
+        clearAttackArrow();
+
+        gameState.currentPhase = "main";
+    };
+
     const effects = defenderPlayer.characters
         .map((card, slotIndex) => ({ card, slotIndex }))
         .filter(entry => getCardAllEffects(entry.card)?.some(effect => effect.type === "onOpponentAttack"));
@@ -2834,7 +2849,8 @@ function promptOnOpponentAttackCharacterEffects(defenderPlayer, onComplete) {
                         currentAttack.target.cardType === "character" &&
                         currentAttack.target.slotIndex === entry.slotIndex
                     ) {
-                        addGameLog(`${trashedCard.name} left the field, so the attack target is gone.`);
+                        endAttackBecauseTargetLeftField(trashedCard.name);
+                        return;
                     }
 
                     promptNext(index + 1);
