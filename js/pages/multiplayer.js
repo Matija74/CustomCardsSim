@@ -192,6 +192,7 @@ function syncPhaseButtonForCurrentState() {
         phaseButton.style.display = "block";
         phaseButton.disabled = true;
         phaseButton.textContent = "Game Over";
+        window.setPhaseButtonUrgency?.(phaseButton, false);
         return;
     }
 
@@ -209,6 +210,7 @@ function syncPhaseButtonForCurrentState() {
         phaseButton.textContent = isLocalTurn
             ? buttonText
             : `${currentPlayer?.name || "Opponent"}'s ${isDrawPhase ? "Draw" : "DON!!"} Phase`;
+        window.setPhaseButtonUrgency?.(phaseButton, isLocalTurn);
         return;
     }
 
@@ -222,6 +224,7 @@ function syncPhaseButtonForCurrentState() {
         phaseButton.textContent = isLocalTurn
             ? "Resolving Start of Turn"
             : `${currentPlayer?.name || "Opponent"}'s Start of Turn`;
+        window.setPhaseButtonUrgency?.(phaseButton, false);
         return;
     }
 
@@ -236,6 +239,7 @@ function syncPhaseButtonForCurrentState() {
         phaseButton.textContent = isLocalTurn
             ? `Pass to ${nextPlayer?.name || "Opponent"}`
             : `${currentPlayer?.name || "Opponent"}'s Turn`;
+        window.setPhaseButtonUrgency?.(phaseButton, false);
         return;
     }
 
@@ -243,6 +247,7 @@ function syncPhaseButtonForCurrentState() {
         phaseButton.style.display = "block";
         phaseButton.disabled = true;
         phaseButton.textContent = "Counter Phase";
+        window.setPhaseButtonUrgency?.(phaseButton, false);
         return;
     }
 
@@ -250,6 +255,7 @@ function syncPhaseButtonForCurrentState() {
         phaseButton.style.display = "block";
         phaseButton.disabled = true;
         phaseButton.textContent = "Attack In Progress";
+        window.setPhaseButtonUrgency?.(phaseButton, false);
         return;
     }
 }
@@ -1325,15 +1331,7 @@ function createPhaseLogProxy() {
         },
 
         set innerHTML(newText) {
-            const addedText = newText.startsWith(currentText)
-                ? newText.replace(currentText, "")
-                : newText;
-
-            currentText = newText;
-
-            if (addedText.trim() !== "") {
-                addGameLog(addedText);
-            }
+            currentText = String(newText || "");
         }
     };
 }
@@ -1345,6 +1343,44 @@ function normalizeLogMessage(message) {
         .trim();
 }
 
+function shouldAddGameLog(cleanMessage) {
+    if (!cleanMessage) {
+        return false;
+    }
+
+    const plainText = cleanMessage
+        .replace(/<br\s*\/?>/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    const suppressedPatterns = [
+        /card database loaded\. game ready\./i,
+        /players rolled the dice/i,
+        /chose to go (first|second)\./i,
+        /will go first\./i,
+        /will go second\./i,
+        /keep hand or mulligan/i,
+        /both players are ready\./i,
+        /starting turn \d+\./i,
+        /refresh phase:/i,
+        /draw phase:/i,
+        /don!! phase:/i,
+        /drew 1 card\./i,
+        /gained \d+ don!!\./i,
+        /selected .+\.$/i,
+        /is choosing a blocker\./i,
+        /may choose a blocker or skip blocking\./i,
+        /has no available blockers\./i,
+        /wait for the defending player to choose/i,
+        /may use counter cards or resolve the attack\./i,
+        /cannot attach don!! right now\./i,
+        /is attacking with .+ choose a target\./i,
+        /^choose a card from the attacking player's hand\.$/i,
+        /skipped .+ effect\./i
+    ];
+
+    return !suppressedPatterns.some(pattern => pattern.test(plainText));
+}
+
 function addGameLog(message) {
     const gameLogMessages = document.getElementById("gameLogMessages");
 
@@ -1352,7 +1388,7 @@ function addGameLog(message) {
 
     const cleanMessage = normalizeLogMessage(message);
 
-    if (!cleanMessage) return;
+    if (!shouldAddGameLog(cleanMessage)) return;
 
     if (!isApplyingMultiplayerState) {
         syncedLogMessages.push(cleanMessage);
@@ -1726,7 +1762,15 @@ function renderLeader(player, areaId) {
             cardType: "leader"
         }
     );
-    renderBasePowerBadge(player.leader, leaderArea);
+    renderBasePowerBadge(
+        player.leader,
+        player,
+        leaderArea,
+        {
+            playerKey,
+            cardType: "leader"
+        }
+    );
 
     setupCardPreview();
     setupBoardLeaderSelection();
@@ -1795,7 +1839,16 @@ function renderPlayerCharacters(player, playerKey) {
                 slotIndex: index
             }
         );
-        renderBasePowerBadge(card, slot);
+        renderBasePowerBadge(
+            card,
+            player,
+            slot,
+            {
+                playerKey,
+                cardType: "character",
+                slotIndex: index
+            }
+        );
     });
 
     setupCardPreview();
@@ -1853,6 +1906,7 @@ function renderPlayerStage(player, stageAreaId) {
     applyCardAnimationClass(img, getBoardStateAnimationClass(player.stage, renderKey));
 
     stageArea.appendChild(img);
+    renderCostModifierBadge(player.stage, stageArea);
 
     setupCardPreview();
 }
@@ -5396,25 +5450,25 @@ function getCostModifier(card) {
 }
 
 function renderCostModifierBadge(card, container) {
-    if (!card || !container || card.cardType !== "character") {
-        return;
-    }
-
-    const modifier = getCostModifier(card);
-
-    if (modifier === 0) {
+    if (!card || !container || (card.cardType !== "character" && card.cardType !== "stage")) {
         return;
     }
 
     const printedCost = Number(card.cost ?? card.playCost ?? 0);
+    const modifier = getCostModifier(card);
+    const currentCost = Math.max(0, printedCost + modifier);
     const sign = modifier > 0 ? "+" : "";
     const badge = document.createElement("div");
 
     badge.className = modifier < 0
         ? "cost-modifier-badge cost-modifier-negative"
-        : "cost-modifier-badge cost-modifier-positive";
-    badge.textContent = `${sign}${modifier} Cost`;
-    badge.title = `Cost modifier: ${sign}${modifier} (${printedCost} printed cost)`;
+        : modifier > 0
+            ? "cost-modifier-badge cost-modifier-positive"
+            : "cost-modifier-badge cost-modifier-neutral";
+    badge.textContent = `Cost ${currentCost}`;
+    badge.title = modifier === 0
+        ? `Printed cost: ${printedCost}`
+        : `Printed cost: ${printedCost}. Modifier: ${sign}${modifier}. Current cost: ${currentCost}.`;
 
     container.appendChild(badge);
 }
@@ -5446,20 +5500,22 @@ function renderPowerModifierBadge(card, player, container, boardCardData = null)
     container.appendChild(badge);
 }
 
-function renderBasePowerBadge(card, container) {
-    if (!card || !container || (card.cardType !== "leader" && card.cardType !== "character")) {
+function renderBasePowerBadge(card, player, container, boardCardData = null) {
+    if (!card || !player || !container || (card.cardType !== "leader" && card.cardType !== "character")) {
         return;
     }
 
-    const basePower = Number(card?.power ?? 0);
-    const effectiveBasePower = getPrintedPower(card);
+    const printedBasePower = Number(card?.power ?? 0);
+    const currentBasePower = getPrintedPower(card);
+    const modifier = getPowerModifier(card, player) + getCurrentAttackTargetPowerBonus(boardCardData);
+    const currentPower = currentBasePower + modifier;
     const badge = document.createElement("div");
 
     badge.className = "base-power-badge";
-    badge.textContent = `Base ${basePower}`;
-    badge.title = effectiveBasePower !== basePower
-        ? `Printed base power: ${basePower}. Current effect base power: ${effectiveBasePower}.`
-        : `Base power: ${basePower}`;
+    badge.textContent = `Power ${currentPower}`;
+    badge.title = currentBasePower !== printedBasePower
+        ? `Printed base power: ${printedBasePower}. Current base power: ${currentBasePower}. Current total power: ${currentPower}.`
+        : `Current power: ${currentPower}`;
 
     container.appendChild(badge);
 }

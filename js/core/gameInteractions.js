@@ -1863,7 +1863,7 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
         effect.id === "POG1-005-when-attacking" ||
         effect.id === "POG1-005-on-opponent-attack"
     ) {
-        return resolveSigmaDeckChoiceEffect(player, sourceCard, ui);
+        return resolveSigmaRevealEffect(player, sourceCard, ui);
     }
 
     if (effect.id === "POG1-007-on-play") {

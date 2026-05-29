@@ -224,6 +224,9 @@ body {
 
 .deck-cover-info {
     flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
 }
 
 .deck-cover-info strong {
@@ -234,6 +237,11 @@ body {
 .deck-cover-info span {
     color: #d0d0d0;
     font-size: 0.85rem;
+}
+
+.deck-cover-row .deck-action-button {
+    flex: 0 0 auto;
+    min-width: 140px;
 }
 
 .deck-meta {
@@ -267,22 +275,7 @@ body {
 }
 
 .deck-list-preview {
-    flex: 1;
-
-    max-height: 150px;
-    overflow-y: auto;
-
-    padding: 12px;
-
-    border-radius: 12px;
-
-    background: rgba(0, 0, 0, 0.22);
-
-    font-family: Consolas, Monaco, monospace;
-    font-size: 0.85rem;
-    line-height: 1.55;
-
-    color: #eeeeee;
+    display: none;
 }
 
 .deck-actions {

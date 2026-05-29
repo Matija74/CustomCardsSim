@@ -78,8 +78,69 @@ function renderPresetDecks(decks) {
     emptyMessage.classList.add("hidden");
 
     decks.forEach(deck => {
-        grid.appendChild(createDeckCard(deck));
+        grid.appendChild(createCompactDeckCard(deck));
     });
+}
+
+function createCompactDeckCard(deck) {
+    const card = document.createElement("article");
+    card.className = "preset-deck-card";
+
+    const parsedDeckLines = parseDeckLines(deck.deckText);
+    const totalCards = getTotalCardCount(parsedDeckLines);
+    const leaderCard = getLeaderCard(deck.leaderKey);
+    const coverCard = leaderCard || getFirstExistingCard(parsedDeckLines);
+
+    const header = document.createElement("div");
+    header.className = "deck-card-header";
+
+    const title = document.createElement("h3");
+    title.textContent = deck.name;
+
+    const badge = document.createElement("span");
+    badge.className = "deck-id-badge";
+    badge.textContent = deck.id;
+
+    header.appendChild(title);
+    header.appendChild(badge);
+
+    const coverRow = document.createElement("div");
+    coverRow.className = "deck-cover-row";
+
+    if (coverCard?.image) {
+        const coverImage = document.createElement("img");
+        coverImage.className = "deck-cover-image";
+        coverImage.src = coverCard.image;
+        coverImage.alt = coverCard.name;
+        coverRow.appendChild(coverImage);
+    }
+
+    const viewButton = document.createElement("button");
+    viewButton.className = "deck-action-button primary";
+    viewButton.textContent = "View Cards";
+    viewButton.addEventListener("click", () => {
+        openDeckImageModal(deck);
+    });
+
+    const coverInfo = document.createElement("div");
+    coverInfo.className = "deck-cover-info";
+    coverInfo.appendChild(viewButton);
+    coverRow.appendChild(coverInfo);
+
+    const meta = document.createElement("div");
+    meta.className = "deck-meta";
+    meta.appendChild(createMetaItem("Leader", leaderCard?.name || deck.leaderKey));
+    meta.appendChild(createMetaItem("Cards", `${totalCards} total`));
+
+    card.appendChild(header);
+    card.appendChild(coverRow);
+    card.appendChild(meta);
+
+    card.addEventListener("dblclick", () => {
+        openDeckImageModal(deck);
+    });
+
+    return card;
 }
 
 function createDeckCard(deck) {
@@ -88,7 +149,6 @@ function createDeckCard(deck) {
 
     const parsedDeckLines = parseDeckLines(deck.deckText);
     const totalCards = getTotalCardCount(parsedDeckLines);
-    const uniqueCards = parsedDeckLines.length;
     const leaderCard = getLeaderCard(deck.leaderKey);
     const coverCard = leaderCard || getFirstExistingCard(parsedDeckLines);
 
@@ -130,8 +190,6 @@ function createDeckCard(deck) {
 
     meta.appendChild(createMetaItem("Leader", leaderCard?.name || deck.leaderKey));
     meta.appendChild(createMetaItem("Cards", `${totalCards} total`));
-    meta.appendChild(createMetaItem("Unique", `${uniqueCards} cards`));
-    meta.appendChild(createMetaItem("Format", "Preset"));
 
     const deckList = document.createElement("div");
     deckList.className = "deck-list-preview";
@@ -150,16 +208,7 @@ function createDeckCard(deck) {
         openDeckImageModal(deck);
     });
 
-    const useButton = document.createElement("button");
-    useButton.className = "deck-action-button secondary";
-    useButton.textContent = "Use in VS Self";
-
-    useButton.addEventListener("click", () => {
-        useDeckInVsSelf(deck.id);
-    });
-
     actions.appendChild(viewButton);
-    actions.appendChild(useButton);
 
     card.appendChild(header);
     card.appendChild(coverRow);

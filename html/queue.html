@@ -32,7 +32,6 @@
                     <div class="deck-picker-field">
                         <span>Your Deck</span>
                         <button id="queueDeckButton" class="deck-picker-button" type="button">Choose Deck</button>
-                        <small id="queueDeckSummary" class="deck-picker-summary">No deck selected</small>
                     </div>
 
                     <button id="createRoomBtn" class="btn btn-primary" type="button">
@@ -68,6 +67,10 @@
                     <span id="player2Status">Player 2: Empty</span>
                 </div>
 
+                <button id="readyUpBtn" class="btn btn-secondary" type="button" disabled>
+                    Ready Up
+                </button>
+
                 <button id="startGameBtn" class="btn btn-primary" type="button" disabled>
                     Start Game
                 </button>
@@ -78,7 +81,7 @@
     <script src="../js/cards/cardDatabase.js?v=multiplayer-fix-3"></script>
     <script src="../js/cards/decks.js?v=multiplayer-fix-3"></script>
     <script src="../js/core/deckParser.js?v=multiplayer-fix-3"></script>
-    <script src="../js/core/deckTools.js?v=deck-tools-1"></script>
-    <script type="module" src="../js/pages/queue.js?v=deck-tools-1"></script>
+    <script src="../js/core/deckTools.js?v=deck-tools-2"></script>
+    <script type="module" src="../js/pages/queue.js?v=deck-tools-2"></script>
 </body>
 </html>

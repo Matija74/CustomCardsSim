@@ -25,6 +25,23 @@ function buildDeckTextFromEntries(entries = []) {
         : "";
 }
 
+function buildDeckTextWithLeader(leaderKey, entries = []) {
+    const leaderLine = String(leaderKey || "").trim()
+        ? `1x${String(leaderKey).trim()}`
+        : "";
+    const deckText = buildDeckTextFromEntries(entries).trimEnd();
+
+    if (leaderLine && deckText) {
+        return `${leaderLine}\n${deckText}\n`;
+    }
+
+    if (leaderLine) {
+        return `${leaderLine}\n`;
+    }
+
+    return deckText ? `${deckText}\n` : "";
+}
+
 function parseDeckEntriesFromText(deckText) {
     const entries = [];
     const errors = [];
@@ -49,6 +66,63 @@ function parseDeckEntriesFromText(deckText) {
 
     return {
         success: errors.length === 0,
+        entries,
+        errors
+    };
+}
+
+function isLeaderCardId(cardId) {
+    const normalizedCardId = String(cardId || "").trim();
+
+    if (!normalizedCardId) {
+        return false;
+    }
+
+    if (window.leaders?.[normalizedCardId]) {
+        return true;
+    }
+
+    return String(window.cardDatabase?.[normalizedCardId]?.cardType || "").toLowerCase() === "leader";
+}
+
+function parseDeckListData(deckText) {
+    const parsedDeck = parseDeckEntriesFromText(deckText);
+
+    if (!parsedDeck.success) {
+        return {
+            success: false,
+            leaderKey: "",
+            entries: [],
+            errors: parsedDeck.errors || []
+        };
+    }
+
+    const entries = [];
+    const errors = [];
+    let leaderKey = "";
+
+    parsedDeck.entries.forEach(entry => {
+        if (!isLeaderCardId(entry.cardId)) {
+            entries.push(entry);
+            return;
+        }
+
+        if (entry.quantity !== 1) {
+            errors.push(`Leader line must use 1x${entry.cardId}.`);
+            return;
+        }
+
+        if (leaderKey && leaderKey !== entry.cardId) {
+            errors.push("Deck text can only include one leader line.");
+            return;
+        }
+
+        leaderKey = entry.cardId;
+    });
+
+    return {
+        success: errors.length === 0,
+        leaderKey,
         entries,
         errors
     };
@@ -194,7 +268,7 @@ function getDeckSummaryText(selection, fallbackLabel = "Choose Deck") {
 }
 
 function createPasteDeckSelection({ deckName, leaderKey, deckText }) {
-    const parsedDeck = parseDeckEntriesFromText(deckText);
+    const parsedDeck = parseDeckListData(deckText);
 
     if (!parsedDeck.success) {
         throw new Error(parsedDeck.errors[0] || "Invalid deck text.");
@@ -210,7 +284,9 @@ function createPasteDeckSelection({ deckName, leaderKey, deckText }) {
         throw new Error(validation.errors[0] || "Deck contains unknown cards.");
     }
 
-    if (!window.leaders?.[leaderKey]) {
+    const resolvedLeaderKey = parsedDeck.leaderKey || String(leaderKey || "").trim();
+
+    if (!window.leaders?.[resolvedLeaderKey]) {
         throw new Error("Choose a valid leader.");
     }
 
@@ -219,7 +295,7 @@ function createPasteDeckSelection({ deckName, leaderKey, deckText }) {
         deckData: createDeckDefinition({
             id: `pasted-deck-${Date.now()}`,
             name: deckName,
-            leaderKey,
+            leaderKey: resolvedLeaderKey,
             entries: parsedDeck.entries,
             source: "paste"
         })
@@ -295,7 +371,7 @@ function openDeckPickerPopup({
 
     const pasteTextarea = document.createElement("textarea");
     pasteTextarea.className = "deck-picker-textarea";
-    pasteTextarea.placeholder = "2xDD01-002\n4xDD01-003";
+    pasteTextarea.placeholder = "1xDD01-001\n2xDD01-002\n4xDD01-003";
     pasteTextarea.value = resolvedSelection?.deckText || "";
 
     const presetSelect = document.createElement("select");
@@ -465,7 +541,9 @@ function createDeckPickerHelp(text) {
 window.savedDeckStorageKey = savedDeckStorageKey;
 window.deckSelectionStorageKey = deckSelectionStorageKey;
 window.buildDeckTextFromEntries = buildDeckTextFromEntries;
+window.buildDeckTextWithLeader = buildDeckTextWithLeader;
 window.parseDeckEntriesFromText = parseDeckEntriesFromText;
+window.parseDeckListData = parseDeckListData;
 window.validateDeckEntries = validateDeckEntries;
 window.createDeckDefinition = createDeckDefinition;
 window.cloneDeckDefinition = cloneDeckDefinition;

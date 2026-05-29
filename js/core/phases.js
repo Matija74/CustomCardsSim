@@ -4,11 +4,25 @@
 // Dice Roll Phase
 // =========================
 
+function setPhaseButtonUrgency(phaseButton, enabled) {
+    if (!phaseButton) {
+        return;
+    }
+
+    phaseButton.classList.toggle("phase-button-required", Boolean(enabled));
+}
+
+function shouldHighlightManualPhaseButton(text, disabled) {
+    if (disabled) {
+        return false;
+    }
+
+    return text === "Draw Card" || /^Add \d+ DON!!$/.test(String(text || ""));
+}
+
 function runDiceRollPhase(phaseButton, phaseInfo) {
     let player1Roll;
     let player2Roll;
-
-    addGameLog("Players rolled the dice...");
 
     do {
         player1Roll = rollD20();
@@ -38,6 +52,8 @@ function runDiceRollPhase(phaseButton, phaseInfo) {
         window.showDiceRollAnimation(player1Roll, player2Roll, gameState.diceWinner);
     }
 
+    setPhaseButtonUrgency(phaseButton, false);
+    phaseButton.style.display = "none";
     phaseButton.disabled = true;
 
     createTurnOrderButtons(phaseButton, phaseInfo);
@@ -181,6 +197,7 @@ function setPhaseButtonState(phaseButton, text, disabled = false) {
     phaseButton.style.display = "block";
     phaseButton.disabled = disabled;
     phaseButton.textContent = text;
+    setPhaseButtonUrgency(phaseButton, shouldHighlightManualPhaseButton(text, disabled));
 }
 
 function canCurrentClientAdvanceTurnPhases() {
@@ -501,3 +518,5 @@ function canPlayerPlayCards(player) {
 
     return true;
 }
+
+window.setPhaseButtonUrgency = setPhaseButtonUrgency;

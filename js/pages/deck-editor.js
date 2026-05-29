@@ -97,11 +97,6 @@ class DeckEditor {
     renderLeaderSelection() {
         this.cardLibraryGrid.innerHTML = "";
 
-        const message = document.createElement("div");
-        message.classList.add("library-message");
-        message.textContent = "Choose a Leader before adding cards to your deck.";
-        this.cardLibraryGrid.appendChild(message);
-
         const filteredLeaders = this.getFilteredCards({
             leadersOnly: true
         });
@@ -692,7 +687,10 @@ class DeckEditor {
             return;
         }
 
-        const deckText = deckDefinition.deckText;
+        const deckText = window.buildDeckTextWithLeader?.(
+            this.selectedLeader?.id,
+            deckDefinition.cards || this.getCurrentDeckEntries()
+        ) || deckDefinition.deckText;
 
         if (!deckText.trim()) {
             alert("Add cards to the deck before copying.");
@@ -740,12 +738,7 @@ class DeckEditor {
     }
 
     importDeckFromText() {
-        if (!this.selectedLeader) {
-            alert("Choose a Leader before importing deck text.");
-            return;
-        }
-
-        const parsedDeck = window.parseDeckEntriesFromText?.(this.importDeckText?.value || "");
+        const parsedDeck = window.parseDeckListData?.(this.importDeckText?.value || "");
 
         if (!parsedDeck?.success) {
             alert(parsedDeck?.errors?.[0] || "Invalid deck text.");
@@ -759,9 +752,18 @@ class DeckEditor {
             return;
         }
 
+        const leaderKey = parsedDeck.leaderKey || this.selectedLeader?.id || "";
+
+        if (!leaderKey) {
+            alert("Include a leader line in the deck text or choose a leader first.");
+            return;
+        }
+
+        const leader = this.leaders?.[leaderKey];
+
         this.loadDeckDefinition({
-            name: this.deckNameInput?.value?.trim() || `${this.selectedLeader.name} Deck`,
-            leaderKey: this.selectedLeader.id,
+            name: this.deckNameInput?.value?.trim() || `${leader?.name || "Imported"} Deck`,
+            leaderKey,
             cards: parsedDeck.entries
         });
     }
@@ -776,22 +778,6 @@ class DeckEditor {
         if (this.selectedLeader) {
             const leaderElement = this.createDeckLeaderElement(this.selectedLeader);
             this.deckDisplay.appendChild(leaderElement);
-        } else {
-            const noLeaderMessage = document.createElement("div");
-            noLeaderMessage.classList.add("empty-deck-message");
-            noLeaderMessage.textContent = "Choose a Leader first.";
-            this.deckDisplay.appendChild(noLeaderMessage);
-        }
-
-        if (this.deckCards.length === 0) {
-            const emptyDeckMessage = document.createElement("div");
-            emptyDeckMessage.classList.add("empty-deck-message");
-
-            emptyDeckMessage.textContent = this.selectedLeader
-                ? "Add cards from the card library to build your deck."
-                : "After choosing a Leader, your available cards will appear here.";
-
-            this.deckDisplay.appendChild(emptyDeckMessage);
         }
 
         this.deckCards.forEach(card => {

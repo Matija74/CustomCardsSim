@@ -1,14 +1,12 @@
 // play.js
 
-function updateDeckSummary(summaryElement, selection, fallbackLabel) {
-    if (!summaryElement) {
+function updateDeckButtonLabel(buttonElement, selection, fallbackLabel) {
+    if (!buttonElement) {
         return;
     }
 
     const deck = window.resolveDeckSelection?.(selection);
-    summaryElement.textContent = deck
-        ? `${deck.name} | Leader ${deck.leaderKey}`
-        : fallbackLabel;
+    buttonElement.textContent = deck?.name || fallbackLabel;
 }
 
 function updateSingleplayerPlayLink() {
@@ -55,8 +53,6 @@ function savePlayDeckSelection(key, selection) {
 function initializePlayPage() {
     const player1DeckButton = document.getElementById("player1DeckButton");
     const player2DeckButton = document.getElementById("player2DeckButton");
-    const player1DeckSummary = document.getElementById("player1DeckSummary");
-    const player2DeckSummary = document.getElementById("player2DeckSummary");
     const defaultDeck = window.getAvailableDecks?.()[0] || null;
 
     if (!player1DeckButton || !player2DeckButton || !defaultDeck) {
@@ -70,8 +66,8 @@ function initializePlayPage() {
     savePlayDeckSelection("player1Selection", player1Selection);
     savePlayDeckSelection("player2Selection", player2Selection);
 
-    updateDeckSummary(player1DeckSummary, player1Selection, "No deck selected");
-    updateDeckSummary(player2DeckSummary, player2Selection, "No deck selected");
+    updateDeckButtonLabel(player1DeckButton, player1Selection, "Choose Deck");
+    updateDeckButtonLabel(player2DeckButton, player2Selection, "Choose Deck");
     updateSingleplayerPlayLink();
 
     player1DeckButton.addEventListener("click", () => {
@@ -80,7 +76,7 @@ function initializePlayPage() {
             initialSelection: (window.getStoredDeckSelection?.() || {}).player1Selection,
             onConfirm: selection => {
                 savePlayDeckSelection("player1Selection", selection);
-                updateDeckSummary(player1DeckSummary, selection, "No deck selected");
+                updateDeckButtonLabel(player1DeckButton, selection, "Choose Deck");
                 updateSingleplayerPlayLink();
             }
         });
@@ -92,7 +88,7 @@ function initializePlayPage() {
             initialSelection: (window.getStoredDeckSelection?.() || {}).player2Selection,
             onConfirm: selection => {
                 savePlayDeckSelection("player2Selection", selection);
-                updateDeckSummary(player2DeckSummary, selection, "No deck selected");
+                updateDeckButtonLabel(player2DeckButton, selection, "Choose Deck");
                 updateSingleplayerPlayLink();
             }
         });

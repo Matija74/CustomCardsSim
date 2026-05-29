@@ -5,6 +5,7 @@ import {
 
 import {
     createRoom,
+    getMatch,
     joinRoom,
     subscribeToMatch,
     startMatch,
@@ -17,12 +18,12 @@ const connectionStatus = document.getElementById("connectionStatus");
 const createRoomBtn = document.getElementById("createRoomBtn");
 const joinRoomBtn = document.getElementById("joinRoomBtn");
 const queueDeckButton = document.getElementById("queueDeckButton");
-const queueDeckSummary = document.getElementById("queueDeckSummary");
 const roomCodeInput = document.getElementById("roomCodeInput");
 const roomStatus = document.getElementById("roomStatus");
 const roomCodeDisplay = document.getElementById("roomCodeDisplay");
 const player1Status = document.getElementById("player1Status");
 const player2Status = document.getElementById("player2Status");
+const readyUpBtn = document.getElementById("readyUpBtn");
 const startGameBtn = document.getElementById("startGameBtn");
 
 let currentUser = null;
@@ -43,15 +44,24 @@ function initializeDeckPicker() {
         saveQueueDeckSelection(onlineSelection);
     }
 
-    updateQueueDeckSummary();
+    updateQueueDeckButtonLabel();
 
     queueDeckButton.addEventListener("click", () => {
         window.openDeckPickerPopup?.({
             title: "Online Deck",
             initialSelection: (window.getStoredDeckSelection?.() || {}).onlineSelection,
-            onConfirm: selection => {
+            onConfirm: async (selection) => {
                 saveQueueDeckSelection(selection);
-                updateQueueDeckSummary();
+                updateQueueDeckButtonLabel();
+
+                if (currentRoomCode && currentUser?.uid) {
+                    try {
+                        await saveCurrentPlayerDeck(currentRoomCode);
+                        await setCurrentPlayerReady(false);
+                    } catch (error) {
+                        roomStatus.textContent = error.message;
+                    }
+                }
             }
         });
     });
@@ -70,16 +80,14 @@ function saveQueueDeckSelection(selection) {
     });
 }
 
-function updateQueueDeckSummary() {
-    if (!queueDeckSummary) {
+function updateQueueDeckButtonLabel() {
+    if (!queueDeckButton) {
         return;
     }
 
     const onlineSelection = (window.getStoredDeckSelection?.() || {}).onlineSelection;
     const deck = window.resolveDeckSelection?.(onlineSelection);
-    queueDeckSummary.textContent = deck
-        ? `${deck.name} | Leader ${deck.leaderKey}`
-        : "No deck selected";
+    queueDeckButton.textContent = deck?.name || "Choose Deck";
 }
 
 function setQueueControlsDisabled(disabled) {
@@ -100,8 +108,8 @@ function getSelectedQueueDeck() {
     return window.resolveDeckSelection?.((window.getStoredDeckSelection?.() || {}).onlineSelection) || null;
 }
 
-async function saveCurrentPlayerDeckAndReady(roomCode, slot) {
-    if (!currentUser?.uid || !roomCode || !slot) {
+async function saveCurrentPlayerDeck(roomCode) {
+    if (!currentUser?.uid || !roomCode) {
         return;
     }
 
@@ -112,7 +120,14 @@ async function saveCurrentPlayerDeckAndReady(roomCode, slot) {
     }
 
     await setPlayerDeck(roomCode, currentUser.uid, selectedDeck);
-    await setPlayerReady(roomCode, currentUser.uid, true);
+}
+
+async function setCurrentPlayerReady(ready) {
+    if (!currentRoomCode || !currentUser?.uid) {
+        return;
+    }
+
+    await setPlayerReady(currentRoomCode, currentUser.uid, ready);
 }
 
 function goToMatchPage() {
@@ -151,26 +166,37 @@ function updateRoomUI(match) {
     const hasPlayer1 = Boolean(match.players?.p1);
     const hasPlayer2 = Boolean(match.players?.p2);
     const bothPlayersConnected = Boolean(match.players?.p1?.connected && match.players?.p2?.connected);
+    const bothPlayersReady = Boolean(match.players?.p1?.ready && match.players?.p2?.ready);
+    const ownPlayer = playerSlot ? match.players?.[playerSlot] : null;
+    const hasSelectedDeck = Boolean(getSelectedQueueDeck());
 
     player1Status.textContent = hasPlayer1
-        ? `Player 1: ${match.players.p1.connected ? "Connected" : "Disconnected"}`
+        ? `Player 1: ${match.players.p1.connected ? "Connected" : "Disconnected"}${match.players.p1.ready ? " • Ready" : ""}`
         : "Player 1: Empty";
 
     player2Status.textContent = hasPlayer2
-        ? `Player 2: ${match.players.p2.connected ? "Connected" : "Disconnected"}`
+        ? `Player 2: ${match.players.p2.connected ? "Connected" : "Disconnected"}${match.players.p2.ready ? " • Ready" : ""}`
         : "Player 2: Empty";
 
     if (!hasPlayer2) {
         roomStatus.textContent = "Waiting for Player 2.";
     } else if (!bothPlayersConnected) {
         roomStatus.textContent = "A player disconnected.";
+    } else if (!bothPlayersReady) {
+        roomStatus.textContent = "Both players connected. Ready up before starting.";
     } else if (playerSlot === "p1") {
-        roomStatus.textContent = "Both players connected. Host can start.";
+        roomStatus.textContent = "Both players are ready. Host can start.";
     } else {
-        roomStatus.textContent = "Both players connected. Waiting for host.";
+        roomStatus.textContent = "Both players are ready. Waiting for host.";
     }
 
-    startGameBtn.disabled = !(bothPlayersConnected && playerSlot === "p1");
+    if (readyUpBtn) {
+        const canReady = Boolean(currentRoomCode && playerSlot && hasSelectedDeck && ownPlayer?.connected);
+        readyUpBtn.disabled = !canReady;
+        readyUpBtn.textContent = ownPlayer?.ready ? "Cancel Ready" : "Ready Up";
+    }
+
+    startGameBtn.disabled = !(bothPlayersConnected && bothPlayersReady && playerSlot === "p1");
 }
 
 createRoomBtn.addEventListener("click", async () => {
@@ -183,7 +209,7 @@ createRoomBtn.addEventListener("click", async () => {
         playerSlot = "p1";
         setRoomCode(roomCode);
         await registerRoomPresence(roomCode, playerSlot, currentUser);
-        await saveCurrentPlayerDeckAndReady(roomCode, playerSlot);
+        await saveCurrentPlayerDeck(roomCode);
         subscribeToCurrentRoom();
 
         roomStatus.textContent = "Room created. Waiting for Player 2.";
@@ -210,7 +236,7 @@ joinRoomBtn.addEventListener("click", async () => {
         playerSlot = "p2";
         setRoomCode(joinedRoomCode);
         await registerRoomPresence(joinedRoomCode, playerSlot, currentUser);
-        await saveCurrentPlayerDeckAndReady(joinedRoomCode, playerSlot);
+        await saveCurrentPlayerDeck(joinedRoomCode);
         subscribeToCurrentRoom();
     } catch (error) {
         roomStatus.textContent = error.message;
@@ -229,6 +255,34 @@ startGameBtn.addEventListener("click", async () => {
     } catch (error) {
         roomStatus.textContent = error.message;
         startGameBtn.disabled = false;
+    }
+});
+
+readyUpBtn?.addEventListener("click", async () => {
+    if (!currentRoomCode || !playerSlot) {
+        return;
+    }
+
+    try {
+        const selectedDeck = getSelectedQueueDeck();
+
+        if (!selectedDeck) {
+            roomStatus.textContent = "Choose a deck before readying up.";
+            return;
+        }
+
+        readyUpBtn.disabled = true;
+        roomStatus.textContent = "Updating ready status...";
+
+        const currentMatch = await getMatch(currentRoomCode);
+        const ownPlayer = currentMatch?.players?.[playerSlot];
+        const nextReadyState = !ownPlayer?.ready;
+
+        await saveCurrentPlayerDeck(currentRoomCode);
+        await setCurrentPlayerReady(nextReadyState);
+    } catch (error) {
+        roomStatus.textContent = error.message;
+        readyUpBtn.disabled = false;
     }
 });
 

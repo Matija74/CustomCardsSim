@@ -30,6 +30,7 @@ let lastAppliedSharedRevision = null;
 let lastSubmittedSharedRevision = null;
 let initializingSharedState = false;
 let lastDiceRenderKey = null;
+let didHandleOpponentDisconnect = false;
 
 window.__multiplayerRuntime = {
     getLocalSlot: () => localSlot,
@@ -302,6 +303,10 @@ function setPhaseButtonState({ text, disabled = false, hidden = false, onClick =
     phaseButton.style.display = hidden ? "none" : "block";
     phaseButton.disabled = disabled;
     phaseButton.textContent = text;
+    window.setPhaseButtonUrgency?.(
+        phaseButton,
+        !hidden && !disabled && (text === "Draw Card" || /^Add \d+ DON!!$/.test(String(text || "")))
+    );
     window.__multiplayerRuntime.handlePhaseButtonClick = onClick
         ? () => runPregameAction("Pregame action failed", onClick)
         : null;
@@ -440,6 +445,7 @@ function renderPregameControls(match) {
         setPhaseButtonState({
             text: dice.tie ? "Roll Again" : ownRolled ? "Waiting For Opponent" : "Roll Dice",
             disabled: !canRoll,
+            hidden: ownRolled && !dice.tie,
             onClick: async () => {
                 await rollMultiplayerDice(roomCode, localSlot);
             }
@@ -473,7 +479,7 @@ function renderPregameControls(match) {
     });
 }
 
-async function ensureDeckAndReady(match) {
+async function ensureDeckSelection(match) {
     const ownPlayer = match?.players?.[localSlot];
 
     if (!ownPlayer || ownPlayer.uid !== currentUser?.uid) {
@@ -487,9 +493,6 @@ async function ensureDeckAndReady(match) {
         return;
     }
 
-    if (!ownPlayer.ready && ownPrivateState?.selectedDeck) {
-        await setPlayerReady(roomCode, currentUser.uid, true);
-    }
 }
 
 async function maybeInitializeServiceMatch(match) {
@@ -635,7 +638,7 @@ async function handlePublicMatchUpdate(match) {
         return;
     }
 
-    await ensureDeckAndReady(match);
+    await ensureDeckSelection(match);
     await maybeInitializeServiceMatch(match);
 
     if (applySharedStateIfNeeded(match)) {
@@ -697,6 +700,23 @@ async function initializeRuntime() {
                 text: "Room Closed",
                 disabled: true
             });
+            return;
+        }
+
+        const opponentSlot = getOpponentSlot(localSlot);
+        const ownPlayer = match.players?.[localSlot];
+        const opponentPlayer = match.players?.[opponentSlot];
+
+        if (
+            !didHandleOpponentDisconnect &&
+            match.status === "started" &&
+            ownPlayer?.connected &&
+            opponentPlayer &&
+            opponentPlayer.connected === false
+        ) {
+            didHandleOpponentDisconnect = true;
+            window.alert(`${opponentPlayer.name || "Your opponent"} left the match. You will return to the main menu.`);
+            window.location.href = "../index.html";
             return;
         }
 

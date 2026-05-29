@@ -18,13 +18,18 @@ function parseDeckText(deckText) {
 
         const amount = parseInt(parts[0], 10);
         const cardId = parts[1].trim();
+        const card = getCardById(cardId);
+
+        if (!card) {
+            return;
+        }
+
+        if (String(card.cardType || "").toLowerCase() === "leader") {
+            return;
+        }
 
         for (let i = 0; i < amount; i++) {
-            const card = getCardById(cardId);
-
-            if (card) {
-                deck.push(card);
-            }
+            deck.push(card);
         }
     });
 
