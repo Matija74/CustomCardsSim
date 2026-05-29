@@ -768,10 +768,10 @@ body {
 .power-modifier-badge {
     position: absolute;
     right: -12px;
-    top: -16px;
+    top: 12px;
 
-    min-width: 70px;
-    padding: 6px 10px;
+    min-width: 56px;
+    padding: 5px 8px;
 
     border: 2px solid rgba(255, 255, 255, 0.95);
     border-radius: 999px;
@@ -793,8 +793,9 @@ body {
     left: -12px;
     top: -16px;
 
-    min-width: 74px;
-    padding: 6px 10px;
+    width: 48px;
+    height: 34px;
+    padding: 0;
 
     border: 2px solid rgba(255, 255, 255, 0.95);
     border-radius: 999px;
@@ -807,6 +808,9 @@ body {
 
     z-index: 29;
     pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
 }
@@ -834,10 +838,10 @@ body {
 .base-power-badge {
     position: absolute;
     right: -12px;
-    top: 20px;
+    top: -16px;
 
-    min-width: 88px;
-    padding: 6px 10px;
+    min-width: 64px;
+    padding: 5px 8px;
 
     border: 2px solid rgba(255, 255, 255, 0.95);
     border-radius: 999px;
@@ -845,7 +849,7 @@ body {
     background: linear-gradient(135deg, #0b5ed7 0%, #10274c 100%);
     color: white;
 
-    font-size: 0.76rem;
+    font-size: 0.74rem;
     font-weight: 900;
     line-height: 1;
     text-align: center;

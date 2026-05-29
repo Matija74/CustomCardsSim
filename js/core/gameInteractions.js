@@ -2810,7 +2810,7 @@ function copyOpponentCharacterBasePower(player, sourceCard, ui) {
                     expiresAtEndOfTurns
                 };
 
-                ui.renderCharacters();
+                refreshCardStatDisplay(ownTarget);
                 addGameLog(`${sourceCard.name} made ${ownTarget.name}'s base power ${basePower} until ${opponent.name}'s next end phase.`);
             },
             emptyMessage: `${sourceCard.name} found no opposing characters.`
@@ -4060,8 +4060,27 @@ function addBattleKeyword(card, keyword) {
     card.battleKeywords.push(keyword);
 }
 
+function refreshCardStatDisplay(card) {
+    if (!card) {
+        return;
+    }
+
+    if ((card.cardType === "leader" || card.cardType === "character") && typeof renderLeaders === "function") {
+        renderLeaders();
+    }
+
+    if ((card.cardType === "leader" || card.cardType === "character") && typeof renderCharacters === "function") {
+        renderCharacters();
+    }
+
+    if (card.cardType === "stage" && typeof renderStages === "function") {
+        renderStages();
+    }
+}
+
 function addBattlePowerBonus(card, amount) {
     card.battlePowerBonus = Number(card.battlePowerBonus || 0) + amount;
+    refreshCardStatDisplay(card);
 }
 
 function addTemporaryPowerBonus(card, amount) {
@@ -4070,6 +4089,7 @@ function addTemporaryPowerBonus(card, amount) {
     }
 
     card.temporaryPowerBonus = Number(card.temporaryPowerBonus || 0) + Number(amount || 0);
+    refreshCardStatDisplay(card);
 }
 
 function addDurationPowerBonus(card, amount, expiresAtEndOfTurns, expiresAtPlayerKey = null) {
@@ -4086,6 +4106,8 @@ function addDurationPowerBonus(card, amount, expiresAtEndOfTurns, expiresAtPlaye
         expiresAtEndOfTurns,
         expiresAtPlayerKey
     });
+
+    refreshCardStatDisplay(card);
 }
 
 function addCostModifier(card, amount) {
@@ -4100,10 +4122,7 @@ function addCostModifier(card, amount) {
     card.costModifiers.push({
         amount: Number(amount || 0)
     });
-
-    if (typeof renderCharacters === "function") {
-        renderCharacters();
-    }
+    refreshCardStatDisplay(card);
 }
 
 function giveRestedDonToCard(player, sourceCard, targetCard, ui) {
@@ -5695,6 +5714,7 @@ function clearExpiredEndPhaseEffects(expiringPlayer) {
                 Number(card.temporaryBasePower.expiresAtEndOfTurns ?? 0) <= Number(expiringPlayer.turns || 0)
             ) {
                 card.temporaryBasePower = null;
+                refreshCardStatDisplay(card);
             }
         });
     });

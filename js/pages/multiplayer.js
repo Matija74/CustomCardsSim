@@ -5465,7 +5465,7 @@ function renderCostModifierBadge(card, container) {
         : modifier > 0
             ? "cost-modifier-badge cost-modifier-positive"
             : "cost-modifier-badge cost-modifier-neutral";
-    badge.textContent = `Cost ${currentCost}`;
+    badge.textContent = `${currentCost}`;
     badge.title = modifier === 0
         ? `Printed cost: ${printedCost}`
         : `Printed cost: ${printedCost}. Modifier: ${sign}${modifier}. Current cost: ${currentCost}.`;
@@ -5487,15 +5487,15 @@ function renderPowerModifierBadge(card, player, container, boardCardData = null)
 
     const badge = document.createElement("div");
     const sign = modifier > 0 ? "+" : "";
-    const printedPower = getPrintedPower(card);
-    const currentPower = printedPower + modifier;
+    const currentBasePower = getPrintedPower(card);
+    const currentPower = currentBasePower + modifier;
 
     badge.className = modifier > 0
         ? "power-modifier-badge power-modifier-positive"
         : "power-modifier-badge power-modifier-negative";
 
     badge.textContent = `${sign}${modifier}`;
-    badge.title = `Current power: ${currentPower} (${printedPower} ${sign}${modifier})`;
+    badge.title = `Current power: ${currentPower} (${currentBasePower} ${sign}${modifier})`;
 
     container.appendChild(badge);
 }
@@ -5507,15 +5507,13 @@ function renderBasePowerBadge(card, player, container, boardCardData = null) {
 
     const printedBasePower = Number(card?.power ?? 0);
     const currentBasePower = getPrintedPower(card);
-    const modifier = getPowerModifier(card, player) + getCurrentAttackTargetPowerBonus(boardCardData);
-    const currentPower = currentBasePower + modifier;
     const badge = document.createElement("div");
 
     badge.className = "base-power-badge";
-    badge.textContent = `Power ${currentPower}`;
+    badge.textContent = `${currentBasePower}`;
     badge.title = currentBasePower !== printedBasePower
-        ? `Printed base power: ${printedBasePower}. Current base power: ${currentBasePower}. Current total power: ${currentPower}.`
-        : `Current power: ${currentPower}`;
+        ? `Printed base power: ${printedBasePower}. Current base power: ${currentBasePower}.`
+        : `Base power: ${currentBasePower}`;
 
     container.appendChild(badge);
 }
