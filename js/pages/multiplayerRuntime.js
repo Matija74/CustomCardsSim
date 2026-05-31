@@ -5,6 +5,7 @@ import {
 
 import {
     getMatch,
+    registerRoomPresence,
     rollMultiplayerDice,
     chooseMultiplayerTurnOrder,
     setMultiplayerMulligan,
@@ -680,6 +681,7 @@ async function initializeRuntime() {
     await signInGuest();
 
     currentUser = await waitForUser();
+    await registerRoomPresence(roomCode, localSlot, currentUser);
 
     unsubscribePrivate = subscribeToPrivateState(roomCode, currentUser.uid, (privateState) => {
         ownPrivateState = privateState || {};
