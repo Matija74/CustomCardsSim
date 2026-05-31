@@ -11,6 +11,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 import { database } from "./firebaseApp.js";
+import { firebaseConfig } from "./firebaseConfig.js";
 
 function generateRoomCode() {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -948,6 +949,46 @@ export async function registerRoomPresence(roomCode, playerSlot, user) {
     });
 
     await touchRoom(room);
+}
+
+export async function createImmediateDisconnectRequest(roomCode, playerSlot, user) {
+    normalizePlayerSlot(playerSlot);
+
+    if (!user?.uid) {
+        throw new Error("User is required to prepare room disconnect handling.");
+    }
+
+    const room = cleanRoomCode(roomCode);
+    const idToken = await user.getIdToken();
+    const url = new URL(`matches/${room}/players/${playerSlot}.json`, firebaseConfig.databaseURL);
+
+    url.searchParams.set("auth", idToken);
+
+    return {
+        url: url.toString(),
+        body: JSON.stringify({
+            connected: false,
+            disconnectedAt: { ".sv": "timestamp" },
+            lastSeenAt: { ".sv": "timestamp" }
+        })
+    };
+}
+
+export function sendImmediateDisconnectRequest(request) {
+    if (!request?.url || !request?.body) {
+        return;
+    }
+
+    fetch(request.url, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: request.body,
+        keepalive: true
+    }).catch(error => {
+        console.error("Failed to send immediate disconnect request:", error);
+    });
 }
 
 export async function cleanupInactiveRooms(options = {}) {

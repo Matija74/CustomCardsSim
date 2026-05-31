@@ -828,6 +828,16 @@ function clearParfumControlState(character) {
     character.ignorePlayedThisTurnCheck = false;
 }
 
+function getParfumOriginalOwner(character) {
+    const ownerKey = character?.parfumControl?.originalOwnerPlayerKey;
+
+    return ownerKey ? gameState?.[ownerKey] || null : null;
+}
+
+function getCardZoneDestinationPlayer(player, card) {
+    return getParfumOriginalOwner(card) || player;
+}
+
 function getParfumControlledCharacter(stageOwner, stage) {
     const control = stage?.parfumControlledCharacter;
 
@@ -3240,10 +3250,20 @@ function resolveUltimaOnPlay(player, sourceCard, ui) {
 
 function resolveDeathEggOnPlay(player, sourceCard, ui) {
     const ownCharacters = player.characters.filter(Boolean);
+    const linkedStageMessages = [];
 
     ownCharacters.forEach(character => {
         character.state = "active";
-        player.hand.push(character);
+
+        const destinationPlayer = getCardZoneDestinationPlayer(player, character);
+
+        destinationPlayer.hand.push(character);
+
+        const linkedStageMessage = trashLinkedParfumStageForCharacter(player, character, ui);
+
+        if (linkedStageMessage) {
+            linkedStageMessages.push(linkedStageMessage);
+        }
     });
 
     player.characters = player.characters.map(() => null);
@@ -3263,7 +3283,7 @@ function resolveDeathEggOnPlay(player, sourceCard, ui) {
     ui.renderCharacters();
     ui.renderTrash();
 
-    return `${sourceCard.name} returned ${ownCharacters.length} character${ownCharacters.length === 1 ? "" : "s"} to ${player.name}'s hand. ${messages.filter(Boolean).join(" ")}`;
+    return `${sourceCard.name} returned ${ownCharacters.length} character${ownCharacters.length === 1 ? "" : "s"} from ${player.name}'s field to their owners' hands. ${[...linkedStageMessages, ...messages].filter(Boolean).join(" ")}`;
 }
 
 function lockOpponentCharactersFromAttacking(player, sourceCard, ui, maxTargets, maxCost) {
@@ -5820,13 +5840,14 @@ function moveCardToTrash(player, card, ui) {
     const returnedDon = card.cardType === "character"
         ? detachAttachedDonToCostArea(player, card, ui)
         : 0;
+    const destinationPlayer = getCardZoneDestinationPlayer(player, card);
 
     if (returnedDon > 0) {
         addGameLog(`${returnedDon} attached DON!! returned to ${player.name}'s cost area rested.`);
     }
 
     card.uiAnimation = card.uiAnimation || "trashed";
-    player.trash.push(card);
+    destinationPlayer.trash.push(card);
 
     if (ui.renderTrash) {
         ui.renderTrash();

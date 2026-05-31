@@ -4,12 +4,14 @@ import {
 } from "../firebase/firebaseApp.js";
 
 import {
+    createImmediateDisconnectRequest,
     getMatch,
     registerRoomPresence,
     rollMultiplayerDice,
     chooseMultiplayerTurnOrder,
     setMultiplayerMulligan,
     requestRematch,
+    sendImmediateDisconnectRequest,
     setPlayerDeck,
     setPlayerReady,
     startMatch,
@@ -34,8 +36,10 @@ let lastDiceRenderKey = null;
 let didHandleOpponentDisconnect = false;
 let opponentDisconnectTimer = null;
 let restoringPresence = false;
+let immediateDisconnectRequest = null;
+let didSendImmediateDisconnect = false;
 
-const OPPONENT_DISCONNECT_GRACE_MS = 6000;
+const OPPONENT_DISCONNECT_GRACE_MS = 1500;
 
 window.__multiplayerRuntime = {
     getLocalSlot: () => localSlot,
@@ -65,6 +69,15 @@ function clearPendingOpponentDisconnect() {
 
     window.clearTimeout(opponentDisconnectTimer);
     opponentDisconnectTimer = null;
+}
+
+function sendImmediateDisconnectOnExit() {
+    if (didSendImmediateDisconnect || !immediateDisconnectRequest) {
+        return;
+    }
+
+    didSendImmediateDisconnect = true;
+    sendImmediateDisconnectRequest(immediateDisconnectRequest);
 }
 
 async function ensureOwnPresence(match) {
@@ -767,7 +780,11 @@ async function initializeRuntime() {
     await signInGuest();
 
     currentUser = await waitForUser();
+    immediateDisconnectRequest = await createImmediateDisconnectRequest(roomCode, localSlot, currentUser);
     await registerRoomPresence(roomCode, localSlot, currentUser);
+
+    window.addEventListener("pagehide", sendImmediateDisconnectOnExit);
+    window.addEventListener("beforeunload", sendImmediateDisconnectOnExit);
 
     unsubscribePrivate = subscribeToPrivateState(roomCode, currentUser.uid, (privateState) => {
         ownPrivateState = privateState || {};
