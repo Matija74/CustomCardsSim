@@ -32,6 +32,10 @@ let lastSubmittedSharedRevision = null;
 let initializingSharedState = false;
 let lastDiceRenderKey = null;
 let didHandleOpponentDisconnect = false;
+let opponentDisconnectTimer = null;
+let restoringPresence = false;
+
+const OPPONENT_DISCONNECT_GRACE_MS = 6000;
 
 window.__multiplayerRuntime = {
     getLocalSlot: () => localSlot,
@@ -52,6 +56,88 @@ function cloneValue(value) {
 
 function getOpponentSlot(slot) {
     return slot === "p1" ? "p2" : "p1";
+}
+
+function clearPendingOpponentDisconnect() {
+    if (!opponentDisconnectTimer) {
+        return;
+    }
+
+    window.clearTimeout(opponentDisconnectTimer);
+    opponentDisconnectTimer = null;
+}
+
+async function ensureOwnPresence(match) {
+    const ownPlayer = match?.players?.[localSlot];
+
+    if (
+        restoringPresence ||
+        !currentUser ||
+        !roomCode ||
+        !localSlot ||
+        !ownPlayer ||
+        ownPlayer.uid !== currentUser.uid ||
+        ownPlayer.connected !== false
+    ) {
+        return;
+    }
+
+    restoringPresence = true;
+
+    try {
+        await registerRoomPresence(roomCode, localSlot, currentUser);
+    } catch (error) {
+        console.error("Failed to restore room presence:", error);
+    } finally {
+        restoringPresence = false;
+    }
+}
+
+function scheduleOpponentDisconnectCheck(match) {
+    const opponentSlot = getOpponentSlot(localSlot);
+    const ownPlayer = match?.players?.[localSlot];
+    const opponentPlayer = match?.players?.[opponentSlot];
+    const shouldWatchDisconnect = Boolean(
+        match?.status === "started" &&
+        ownPlayer?.connected &&
+        opponentPlayer &&
+        opponentPlayer.connected === false
+    );
+
+    if (!shouldWatchDisconnect) {
+        clearPendingOpponentDisconnect();
+        return;
+    }
+
+    if (didHandleOpponentDisconnect || opponentDisconnectTimer) {
+        return;
+    }
+
+    opponentDisconnectTimer = window.setTimeout(async () => {
+        opponentDisconnectTimer = null;
+
+        try {
+            const latestMatch = await getMatch(roomCode);
+            const latestOwnPlayer = latestMatch?.players?.[localSlot];
+            const latestOpponentPlayer = latestMatch?.players?.[opponentSlot];
+
+            if (
+                didHandleOpponentDisconnect ||
+                latestMatch?.status !== "started" ||
+                !latestOwnPlayer?.connected ||
+                !latestOpponentPlayer ||
+                latestOpponentPlayer.connected !== false
+            ) {
+                return;
+            }
+
+            didHandleOpponentDisconnect = true;
+            window.alert(`${latestOpponentPlayer.name || "Your opponent"} left the match. You will return to the main menu.`);
+            window.location.href = "../index.html";
+        } catch (error) {
+            console.error("Failed to verify opponent disconnect:", error);
+        }
+    }, OPPONENT_DISCONNECT_GRACE_MS);
 }
 
 function getPageApi() {
@@ -698,6 +784,7 @@ async function initializeRuntime() {
 
     unsubscribeMatch = subscribeToMatch(roomCode, (match) => {
         if (!match) {
+            clearPendingOpponentDisconnect();
             setPhaseButtonState({
                 text: "Room Closed",
                 disabled: true
@@ -705,22 +792,10 @@ async function initializeRuntime() {
             return;
         }
 
-        const opponentSlot = getOpponentSlot(localSlot);
-        const ownPlayer = match.players?.[localSlot];
-        const opponentPlayer = match.players?.[opponentSlot];
-
-        if (
-            !didHandleOpponentDisconnect &&
-            match.status === "started" &&
-            ownPlayer?.connected &&
-            opponentPlayer &&
-            opponentPlayer.connected === false
-        ) {
-            didHandleOpponentDisconnect = true;
-            window.alert(`${opponentPlayer.name || "Your opponent"} left the match. You will return to the main menu.`);
-            window.location.href = "../index.html";
-            return;
-        }
+        ensureOwnPresence(match).catch(error => {
+            console.error("Failed to repair own room presence:", error);
+        });
+        scheduleOpponentDisconnectCheck(match);
 
         handlePublicMatchUpdate(match).catch(error => {
             console.error("Failed to process multiplayer update:", error);
