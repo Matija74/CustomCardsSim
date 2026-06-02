@@ -7,7 +7,7 @@
 
     <link rel="icon" type="image/png" href="../images/basic/logo-without-title.png">
     <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="../css/deck-editor.css?v=filters-1">
+    <link rel="stylesheet" href="../css/deck-editor.css?v=copy-limit-1">
 </head>
 
 <body>
@@ -45,6 +45,11 @@
                         placeholder="Enter deck name..."
                     >
                 </div>
+
+                <label class="deck-setting-toggle" for="limitCopiesToggle">
+                    <input type="checkbox" id="limitCopiesToggle" checked>
+                    <span>Limit cards to 4 copies</span>
+                </label>
 
                 <div class="deck-display" id="deckDisplay"></div>
 
@@ -210,6 +215,6 @@
 
     <script src="../js/cards/cardDatabase.js?v=ry-ichigo-1"></script>
     <script src="../js/core/deckTools.js?v=deck-tools-2"></script>
-    <script src="../js/pages/deck-editor.js?v=deck-tools-2"></script>
+    <script src="../js/pages/deck-editor.js?v=copy-limit-1"></script>
 </body>
 </html>

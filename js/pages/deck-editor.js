@@ -19,6 +19,7 @@ class DeckEditor {
         this.cardLibraryGrid = document.getElementById("cardLibraryGrid");
         this.deckCardCount = document.getElementById("deckCardCount");
         this.deckNameInput = document.getElementById("deckName");
+        this.limitCopiesToggle = document.getElementById("limitCopiesToggle");
 
         this.cardSearch = document.getElementById("cardSearch");
         this.categoryFilter = document.getElementById("categoryFilter");
@@ -72,6 +73,7 @@ class DeckEditor {
         this.counterFilter.addEventListener("change", () => this.renderCardLibrary());
         this.leaderColorFilterToggle.addEventListener("change", () => this.renderCardLibrary());
         this.leaderTypeFilterToggle.addEventListener("change", () => this.renderCardLibrary());
+        this.limitCopiesToggle?.addEventListener("change", () => this.handleCopyLimitToggleChange());
 
         this.saveDeckButton?.addEventListener("click", () => this.saveCurrentDeck());
         this.copyDeckCodeButton?.addEventListener("click", () => this.copyDeckCode());
@@ -195,8 +197,7 @@ class DeckEditor {
             button.textContent = "Choose Leader";
             button.addEventListener("click", () => this.chooseLeader(card));
         } else {
-            const currentAmount = this.getCardAmountInDeck(card.id);
-            const isAtLimit = currentAmount >= this.maxCopiesPerCard;
+            const isAtLimit = !this.canAddAnotherCopy(card.id);
 
             button.textContent = isAtLimit ? "Max" : "Add";
             button.disabled = isAtLimit;
@@ -483,6 +484,23 @@ class DeckEditor {
     // Deck Actions
     // =========================
 
+    isCopyLimitEnabled() {
+        return this.limitCopiesToggle?.checked ?? true;
+    }
+
+    canAddAnotherCopy(cardId) {
+        if (!this.isCopyLimitEnabled()) {
+            return true;
+        }
+
+        return this.getCardAmountInDeck(cardId) < this.maxCopiesPerCard;
+    }
+
+    handleCopyLimitToggleChange() {
+        this.renderDeck();
+        this.renderCardLibrary();
+    }
+
     addCardToDeck(card) {
         if (!this.selectedLeader) {
             alert("You must choose a Leader before adding cards.");
@@ -492,7 +510,7 @@ class DeckEditor {
         const existingCard = this.deckCards.find(deckCard => deckCard.id === card.id);
 
         if (existingCard) {
-            if (existingCard.amount >= this.maxCopiesPerCard) {
+            if (!this.canAddAnotherCopy(card.id)) {
                 alert(`You can only have ${this.maxCopiesPerCard} copies of this card.`);
                 return;
             }
@@ -516,7 +534,7 @@ class DeckEditor {
             return;
         }
 
-        if (existingCard.amount >= this.maxCopiesPerCard) {
+        if (!this.canAddAnotherCopy(cardId)) {
             alert(`You can only have ${this.maxCopiesPerCard} copies of this card.`);
             return;
         }
@@ -872,7 +890,7 @@ class DeckEditor {
         increaseButton.classList.add("quantity-button");
         increaseButton.textContent = "+";
 
-        const isAtLimit = card.amount >= this.maxCopiesPerCard;
+        const isAtLimit = !this.canAddAnotherCopy(card.id);
 
         increaseButton.disabled = isAtLimit;
 
