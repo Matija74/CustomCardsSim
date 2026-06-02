@@ -166,6 +166,7 @@
       {
         "id": "JK01-001-on-opponent-attack",
         "type": "onOpponentAttack",
+        "maxUsesPerTurn": 2,
         "text": "On Your Opponent's Attack Twice Per Turn: Activate an event card with a Counter from your trash. Then, draw 1 trash 1."
       }
     ]

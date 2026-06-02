@@ -398,6 +398,54 @@ function chooseHandCard(player, sourceCard, options = {}) {
     );
 }
 
+function resolveDrawOneTrashOne(player, sourceCard, ui, options = {}) {
+    const finish = (...args) => {
+        if (typeof queueMultiplayerStateSync === "function") {
+            queueMultiplayerStateSync();
+        }
+
+        options.onComplete?.(...args);
+    };
+
+    const drawResult = drawCard(player, ui);
+
+    if (drawResult?.deckOut) {
+        finish();
+        return `${sourceCard.name}'s effect tried to draw 1 card, but ${player.name} lost by deck out.`;
+    }
+
+    if (player.hand.length === 0) {
+        finish();
+        return `${sourceCard.name}'s effect drew 1 card, but found no card in hand to trash.`;
+    }
+
+    const chooseMessage = chooseHandCard(player, sourceCard, {
+        prompt: options.prompt || `Choose 1 card from your hand to trash for ${sourceCard.name}.`,
+        optional: false,
+        onSelect: ({ card }) => {
+            const handIndex = player.hand.indexOf(card);
+
+            if (handIndex === -1) {
+                addGameLog(`${sourceCard.name} could not find that hand card to trash.`);
+                finish();
+                return;
+            }
+
+            const trashedCard = player.hand.splice(handIndex, 1)[0];
+            moveCardToTrash(player, trashedCard, ui);
+            ui?.renderHands?.();
+            ui?.renderTrash?.();
+            addGameLog(`${player.name} trashed ${trashedCard.name} for ${sourceCard.name}.`);
+            finish(trashedCard);
+        },
+        emptyMessage: `${sourceCard.name}'s effect found no cards in hand to trash.`
+    });
+
+    return chooseMessage
+        ? `${sourceCard.name}'s effect drew 1 card. ${chooseMessage}`
+        : `${sourceCard.name}'s effect drew 1 card.`;
+}
+
 function chooseHandCardsToTopOrBottomOfDeck(player, sourceCard, ui, count, options = {}) {
     const topCards = [];
     const bottomCards = [];
@@ -955,7 +1003,22 @@ function trashStageFromField(player, stage, ui, options = {}) {
         ui.renderStages();
     }
 
+    if (options.isKO) {
+        resolveOnKOEffects(player, stageCard, ui).forEach(message => {
+            if (message) {
+                addGameLog(message);
+            }
+        });
+    }
+
     return returnMessage;
+}
+
+function koStageFromField(player, stage, ui, options = {}) {
+    return trashStageFromField(player, stage, ui, {
+        ...options,
+        isKO: true
+    });
 }
 
 function trashLinkedParfumStageForCharacter(player, character, ui) {
@@ -1198,6 +1261,41 @@ function drawCard(player, uiInstance = ui) {
     return checkDeckOut(player, `${player.name} drew the last card from their deck.`);
 }
 
+function trashTopCardsOfDeck(player, amount, uiInstance = ui) {
+    const trashedCards = [];
+
+    if (!player || amount <= 0) {
+        return {
+            success: false,
+            trashedCards,
+            message: "No cards were trashed from the deck."
+        };
+    }
+
+    for (let index = 0; index < amount; index++) {
+        const topCard = player.deck.shift();
+
+        if (!topCard) {
+            break;
+        }
+
+        const trashedCard = assignCardInstance(topCard);
+        moveCardToTrash(player, trashedCard, uiInstance);
+        trashedCards.push(trashedCard);
+    }
+
+    uiInstance?.renderDecks?.();
+    uiInstance?.renderTrash?.();
+
+    return {
+        success: trashedCards.length > 0,
+        trashedCards,
+        message: trashedCards.length > 0
+            ? `${player.name} trashed ${trashedCards.length} card${trashedCards.length === 1 ? "" : "s"} from the top of the deck.`
+            : `${player.name} had no cards in deck to trash.`
+    };
+}
+
 function drawCards(player, amount, uiInstance = ui) {
     for (let i = 0; i < amount; i++) {
         const drawResult = drawCard(player, uiInstance);
@@ -1210,6 +1308,27 @@ function drawCards(player, amount, uiInstance = ui) {
     return {
         deckOut: false
     };
+}
+
+function drawCardFromBottom(player, uiInstance = ui) {
+    const card = player.deck.pop();
+
+    if (!card) {
+        console.log(`${player.name} has no cards left in deck.`);
+        return loseByDeckOut(player, `${player.name} tried to draw from the bottom of an empty deck.`);
+    }
+
+    const drawnCard = assignCardInstance(card);
+
+    drawnCard.uiAnimation = "drawn";
+    player.hand.push(drawnCard);
+
+    if (uiInstance) {
+        uiInstance.renderHands();
+        uiInstance.renderDecks();
+    }
+
+    return checkDeckOut(player, `${player.name} drew the last card from their deck.`);
 }
 
 // =========================
@@ -1257,6 +1376,29 @@ function getCounterEffectPower(card, player) {
 function canUseCounterEffect(card, player, effect) {
     if (!card || !player || !effect) {
         return false;
+    }
+
+    const higurumaCounterPowerLimits = {
+        "JK01-002-counter": 7000,
+        "JK01-003-counter": 7000,
+        "JK01-004-counter": 10000,
+        "JK01-005-counter": 12000
+    };
+    const higurumaPowerLimit = higurumaCounterPowerLimits[effect.id];
+
+    if (higurumaPowerLimit) {
+        if (typeof currentAttack === "undefined" || !currentAttack) {
+            return false;
+        }
+
+        const attackerPlayer = gameState?.[currentAttack.attackerPlayerKey];
+        const attackerCard = getBoardCardFromData(currentAttack.attacker);
+
+        if (!attackerPlayer || !attackerCard) {
+            return false;
+        }
+
+        return getCardBattlePower(attackerCard, attackerPlayer) <= higurumaPowerLimit;
     }
 
     if (effect.id === "POG1-014-counter") {
@@ -1471,9 +1613,11 @@ function playCharacterCard(player, handIndex, ui, targetSlotIndex = null) {
     player.characters[slotIndex] = playedCard;
 
     if (replacedCard) {
-        moveCardToTrash(player, replacedCard, ui);
-        resolveGutsLeaderCharacterRemovedBonus(player, ui);
-        const linkedStageMessage = trashLinkedParfumStageForCharacter(player, replacedCard, ui);
+        const trashResult = trashCharacterFromField(player, null, ui, {
+            character: replacedCard,
+            render: false
+        });
+        const linkedStageMessage = trashResult.linkedStageMessage;
 
         if (linkedStageMessage) {
             addGameLog(linkedStageMessage);
@@ -1695,6 +1839,34 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
         return drawResult?.deckOut
             ? `${sourceCard.name}'s effect tried to draw 1 card, but ${player.name} lost by deck out.`
             : `${sourceCard.name}'s effect drew 1 card.`;
+    }
+
+    if (effect.id === "JK01-002-counter") {
+        return resolveEvidenceCounterEffect(player, sourceCard, ui);
+    }
+
+    if (effect.id === "JK01-003-counter") {
+        return resolveConfiscationCounterEffect(player, sourceCard, ui);
+    }
+
+    if (effect.id === "JK01-004-counter") {
+        return resolveDeathPenaltyCounterEffect(player, sourceCard, ui);
+    }
+
+    if (effect.id === "JK01-005-counter") {
+        return resolveConfessionCounterEffect(player, sourceCard, ui);
+    }
+
+    if (effect.id === "JK01-011-on-ko") {
+        return resolveDrawOneTrashOne(player, sourceCard, ui);
+    }
+
+    if (effect.id === "JK01-007-on-play") {
+        if (!player.leader || !CardEffects.hasCardName(player.leader, "Hiromi Higuruma")) {
+            return `${sourceCard.name}'s On Play effect did not resolve because ${player.name}'s leader is not Hiromi Higuruma.`;
+        }
+
+        return trashTopCardsOfDeck(player, 5, ui).message;
     }
 
     if (effect.actionId === "lookTopFiveDandadan") {
@@ -2089,7 +2261,15 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
             prompt: "Choose up to 1 opposing cost 4 or lower character to rest.",
             optional: true,
             filter: card => getCardEffectiveCost(card) <= 4 && (card.state || "active") === "active",
-            onSelect: ({ card }) => {
+            onSelect: ({ card, playerKey, slotIndex }) => {
+                const targetPlayer = playerKey ? gameState?.[playerKey] : getPlayerForBoardCard(card);
+                const targetPlayerKey = getPlayerKey(targetPlayer);
+
+                if (isProtectedFromOpponentEffects(card, targetPlayerKey, player)) {
+                    addGameLog(`${card.name} is protected from opponent effects.`);
+                    return;
+                }
+
                 card.state = "rested";
                 ui.renderCharacters();
                 addGameLog(`${sourceCard.name}'s On Play effect rested ${card.name}.`);
@@ -2689,12 +2869,11 @@ function resolveImmediateCopiedOnOpponentAttackEffect(player, sourceCard, copied
             return `${sourceCard.name} copied ${copiedFromCard.name}'s effect but could not pay its cost.`;
         }
 
-        const trashedCard = player.characters[sourceSlotIndex];
-
-        player.characters[sourceSlotIndex] = null;
-        moveCardToTrash(player, trashedCard, ui);
-        resolveGutsLeaderCharacterRemovedBonus(player, ui);
-        const linkedStageMessage = trashLinkedParfumStageForCharacter(player, trashedCard, ui);
+        const trashResult = trashCharacterFromField(player, sourceSlotIndex, ui, {
+            render: false
+        });
+        const trashedCard = trashResult.character;
+        const linkedStageMessage = trashResult.linkedStageMessage;
         drawCard(player, ui);
 
         if (ui?.renderCharacters) {
@@ -2860,10 +3039,10 @@ function trashOwnCharacterForMetalSonicPower(player, sourceCard, ui) {
                 ? player.characters[sourceSlotIndex]
                 : sourceCard;
 
-            player.characters[slotIndex] = null;
-            moveCardToTrash(player, card, ui);
-            resolveGutsLeaderCharacterRemovedBonus(player, ui);
-            const linkedStageMessage = trashLinkedParfumStageForCharacter(player, card, ui);
+            const trashResult = trashCharacterFromField(player, slotIndex, ui, {
+                render: false
+            });
+            const linkedStageMessage = trashResult.linkedStageMessage;
             addTemporaryPowerBonus(metalSonic, bonus);
 
             ui.renderCharacters();
@@ -4072,6 +4251,24 @@ function addTemporaryKeyword(card, keyword) {
     card.temporaryKeywords.push(keyword);
 }
 
+function addDurationKeyword(card, keyword, expiresAtEndOfTurns, expiresAtPlayerKey = null) {
+    if (!card) {
+        return;
+    }
+
+    if (!Array.isArray(card.durationKeywords)) {
+        card.durationKeywords = [];
+    }
+
+    card.durationKeywords.push({
+        keyword,
+        expiresAtEndOfTurns,
+        expiresAtPlayerKey
+    });
+
+    refreshCardStatDisplay(card);
+}
+
 function addBattleKeyword(card, keyword) {
     if (!card.battleKeywords) {
         card.battleKeywords = [];
@@ -4550,7 +4747,99 @@ function takeTopLifeToHand(player, ui) {
     return card;
 }
 
+function takeAllLifeToHand(player, ui) {
+    if (!player) {
+        return {
+            success: false,
+            cardsMoved: 0,
+            remainingLife: 0,
+            winnerPlayer: null,
+            reasonTitle: "",
+            reasonText: "",
+            message: "No player was found."
+        };
+    }
+
+    const movedCards = [];
+
+    while (player.life.length > 0) {
+        const card = player.life.shift();
+
+        if (!card) {
+            break;
+        }
+
+        card.faceUp = false;
+        player.hand.push(card);
+        movedCards.push(card);
+    }
+
+    ui?.renderLifeCards?.();
+    ui?.renderHands?.();
+
+    const winCondition = getLifeZeroWinConditionWinner(player);
+
+    if (winCondition && (typeof currentAttack === "undefined" || !currentAttack) && typeof endGame === "function") {
+        endGame(
+            winCondition.winnerPlayer,
+            winCondition.reasonTitle,
+            winCondition.reasonText
+        );
+    }
+
+    return {
+        success: movedCards.length > 0,
+        cardsMoved: movedCards.length,
+        remainingLife: player.life.length,
+        winnerPlayer: winCondition?.winnerPlayer || null,
+        reasonTitle: winCondition?.reasonTitle || "",
+        reasonText: winCondition?.reasonText || "",
+        message: movedCards.length > 0
+            ? `${player.name} added ${movedCards.length} remaining life card${movedCards.length === 1 ? "" : "s"} to hand.`
+            : `${player.name} had no remaining life cards to add to hand.`
+    };
+}
+
+function hasJujutsuOrCullingGameLeader(player) {
+    const leader = player?.leader;
+
+    return Boolean(leader) && (
+        hasTypeText(leader, "Culling Game Participant") ||
+        hasTypeText(leader, "Jujutsu High")
+    );
+}
+
+function hasContinuousOpponentEffectProtection(card, actingPlayer) {
+    if (!card || !actingPlayer || card.cardType !== "character") {
+        return false;
+    }
+
+    const owner = getPlayerForBoardCard(card);
+
+    if (!owner || owner === actingPlayer) {
+        return false;
+    }
+
+    if (areCardEffectsNegated(card)) {
+        return false;
+    }
+
+    if (card.cardNumber === "JK01-008") {
+        return hasJujutsuOrCullingGameLeader(owner);
+    }
+
+    if (card.cardNumber === "JK01-009") {
+        return hasTypeText(owner.leader, "Culling Game Participant");
+    }
+
+    return false;
+}
+
 function isProtectedFromOpponentEffects(card, cardPlayerKey, actingPlayer) {
+    if (hasContinuousOpponentEffectProtection(card, actingPlayer)) {
+        return true;
+    }
+
     if (!card?.protectedFromOpponentEffects) {
         return false;
     }
@@ -4655,6 +4944,829 @@ function getPlayerFieldDonCount(player) {
 
 function getTotalDonInPlay(player) {
     return getPlayerFieldDonCount(player);
+}
+
+function getPerTurnEffectUseLimit(effect) {
+    const maxUsesPerTurn = Number(effect?.maxUsesPerTurn ?? 0);
+
+    if (Number.isFinite(maxUsesPerTurn) && maxUsesPerTurn > 0) {
+        return maxUsesPerTurn;
+    }
+
+    return effect?.oncePerTurn ? 1 : 0;
+}
+
+function hasReachedPerTurnEffectUseLimit(card, effect, turnNumber) {
+    const limit = getPerTurnEffectUseLimit(effect);
+
+    if (limit <= 0 || !card || !effect?.id) {
+        return false;
+    }
+
+    return CardEffects.getPerTurnEffectUseCount(card, effect.id, turnNumber) >= limit;
+}
+
+function canUseOnOpponentAttackEffect(player, card, effect) {
+    if (!player || !card || !effect || effect.type !== "onOpponentAttack") {
+        return false;
+    }
+
+    if (effect.id === "JK01-009-on-opponent-attack") {
+        if (typeof currentAttack === "undefined" || !currentAttack) {
+            return false;
+        }
+
+        return currentAttack.defenderPlayerKey === getPlayerKey(player) &&
+            currentAttack.target?.cardType === "leader";
+    }
+
+    return !hasReachedPerTurnEffectUseLimit(card, effect, player.turns);
+}
+
+function canHigurumaLeaderActivateTrashEvent(player, card) {
+    if (!player || !card || card.cardType !== "event") {
+        return false;
+    }
+
+    const cardCost = Number(card.cost ?? card.playCost ?? 0);
+
+    if (getTotalDonInPlay(player) <= 7 && cardCost >= 7) {
+        return false;
+    }
+
+    return getCounterEffects(card, player).some(effect => {
+        return effect.id === "JK01-002-counter" ||
+            effect.id === "JK01-003-counter" ||
+            effect.id === "JK01-004-counter" ||
+            effect.id === "JK01-005-counter" ||
+            effect.actionId === "eggmanCounterPower" ||
+            effect.actionId === "leaderOrCharacterCounterPower" ||
+            effect.actionId === "santenKesshunCounterPower" ||
+            effect.actionId === "leaderCounterPower" ||
+            Number(effect.powerModifier ?? 0) > 0;
+    });
+}
+
+function negateCurrentAttack(sourceCard) {
+    if (typeof currentAttack === "undefined" || !currentAttack) {
+        return false;
+    }
+
+    currentAttack.negated = true;
+    currentAttack.negatedBy = sourceCard?.name || "an effect";
+
+    return true;
+}
+
+function resolveEvidenceCounterEffect(player, sourceCard, ui, options = {}) {
+    const finish = (...args) => {
+        if (typeof queueMultiplayerStateSync === "function") {
+            queueMultiplayerStateSync();
+        }
+
+        options.onComplete?.(...args);
+    };
+
+    if (typeof currentAttack === "undefined" || !currentAttack) {
+        finish();
+        return `${sourceCard.name} could not be used because there is no current attack.`;
+    }
+
+    const attackerPlayer = gameState?.[currentAttack.attackerPlayerKey];
+    const attackerCard = getBoardCardFromData(currentAttack.attacker);
+
+    if (!attackerPlayer || !attackerCard) {
+        finish();
+        return `${sourceCard.name} could not find the attacking card.`;
+    }
+
+    const attackerPower = getCardBattlePower(attackerCard, attackerPlayer);
+
+    if (attackerPower > 7000) {
+        finish();
+        return `${sourceCard.name} could not negate the attack because ${attackerCard.name} has ${attackerPower} power.`;
+    }
+
+    negateCurrentAttack(sourceCard);
+
+    const topLifeCard = player.life?.[0];
+
+    if (!topLifeCard) {
+        finish();
+        return `${sourceCard.name} negated the attack, but ${player.name} has no life card to reveal.`;
+    }
+
+    topLifeCard.faceUp = true;
+    ui?.renderLifeCards?.();
+
+    const resetTopLifeFaceDown = () => {
+        if (player.life?.[0]?.instanceId === topLifeCard.instanceId) {
+            player.life[0].faceUp = false;
+            ui?.renderLifeCards?.();
+        }
+    };
+
+    const completeNoBonus = () => {
+        resetTopLifeFaceDown();
+        finish();
+    };
+
+    const revealedTypeMatches = hasTypeText(topLifeCard, "Culling Game Participants") ||
+        hasTypeText(topLifeCard, "Deadly Sentencing");
+
+    if (!revealedTypeMatches) {
+        completeNoBonus();
+        return `${sourceCard.name} negated the attack and revealed ${topLifeCard.name}.`;
+    }
+
+    const completeChoice = (choice) => {
+        if (choice === "hand") {
+            const addedLifeCard = player.life.shift();
+
+            if (addedLifeCard) {
+                addedLifeCard.faceUp = false;
+                player.hand.push(addedLifeCard);
+                ui?.renderLifeCards?.();
+                ui?.renderHands?.();
+                addGameLog(`${player.name} added ${addedLifeCard.name} from life to hand with ${sourceCard.name}.`);
+            }
+
+            finish();
+            return;
+        }
+
+        if (choice === "top" || choice === "bottom") {
+            const drawResult = choice === "top"
+                ? drawCard(player, ui)
+                : drawCardFromBottom(player, ui);
+
+            if (drawResult?.deckOut) {
+                addGameLog(
+                    choice === "top"
+                        ? `${sourceCard.name} tried to draw from the top of the deck, but ${player.name} lost by deck out.`
+                        : `${sourceCard.name} tried to draw from the bottom of the deck, but ${player.name} lost by deck out.`
+                );
+            } else {
+                addGameLog(
+                    choice === "top"
+                        ? `${player.name} drew 1 card from the top of the deck with ${sourceCard.name}.`
+                        : `${player.name} drew 1 card from the bottom of the deck with ${sourceCard.name}.`
+                );
+            }
+
+            resetTopLifeFaceDown();
+            finish();
+            return;
+        }
+
+        completeNoBonus();
+    };
+
+    if (ui?.chooseEffectOption) {
+        ui.chooseEffectOption({
+            player,
+            sourceCard,
+            title: sourceCard.name,
+            prompt: `Revealed ${topLifeCard.name}. Choose how to resolve ${sourceCard.name}.`,
+            options: [
+                {
+                    label: "Add to Hand",
+                    value: "hand"
+                },
+                {
+                    label: "Draw Top",
+                    value: "top"
+                },
+                {
+                    label: "Draw Bottom",
+                    value: "bottom"
+                },
+                {
+                    label: "Skip",
+                    value: null,
+                    secondary: true
+                }
+            ],
+            onComplete: completeChoice
+        });
+
+        return `${sourceCard.name} negated the attack and revealed ${topLifeCard.name}.`;
+    }
+
+    completeChoice("hand");
+    return `${sourceCard.name} negated the attack and revealed ${topLifeCard.name}.`;
+}
+
+function resolveConfiscationCounterEffect(player, sourceCard, ui, options = {}) {
+    const finish = (...args) => {
+        if (typeof queueMultiplayerStateSync === "function") {
+            queueMultiplayerStateSync();
+        }
+
+        options.onComplete?.(...args);
+    };
+
+    if (typeof currentAttack === "undefined" || !currentAttack) {
+        finish();
+        return `${sourceCard.name} could not be used because there is no current attack.`;
+    }
+
+    const attackerPlayer = gameState?.[currentAttack.attackerPlayerKey];
+    const attackerCard = getBoardCardFromData(currentAttack.attacker);
+
+    if (!attackerPlayer || !attackerCard) {
+        finish();
+        return `${sourceCard.name} could not find the attacking card.`;
+    }
+
+    const attackerPower = getCardBattlePower(attackerCard, attackerPlayer);
+
+    if (attackerPower > 7000) {
+        finish();
+        return `${sourceCard.name} could not negate the attack because ${attackerCard.name} has ${attackerPower} power.`;
+    }
+
+    negateCurrentAttack(sourceCard);
+
+    if (player.stage) {
+        const stageReturnMessage = koStageFromField(player, player.stage, ui);
+
+        if (stageReturnMessage) {
+            addGameLog(stageReturnMessage);
+        }
+    } else {
+        addGameLog(`${sourceCard.name} found no stage to trash.`);
+    }
+
+    const message = chooseOpponentCharacter(player, sourceCard, {
+        prompt: "Choose up to 1 opposing character to negate its effects this turn.",
+        optional: true,
+        onSelect: ({ card }) => {
+            addTemporaryEffectNegation(card, getPlayerKey(player), Number(player.turns || 0));
+            ui?.renderCharacters?.();
+            addGameLog(`${sourceCard.name} negated ${card.name}'s effects this turn.`);
+            finish();
+        },
+        onSkip: finish,
+        onEmpty: finish,
+        skipMessage: `${player.name} did not choose a character for ${sourceCard.name}.`,
+        emptyMessage: `${sourceCard.name} found no opposing characters.`
+    });
+
+    return message
+        ? `${sourceCard.name} negated the attack. ${message}`
+        : `${sourceCard.name} negated the attack.`;
+}
+
+function resolveDeathPenaltyCounterEffect(player, sourceCard, ui, options = {}) {
+    const finish = (...args) => {
+        if (typeof queueMultiplayerStateSync === "function") {
+            queueMultiplayerStateSync();
+        }
+
+        options.onComplete?.(...args);
+    };
+
+    if (typeof currentAttack === "undefined" || !currentAttack) {
+        finish();
+        return `${sourceCard.name} could not be used because there is no current attack.`;
+    }
+
+    const attackerPlayer = gameState?.[currentAttack.attackerPlayerKey];
+    const attackerCard = getBoardCardFromData(currentAttack.attacker);
+
+    if (!attackerPlayer || !attackerCard) {
+        finish();
+        return `${sourceCard.name} could not find the attacking card.`;
+    }
+
+    const attackerPower = getCardBattlePower(attackerCard, attackerPlayer);
+
+    if (attackerPower > 10000) {
+        finish();
+        return `${sourceCard.name} could not negate the attack because ${attackerCard.name} has ${attackerPower} power.`;
+    }
+
+    negateCurrentAttack(sourceCard);
+
+    if (!player.leader) {
+        finish();
+        return `${sourceCard.name} negated the attack, but ${player.name} has no leader to empower.`;
+    }
+
+    if ((player.life?.length || 0) > 3) {
+        finish();
+        return `${sourceCard.name} negated the attack, but ${player.name} has more than 3 life cards.`;
+    }
+
+    const expiresAtPlayerKey = getPlayerKey(player);
+    const expiresAtEndOfTurns = Number(player.turns || 0) + 1;
+
+    player.leader.temporaryBasePower = {
+        value: 9000,
+        expiresAtPlayerKey,
+        expiresAtEndOfTurns
+    };
+    addDurationKeyword(player.leader, "doubleAttack", expiresAtEndOfTurns, expiresAtPlayerKey);
+    refreshCardStatDisplay(player.leader);
+    ui?.renderLeaders?.();
+
+    addGameLog(`${sourceCard.name} made ${player.leader.name}'s base power 9000 and gave it Double Attack until the end of ${player.name}'s next turn.`);
+    finish();
+    return `${sourceCard.name} negated the attack and empowered ${player.leader.name} until the end of ${player.name}'s next turn.`;
+}
+
+function getLifeZeroWinConditionWinner(damagedPlayer) {
+    if (!damagedPlayer || (damagedPlayer.life?.length || 0) !== 0) {
+        return null;
+    }
+
+    const opponent = getOpponentOfPlayer(damagedPlayer);
+    const leader = opponent?.leader;
+    const condition = leader?.lifeZeroWinCondition;
+
+    if (!leader || !condition || !isTemporaryStatusEntryActive(condition)) {
+        return null;
+    }
+
+    return {
+        winnerPlayer: opponent,
+        reasonTitle: "Final Verdict",
+        reasonText: `${opponent.name} won because ${leader.name}'s effect says they win if the opponent's life hits 0 this turn.`
+    };
+}
+
+function resolveHiromiHigurumaCharacterLeaderDamage(attackerPlayer, attackerCard, defenderPlayer, ui) {
+    if (!attackerPlayer || !attackerCard || !defenderPlayer) {
+        return {
+            winnerPlayer: null,
+            reasonTitle: "",
+            reasonText: "",
+            message: ""
+        };
+    }
+
+    if (attackerCard.cardNumber !== "JK01-006" || areCardEffectsNegated(attackerCard)) {
+        return {
+            winnerPlayer: null,
+            reasonTitle: "",
+            reasonText: "",
+            message: ""
+        };
+    }
+
+    const lifeResult = takeAllLifeToHand(defenderPlayer, ui);
+
+    return {
+        winnerPlayer: lifeResult.winnerPlayer || null,
+        reasonTitle: lifeResult.reasonTitle || "",
+        reasonText: lifeResult.reasonText || "",
+        message: lifeResult.success
+            ? `${attackerCard.name} made ${defenderPlayer.name} add all remaining life cards to hand.`
+            : ""
+    };
+}
+
+function resolveTakakoUroOnOpponentAttack(player, sourceCard, ui, options = {}) {
+    const finish = () => {
+        if (typeof queueMultiplayerStateSync === "function") {
+            queueMultiplayerStateSync();
+        }
+
+        options.onComplete?.();
+    };
+
+    if (typeof currentAttack === "undefined" || !currentAttack) {
+        finish();
+        return `${sourceCard.name} could not be used because there is no current attack.`;
+    }
+
+    if (currentAttack.defenderPlayerKey !== getPlayerKey(player) || currentAttack.target?.cardType !== "leader") {
+        finish();
+        return `${sourceCard.name} could not be used because your leader is not being attacked.`;
+    }
+
+    const promptMessage = chooseHandCard(player, sourceCard, {
+        prompt: `Choose up to 1 event card with base cost 6 or less to activate its Counter for ${sourceCard.name}.`,
+        optional: true,
+        filter: card => {
+            return card?.cardType === "event" &&
+                Number(card.cost ?? card.playCost ?? 0) <= 6 &&
+                getCounterEffects(card, player).length > 0;
+        },
+        onSelect: ({ card }) => {
+            const handIndex = player.hand.indexOf(card);
+
+            if (handIndex === -1) {
+                addGameLog(`${sourceCard.name} could not find that hand event anymore.`);
+                finish();
+                return;
+            }
+
+            const result = useCounterFromHand(player, handIndex, ui);
+
+            if (result?.message) {
+                addGameLog(result.message);
+            }
+
+            finish();
+        },
+        onSkip: finish,
+        onEmpty: finish,
+        skipMessage: `${player.name} did not activate a hand event with ${sourceCard.name}.`,
+        emptyMessage: `${sourceCard.name} found no event Counter cards with base cost 6 or less in hand.`
+    });
+
+    return promptMessage || `${sourceCard.name}'s effect resolved.`;
+}
+
+function resolveConfessionCounterEffect(player, sourceCard, ui, options = {}) {
+    const finish = (...args) => {
+        if (typeof queueMultiplayerStateSync === "function") {
+            queueMultiplayerStateSync();
+        }
+
+        options.onComplete?.(...args);
+    };
+
+    if (typeof currentAttack === "undefined" || !currentAttack) {
+        finish();
+        return `${sourceCard.name} could not be used because there is no current attack.`;
+    }
+
+    const attackerPlayer = gameState?.[currentAttack.attackerPlayerKey];
+    const attackerCard = getBoardCardFromData(currentAttack.attacker);
+
+    if (!attackerPlayer || !attackerCard) {
+        finish();
+        return `${sourceCard.name} could not find the attacking card.`;
+    }
+
+    const attackerPower = getCardBattlePower(attackerCard, attackerPlayer);
+
+    if (attackerPower > 12000) {
+        finish();
+        return `${sourceCard.name} could not negate the attack because ${attackerCard.name} has ${attackerPower} power.`;
+    }
+
+    negateCurrentAttack(sourceCard);
+
+    if (!player.leader) {
+        finish();
+        return `${sourceCard.name} negated the attack, but ${player.name} has no leader to empower.`;
+    }
+
+    const completeEmpowerment = (restedDon) => {
+        let summary = `${sourceCard.name} negated the attack.`;
+
+        if (restedDon) {
+            addGameLog(`${player.name} rested 10 DON!! for ${sourceCard.name}.`);
+            summary += ` ${player.name} rested 10 DON!!.`;
+        }
+
+        if ((player.life?.length || 0) <= 2) {
+            const expiresAtPlayerKey = getPlayerKey(player);
+            const expiresAtEndOfTurns = Number(player.turns || 0) + 1;
+
+            player.leader.temporaryBasePower = {
+                value: 9000,
+                expiresAtPlayerKey,
+                expiresAtEndOfTurns
+            };
+            addDurationKeyword(player.leader, "doubleAttack", expiresAtEndOfTurns, expiresAtPlayerKey);
+            addDurationKeyword(player.leader, "banish", expiresAtEndOfTurns, expiresAtPlayerKey);
+            player.leader.lifeZeroWinCondition = {
+                expiresAtPlayerKey,
+                expiresAtEndOfTurns
+            };
+            refreshCardStatDisplay(player.leader);
+            ui?.renderLeaders?.();
+
+            addGameLog(`${sourceCard.name} made ${player.leader.name}'s base power 9000 and gave it Double Attack, Banish, and a life-0 win condition until the end of ${player.name}'s next turn.`);
+            summary += ` ${player.leader.name} is now 9000 power with Double Attack and Banish until the end of ${player.name}'s next turn.`;
+        } else {
+            addGameLog(`${sourceCard.name} did not empower ${player.leader.name} because ${player.name} has more than 2 life cards.`);
+            summary += ` ${player.leader.name} was not empowered because ${player.name} has more than 2 life cards.`;
+        }
+
+        finish();
+        return summary;
+    };
+
+    if (player.don >= 10 && ui?.chooseEffectActivation) {
+        ui.chooseEffectActivation({
+            player,
+            sourceCard,
+            effect: {
+                id: "JK01-005-rest-10-don",
+                type: "counter",
+                text: "Rest 10 active DON!!?"
+            },
+            title: sourceCard.name,
+            prompt: `Rest 10 active DON!! for ${sourceCard.name}?`,
+            activateText: "Rest 10 DON!!",
+            skipText: "Skip",
+            onComplete: (shouldActivate) => {
+                const restedDon = shouldActivate && restDonForCost(player, 10, ui);
+                completeEmpowerment(Boolean(restedDon));
+            }
+        });
+
+        return `${player.name} is choosing whether to rest 10 DON!! for ${sourceCard.name}.`;
+    }
+
+    return completeEmpowerment(false);
+}
+
+function resolveHigurumaTrashCounterEffect(player, leader, eventCard, effect, ui, onComplete) {
+    const finish = () => {
+        if (typeof queueMultiplayerStateSync === "function") {
+            queueMultiplayerStateSync();
+        }
+
+        onComplete?.();
+    };
+
+    const drawAndTrash = () => {
+        const drawResult = drawCard(player, ui);
+
+        if (drawResult?.deckOut) {
+            addGameLog(`${leader.name}'s effect drew 1 card, but ${player.name} lost by deck out.`);
+            finish();
+            return;
+        }
+
+        addGameLog(`${leader.name}'s effect drew 1 card.`);
+
+        if (player.hand.length === 0) {
+            addGameLog(`${leader.name}'s effect found no card in hand to trash.`);
+            finish();
+            return;
+        }
+
+        const trashPromptMessage = chooseHandCard(player, leader, {
+            prompt: `Choose 1 card from your hand to trash for ${leader.name}.`,
+            optional: false,
+            onSelect: ({ card }) => {
+                const handIndex = player.hand.indexOf(card);
+
+                if (handIndex === -1) {
+                    addGameLog(`${leader.name} could not find that hand card to trash.`);
+                    finish();
+                    return;
+                }
+
+                const trashedCard = player.hand.splice(handIndex, 1)[0];
+                moveCardToTrash(player, trashedCard, ui);
+                ui?.renderHands?.();
+                ui?.renderTrash?.();
+                addGameLog(`${player.name} trashed ${trashedCard.name} from hand for ${leader.name}.`);
+                finish();
+            },
+            emptyMessage: `${leader.name}'s effect found no card in hand to trash.`
+        });
+
+        if (trashPromptMessage) {
+            addGameLog(trashPromptMessage);
+        }
+    };
+
+    addGameLog(`${player.name} activated ${eventCard.name} from trash with ${leader.name}.`);
+
+    if (effect.id === "JK01-002-counter") {
+        const message = resolveEvidenceCounterEffect(player, eventCard, ui, {
+            onComplete: drawAndTrash
+        });
+
+        return message || `${eventCard.name} activated from trash.`;
+    }
+
+    if (effect.id === "JK01-003-counter") {
+        const message = resolveConfiscationCounterEffect(player, eventCard, ui, {
+            onComplete: drawAndTrash
+        });
+
+        return message || `${eventCard.name} activated from trash.`;
+    }
+
+    if (effect.id === "JK01-004-counter") {
+        const message = resolveDeathPenaltyCounterEffect(player, eventCard, ui, {
+            onComplete: drawAndTrash
+        });
+
+        return message || `${eventCard.name} activated from trash.`;
+    }
+
+    if (effect.id === "JK01-005-counter") {
+        const message = resolveConfessionCounterEffect(player, eventCard, ui, {
+            onComplete: drawAndTrash
+        });
+
+        return message || `${eventCard.name} activated from trash.`;
+    }
+
+    if (effect.actionId === "eggmanCounterPower") {
+        const promptMessage = chooseOwnBoardCard(player, eventCard, {
+            prompt: "Choose up to 1 Eggman Empire leader or character to give +4000 power during this battle.",
+            optional: true,
+            includeLeader: true,
+            filter: card => (card.cardType === "leader" || card.cardType === "character") && hasTypeText(card, "Eggman Empire"),
+            onSelect: ({ card }) => {
+                addBattlePowerBonus(card, Number(effect.powerModifier ?? 4000));
+                ui?.renderLeaders?.();
+                ui?.renderCharacters?.();
+                addGameLog(`${eventCard.name} gave ${card.name} +4000 power during this battle.`);
+                drawAndTrash();
+            },
+            onSkip: drawAndTrash,
+            onEmpty: drawAndTrash,
+            skipMessage: `${player.name} did not choose a card for ${eventCard.name}.`,
+            emptyMessage: `${eventCard.name} found no Eggman Empire leader or character.`
+        });
+
+        if (promptMessage) {
+            addGameLog(promptMessage);
+        }
+
+        return `${player.name} is choosing a counter target for ${eventCard.name}.`;
+    }
+
+    if (effect.actionId === "leaderOrCharacterCounterPower") {
+        const promptMessage = chooseOwnBoardCard(player, eventCard, {
+            prompt: "Choose one of your leaders or characters to give +2000 power during this battle.",
+            optional: false,
+            includeLeader: true,
+            filter: card => card.cardType === "leader" || card.cardType === "character",
+            onSelect: ({ card }) => {
+                addBattlePowerBonus(card, Number(effect.powerModifier ?? 2000));
+                ui?.renderLeaders?.();
+                ui?.renderCharacters?.();
+                addGameLog(`${eventCard.name} gave ${card.name} +2000 power during this battle.`);
+                drawAndTrash();
+            },
+            emptyMessage: `${eventCard.name} found no leader or character.`
+        });
+
+        if (promptMessage) {
+            addGameLog(promptMessage);
+        }
+
+        return `${player.name} is choosing a counter target for ${eventCard.name}.`;
+    }
+
+    if (effect.actionId === "santenKesshunCounterPower") {
+        const power = player.life.length <= 2 ? 4000 : 2000;
+        const promptMessage = chooseOwnBoardCard(player, eventCard, {
+            prompt: `Choose up to 1 leader or character to give +${power} power during this battle.`,
+            optional: true,
+            includeLeader: true,
+            filter: card => card.cardType === "leader" || card.cardType === "character",
+            onSelect: ({ card }) => {
+                addBattlePowerBonus(card, power);
+                ui?.renderLeaders?.();
+                ui?.renderCharacters?.();
+                addGameLog(`${eventCard.name} gave ${card.name} +${power} power during this battle.`);
+                drawAndTrash();
+            },
+            onSkip: drawAndTrash,
+            onEmpty: drawAndTrash,
+            skipMessage: `${player.name} did not choose a card for ${eventCard.name}.`,
+            emptyMessage: `${eventCard.name} found no leader or character.`
+        });
+
+        if (promptMessage) {
+            addGameLog(promptMessage);
+        }
+
+        return `${player.name} is choosing a counter target for ${eventCard.name}.`;
+    }
+
+    if (effect.actionId === "leaderCounterPower") {
+        const power = Number(effect.powerModifier ?? 0);
+
+        addBattlePowerBonus(player.leader, power);
+        ui?.renderLeaders?.();
+        addGameLog(`${eventCard.name} gave ${player.name}'s leader +${power} power during this battle.`);
+        drawAndTrash();
+        return `${eventCard.name} activated from trash.`;
+    }
+
+    const counterPower = Number(effect.powerModifier ?? 0);
+
+    if (counterPower > 0) {
+        if (typeof applyCounterPowerToCurrentAttack === "function") {
+            applyCounterPowerToCurrentAttack(counterPower);
+        } else if (typeof currentAttack !== "undefined" && currentAttack) {
+            currentAttack.targetPowerBonus = Number(currentAttack.targetPowerBonus || 0) + counterPower;
+        }
+
+        addGameLog(`${eventCard.name} gave +${counterPower} counter power during this battle.`);
+    }
+
+    drawAndTrash();
+    return `${eventCard.name} activated from trash.`;
+}
+
+function resolveHiromiHigurumaLeaderOnOpponentAttack(player, leader, ui, options = {}) {
+    const effect = getCardAllEffects(leader)?.find(cardEffect => cardEffect.id === "JK01-001-on-opponent-attack");
+
+    if (!player || !leader || !effect) {
+        options.onComplete?.();
+        return "";
+    }
+
+    if (hasReachedPerTurnEffectUseLimit(leader, effect, player.turns)) {
+        options.onComplete?.();
+        return `${leader.name}'s On Your Opponent's Attack effect has already been used ${getPerTurnEffectUseLimit(effect)} times this turn.`;
+    }
+
+    const validChoices = player.trash
+        .map((card, trashIndex) => ({
+            card,
+            trashIndex
+        }))
+        .filter(entry => entry.card && canHigurumaLeaderActivateTrashEvent(player, entry.card));
+
+    if (validChoices.length === 0) {
+        options.onComplete?.();
+        return `${leader.name} found no supported Counter events in trash to activate.`;
+    }
+
+    const chooseEvent = (selectedValue) => {
+        if (selectedValue === null || selectedValue === undefined || selectedValue === "") {
+            addGameLog(`${player.name} did not activate a trash event with ${leader.name}.`);
+            options.onComplete?.();
+            return;
+        }
+
+        const trashIndex = Number(selectedValue);
+
+        if (!Number.isInteger(trashIndex) || trashIndex < 0 || trashIndex >= player.trash.length) {
+            addGameLog(`${leader.name} could not find that trash event anymore.`);
+            options.onComplete?.();
+            return;
+        }
+
+        const eventCard = player.trash[trashIndex];
+        const counterEffect = getCounterEffects(eventCard, player).find(counter => {
+            return counter.id === "JK01-002-counter" ||
+                counter.id === "JK01-003-counter" ||
+                counter.id === "JK01-004-counter" ||
+                counter.id === "JK01-005-counter" ||
+                counter.actionId === "eggmanCounterPower" ||
+                counter.actionId === "leaderOrCharacterCounterPower" ||
+                counter.actionId === "santenKesshunCounterPower" ||
+                counter.actionId === "leaderCounterPower" ||
+                Number(counter.powerModifier ?? 0) > 0;
+        });
+
+        if (!eventCard || !counterEffect || !canHigurumaLeaderActivateTrashEvent(player, eventCard)) {
+            addGameLog(`${leader.name} could not activate that event from trash.`);
+            options.onComplete?.();
+            return;
+        }
+
+        CardEffects.markPerTurnEffectUsed(leader, effect.id, player.turns);
+
+        const message = resolveHigurumaTrashCounterEffect(
+            player,
+            leader,
+            eventCard,
+            counterEffect,
+            ui,
+            options.onComplete
+        );
+
+        if (message) {
+            addGameLog(message);
+        }
+    };
+
+    if (ui?.chooseEffectOption) {
+        ui.chooseEffectOption({
+            player,
+            sourceCard: leader,
+            title: leader.name,
+            prompt: "Choose a Counter event from your trash to activate.",
+            options: [
+                ...validChoices.map(({ card, trashIndex }) => ({
+                    label: `${card.name} (${card.cardNumber})`,
+                    value: trashIndex
+                })),
+                {
+                    label: "Skip",
+                    value: null,
+                    secondary: true
+                }
+            ],
+            onComplete: chooseEvent
+        });
+
+        return `${player.name} is choosing a Counter event from trash for ${leader.name}.`;
+    }
+
+    chooseEvent(validChoices[0]?.trashIndex ?? null);
+    return `${leader.name}'s effect resolved.`;
 }
 
 function resolveCounterEffects(player, card, ui) {
@@ -4849,11 +5961,10 @@ function resolveDavidTaglavnovicCharacterMain(player, sourceCard, ui) {
         return `${sourceCard.name} found no B.R.A.N.K.O. in hand or trash with cost ${maxCost} or less.`;
     }
 
-    const trashedSource = player.characters[sourceSlotIndex];
-    player.characters[sourceSlotIndex] = null;
-    moveCardToTrash(player, trashedSource, ui);
-    resolveGutsLeaderCharacterRemovedBonus(player, ui);
-    const linkedStageMessage = trashLinkedParfumStageForCharacter(player, trashedSource, ui);
+    const trashResult = trashCharacterFromField(player, sourceSlotIndex, ui, {
+        render: false
+    });
+    const linkedStageMessage = trashResult.linkedStageMessage;
 
     const completePlay = (choice) => {
         if (!choice) {
@@ -5054,6 +6165,48 @@ function setBoardCardActive(boardCardData) {
     return true;
 }
 
+function trashCharacterFromField(player, slotIndex, ui, options = {}) {
+    const providedCharacter = options.character || null;
+    const slotCharacter = Number.isInteger(slotIndex)
+        ? player?.characters?.[slotIndex] || null
+        : null;
+    const character = slotCharacter || providedCharacter;
+
+    if (!player || !character) {
+        return {
+            success: false,
+            message: "No character was found to trash."
+        };
+    }
+
+    const resolvedSlotIndex = Number.isInteger(slotIndex)
+        ? slotIndex
+        : player.characters.findIndex(card => card?.instanceId === character.instanceId);
+
+    if (resolvedSlotIndex !== -1 && player.characters[resolvedSlotIndex]?.instanceId === character.instanceId) {
+        player.characters[resolvedSlotIndex] = null;
+    }
+
+    moveCardToTrash(player, character, ui);
+    resolveGutsLeaderCharacterRemovedBonus(player, ui);
+    const linkedStageMessage = trashLinkedParfumStageForCharacter(player, character, ui);
+
+    if (options.render !== false) {
+        ui?.renderLeaders?.();
+        ui?.renderCharacters?.();
+        ui?.renderTrash?.();
+    }
+
+    return {
+        success: true,
+        character,
+        linkedStageMessage,
+        message: linkedStageMessage
+            ? `${character.name} was trashed and placed in the trash. ${linkedStageMessage}`
+            : `${character.name} was trashed and placed in the trash.`
+    };
+}
+
 function KOCharacter(player, slotIndex, ui, options = {}) {
     const character = player.characters[slotIndex];
 
@@ -5071,11 +6224,10 @@ function KOCharacter(player, slotIndex, ui, options = {}) {
         };
     }
 
-    player.characters[slotIndex] = null;
-
-    moveCardToTrash(player, character, ui);
-    resolveGutsLeaderCharacterRemovedBonus(player, ui);
-    const linkedStageMessage = trashLinkedParfumStageForCharacter(player, character, ui);
+    const trashResult = trashCharacterFromField(player, slotIndex, ui, {
+        render: false
+    });
+    const linkedStageMessage = trashResult.linkedStageMessage;
 
     const effectMessages = resolveOnKOEffects(player, character, ui);
 
@@ -5150,11 +6302,23 @@ function takeLifeDamage(player, amount, ui) {
     const triggerText = triggerMessages.length > 0
         ? ` ${triggerMessages.join(" ")}`
         : "";
+    const winCondition = getLifeZeroWinConditionWinner(player);
+
+    if (winCondition && (typeof currentAttack === "undefined" || !currentAttack) && typeof endGame === "function") {
+        endGame(
+            winCondition.winnerPlayer,
+            winCondition.reasonTitle,
+            winCondition.reasonText
+        );
+    }
 
     return {
         success: lifeTaken > 0,
         lifeTaken,
         remainingLife: player.life.length,
+        winnerPlayer: winCondition?.winnerPlayer || null,
+        reasonTitle: winCondition?.reasonTitle || "",
+        reasonText: winCondition?.reasonText || "",
         message: lifeTaken > 0
             ? `${player.name} took ${lifeTaken} life card${lifeTaken === 1 ? "" : "s"}.${triggerText}`
             : `${player.name} has no life cards left.`
@@ -5427,10 +6591,23 @@ function banishLifeDamage(player, amount, ui) {
     ui.renderLifeCards();
     ui.renderTrash();
 
+    const winCondition = getLifeZeroWinConditionWinner(player);
+
+    if (winCondition && (typeof currentAttack === "undefined" || !currentAttack) && typeof endGame === "function") {
+        endGame(
+            winCondition.winnerPlayer,
+            winCondition.reasonTitle,
+            winCondition.reasonText
+        );
+    }
+
     return {
         success: lifeBanished > 0,
         lifeBanished,
         remainingLife: player.life.length,
+        winnerPlayer: winCondition?.winnerPlayer || null,
+        reasonTitle: winCondition?.reasonTitle || "",
+        reasonText: winCondition?.reasonText || "",
         message: lifeBanished > 0
             ? `${player.name} banished ${lifeBanished} life card${lifeBanished === 1 ? "" : "s"} to trash.`
             : `${player.name} has no life cards left.`
@@ -5735,6 +6912,33 @@ function clearExpiredEndPhaseEffects(expiringPlayer) {
             ) {
                 card.temporaryBasePower = null;
                 refreshCardStatDisplay(card);
+            }
+
+            if (
+                card.lifeZeroWinCondition?.expiresAtPlayerKey === expiringPlayerKey &&
+                Number(card.lifeZeroWinCondition.expiresAtEndOfTurns ?? 0) <= Number(expiringPlayer.turns || 0)
+            ) {
+                card.lifeZeroWinCondition = null;
+            }
+
+            if (Array.isArray(card.durationKeywords)) {
+                const beforeCount = card.durationKeywords.length;
+
+                card.durationKeywords = card.durationKeywords.filter(entry => {
+                    if (!entry?.expiresAtPlayerKey) {
+                        return true;
+                    }
+
+                    if (entry.expiresAtPlayerKey !== expiringPlayerKey) {
+                        return true;
+                    }
+
+                    return Number(entry.expiresAtEndOfTurns ?? 0) > Number(expiringPlayer.turns || 0);
+                });
+
+                if (card.durationKeywords.length !== beforeCount) {
+                    refreshCardStatDisplay(card);
+                }
             }
         });
     });

@@ -83,8 +83,27 @@ window.CardEffects = {
             }
         }
 
+        if (card.cardNumber === "JK01-006" && wantedKeyword === "rush") {
+            const owner = typeof getPlayerForBoardCard === "function"
+                ? getPlayerForBoardCard(card)
+                : null;
+
+            if (owner && !owner.stage) {
+                return true;
+            }
+        }
+
         const allKeywords = [
             ...(Array.isArray(card.keywords) ? card.keywords : []),
+            ...(Array.isArray(card.durationKeywords)
+                ? card.durationKeywords
+                    .filter(entry => !entry || !entry.expiresAtPlayerKey || (
+                        typeof gameState !== "undefined" &&
+                        typeof isTemporaryStatusEntryActive === "function" &&
+                        isTemporaryStatusEntryActive(entry)
+                    ))
+                    .map(entry => entry?.keyword)
+                : []),
             ...(Array.isArray(card.temporaryKeywords) ? card.temporaryKeywords : []),
             ...(Array.isArray(card.battleKeywords) ? card.battleKeywords : [])
         ];
@@ -259,6 +278,33 @@ window.CardEffects = {
         }
 
         card.oncePerTurnEffectsUsed[effectId] = turnNumber;
+    },
+
+    getPerTurnEffectUseCount(card, effectId, turnNumber) {
+        const usage = card?.perTurnEffectUses?.[effectId];
+
+        if (!usage || usage.turnNumber !== turnNumber) {
+            return 0;
+        }
+
+        return Number(usage.count || 0);
+    },
+
+    markPerTurnEffectUsed(card, effectId, turnNumber, amount = 1) {
+        if (!card || !effectId) {
+            return;
+        }
+
+        if (!card.perTurnEffectUses) {
+            card.perTurnEffectUses = {};
+        }
+
+        const currentCount = this.getPerTurnEffectUseCount(card, effectId, turnNumber);
+
+        card.perTurnEffectUses[effectId] = {
+            turnNumber,
+            count: currentCount + Math.max(1, Number(amount || 1))
+        };
     },
 
     wasEffectSkippedForAttack(card, effectId) {
@@ -695,6 +741,51 @@ window.CardEffects = {
         };
     },
 
+    resolveYujiItadoriWhenAttacking(player, attackerData, ui) {
+        const character = attackerData?.cardType === "character"
+            ? player?.characters?.[attackerData.slotIndex]
+            : null;
+
+        if (!character || character.cardNumber !== "JK01-007") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const effectId = "JK01-007-when-attacking";
+
+        if (this.hasUsedOncePerTurnEffect(character, effectId, player.turns)) {
+            return {
+                activated: false,
+                message: `${character.name}'s Once Per Turn When Attacking effect has already been used this turn.`
+            };
+        }
+
+        const message = typeof addCardFromTrashToHand === "function"
+            ? addCardFromTrashToHand(player, character, ui, {
+                optional: false,
+                prompt: "Choose 1 Hiromi Higuruma card from your trash to add to your hand.",
+                filter: card => this.hasCardName(card, "Hiromi Higuruma"),
+                emptyMessage: `${character.name} found no Hiromi Higuruma cards in trash.`
+            })
+            : "";
+
+        if (!message || message.includes("found no Hiromi Higuruma cards")) {
+            return {
+                activated: false,
+                message
+            };
+        }
+
+        this.markOncePerTurnEffectUsed(character, effectId, player.turns);
+
+        return {
+            activated: true,
+            message
+        };
+    },
+
     // =========================
     // Stage Effects
     // =========================
@@ -781,7 +872,8 @@ window.CardEffects = {
             this.resolveKisukeWhenAttacking(player, attackerData, ui),
             this.resolveYoruichiWhenAttacking(player, attackerData, ui),
             this.resolveUryuWhenAttacking(player, attackerData, ui),
-            this.resolveDejanSigmaWhenAttacking(player, attackerData, ui)
+            this.resolveDejanSigmaWhenAttacking(player, attackerData, ui),
+            this.resolveYujiItadoriWhenAttacking(player, attackerData, ui)
         ];
 
         effectResults.forEach(result => {

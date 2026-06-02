@@ -2671,6 +2671,16 @@ function canUseActivateMainEffect(player, card, effect) {
         return false;
     }
 
+    if (effect.id === "JK01-011-activate-main") {
+        if ((card.state || "active") === "rested") {
+            return false;
+        }
+
+        if (player.leader?.cardNumber !== "JK01-001") {
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -2779,6 +2789,54 @@ function resolveBoardActionEffect(player, card, effect) {
         return {
             success: false,
             message: `${card.name} needs at least 2 cards in trash.`
+        };
+    }
+
+    if (effect.id === "JK01-011-activate-main") {
+        if ((card.state || "active") === "rested") {
+            return {
+                success: false,
+                message: `${card.name} is already rested.`
+            };
+        }
+
+        if (player.leader?.cardNumber !== "JK01-001") {
+            return {
+                success: false,
+                message: `${card.name}'s effect requires Hiromi Higuruma as your leader.`
+            };
+        }
+
+        card.state = "rested";
+
+        const milledCards = [];
+
+        for (let index = 0; index < 2; index++) {
+            const topCard = player.deck.shift();
+
+            if (!topCard) {
+                break;
+            }
+
+            const trashedCard = assignCardInstance(topCard);
+            moveCardToTrash(player, trashedCard, ui);
+            milledCards.push(trashedCard);
+        }
+
+        renderStages();
+        renderDecks();
+        renderTrash();
+
+        const drawTrashMessage = resolveDrawOneTrashOne(player, card, ui, {
+            onComplete: () => queueMultiplayerStateSync()
+        });
+        const millMessage = milledCards.length > 0
+            ? `${player.name} trashed ${milledCards.length} card${milledCards.length === 1 ? "" : "s"} from the top of the deck.`
+            : `${player.name} had no cards in deck to trash.`;
+
+        return {
+            success: true,
+            message: `${millMessage} ${drawTrashMessage}`.trim()
         };
     }
 
@@ -3472,13 +3530,35 @@ function promptOnOpponentAttackCharacterEffects(defenderPlayer) {
         return;
     }
 
-    const entries = defenderPlayer.characters
+    const entries = [];
+
+    const leaderEffect = getCardAllEffects(defenderPlayer.leader)?.find(effect => {
+        return effect.type === "onOpponentAttack" &&
+            (!canUseOnOpponentAttackEffect || canUseOnOpponentAttackEffect(defenderPlayer, defenderPlayer.leader, effect));
+    });
+
+    if (defenderPlayer.leader && leaderEffect) {
+        entries.push({
+            cardType: "leader"
+        });
+    }
+
+    defenderPlayer.characters
         .map((card, slotIndex) => ({
             slotIndex,
-            hasEffect: getCardAllEffects(card)?.some(effect => effect.type === "onOpponentAttack")
+            card,
+            hasEffect: getCardAllEffects(card)?.some(effect => {
+                return effect.type === "onOpponentAttack" &&
+                    (!canUseOnOpponentAttackEffect || canUseOnOpponentAttackEffect(defenderPlayer, card, effect));
+            })
         }))
         .filter(entry => entry.hasEffect)
-        .map(entry => ({ slotIndex: entry.slotIndex }));
+        .forEach(entry => {
+            entries.push({
+                cardType: "character",
+                slotIndex: entry.slotIndex
+            });
+        });
 
     if (entries.length === 0) {
         continueAttackAfterDefenderResponses();
@@ -3507,7 +3587,9 @@ function getCurrentPendingOnOpponentAttackEffect() {
         return null;
     }
 
-    const currentCard = defenderPlayer.characters?.[entry.slotIndex];
+    const currentCard = entry.cardType === "leader"
+        ? defenderPlayer.leader
+        : defenderPlayer.characters?.[entry.slotIndex];
     const effect = getCardAllEffects(currentCard)?.find(cardEffect => cardEffect.type === "onOpponentAttack");
 
     if (!currentCard || !effect) {
@@ -3657,14 +3739,40 @@ function showPendingOpponentAttackEffectChoice() {
                 return;
             }
 
-            if (effect.actionId === "trashThisDrawOne") {
-                const trashedCard = defenderPlayer.characters[entry.slotIndex];
+            if (effect.id === "JK01-001-on-opponent-attack") {
+                const message = resolveHiromiHigurumaLeaderOnOpponentAttack(defenderPlayer, currentCard, ui, {
+                    onComplete: () => advancePendingOnOpponentAttackEffect()
+                });
+
+                if (message) {
+                    addGameLog(message);
+                }
+
+                queueMultiplayerStateSync();
+                return;
+            }
+
+            if (effect.id === "JK01-009-on-opponent-attack") {
+                const message = resolveTakakoUroOnOpponentAttack(defenderPlayer, currentCard, ui, {
+                    onComplete: () => advancePendingOnOpponentAttackEffect()
+                });
+
+                if (message) {
+                    addGameLog(message);
+                }
+
+                queueMultiplayerStateSync();
+                return;
+            }
+
+            if (effect.actionId === "trashThisDrawOne" && entry.cardType === "character") {
+                const trashResult = trashCharacterFromField(defenderPlayer, entry.slotIndex, ui, {
+                    render: false
+                });
+                const trashedCard = trashResult.character;
+                const linkedStageMessage = trashResult.linkedStageMessage;
 
                 if (trashedCard) {
-                    defenderPlayer.characters[entry.slotIndex] = null;
-                    moveCardToTrash(defenderPlayer, trashedCard, ui);
-                    resolveGutsLeaderCharacterRemovedBonus(defenderPlayer, ui);
-                    const linkedStageMessage = trashLinkedParfumStageForCharacter(defenderPlayer, trashedCard, ui);
                     drawCard(defenderPlayer, ui);
 
                     renderCharacters();
@@ -3910,6 +4018,35 @@ async function resolveCurrentAttack() {
         return;
     }
 
+    if (currentAttack.negated) {
+        addGameLog(`
+            ${defenderPlayer.name} resolved the attack.<br>
+            ${attackerPlayer.name}'s attack with ${attackerCard.name} was negated by ${currentAttack.negatedBy || "a counter effect"}.
+        `);
+
+        const finalizeNegatedAttack = () => {
+            clearBattleOnlyEffectsForCurrentAttack(attackerCard, targetCard);
+
+            currentAttack = null;
+            pendingAttack = null;
+            pendingBlock = null;
+
+            clearAttackTargets();
+            clearBlockerTargets();
+            clearBattleControls();
+            clearAttackArrow();
+
+            renderLeaders();
+            renderCharacters();
+
+            gameState.currentPhase = "main";
+            queueMultiplayerStateSync();
+        };
+
+        finalizeNegatedAttack();
+        return;
+    }
+
     const attackerPower = getCardBattlePower(attackerCard, attackerPlayer);
     const targetBasePower = getCardBattlePower(targetCard, defenderPlayer);
     const targetCounterBonus = currentAttack.targetPowerBonus || 0;
@@ -3918,6 +4055,8 @@ async function resolveCurrentAttack() {
     const attackerWins = attackerPower >= targetPower;
 
     let gameWinner = null;
+    let gameOverTitle = "Final Attack";
+    let gameOverText = `${defenderPlayer.name} had no life cards left and took a successful leader attack.`;
 
     let battleResultText = attackerWins
         ? `${attackerCard.name} wins the battle.`
@@ -3949,11 +4088,36 @@ async function resolveCurrentAttack() {
 
             battleResultText += `<br>${lifeResult.message}`;
 
+            if (lifeResult.winnerPlayer) {
+                gameWinner = lifeResult.winnerPlayer;
+                gameOverTitle = lifeResult.reasonTitle || "Victory";
+                gameOverText = lifeResult.reasonText || `${gameWinner.name} won after ${defenderPlayer.name}'s life hit 0.`;
+                battleResultText += `<br>${gameWinner.name} wins the game.`;
+            }
+
             if (lifeResult.success) {
                 const upgradeMessage = resolveKurosakiIchigoDamageStageUpgrade(defenderPlayer, ui);
 
                 if (upgradeMessage) {
                     battleResultText += `<br>${upgradeMessage}`;
+                }
+
+                const higurumaDamageResult = resolveHiromiHigurumaCharacterLeaderDamage(
+                    attackerPlayer,
+                    attackerCard,
+                    defenderPlayer,
+                    ui
+                );
+
+                if (higurumaDamageResult.message) {
+                    battleResultText += `<br>${higurumaDamageResult.message}`;
+                }
+
+                if (higurumaDamageResult.winnerPlayer) {
+                    gameWinner = higurumaDamageResult.winnerPlayer;
+                    gameOverTitle = higurumaDamageResult.reasonTitle || "Victory";
+                    gameOverText = higurumaDamageResult.reasonText || `${gameWinner.name} won after ${defenderPlayer.name}'s life hit 0.`;
+                    battleResultText += `<br>${gameWinner.name} wins the game.`;
                 }
             }
         }
@@ -3984,8 +4148,8 @@ async function resolveCurrentAttack() {
         if (gameWinner) {
             endGame(
                 gameWinner,
-                "Final Attack",
-                `${defenderPlayer.name} had no life cards left and took a successful leader attack.`
+                gameOverTitle,
+                gameOverText
             );
             queueMultiplayerStateSync();
             return;
@@ -5166,6 +5330,8 @@ function getPowerModifier(card, player = null) {
         getTurboGrannyFormPowerModifier(card, player) +
         getSerpicoFarnesePowerModifier(card, player) +
         getGutsLeaderPowerModifier(card, player) +
+        getHigurumaLeaderPowerModifier(card, player) +
+        getJujutsuProtectionPowerModifier(card, player) +
         getKurosakiIchigoPowerModifier(card, player) +
         getRimuruTempestPowerModifier(card, player) +
         getOpponentTurnPowerModifier(card, player) +
@@ -5301,6 +5467,32 @@ function getGutsLeaderPowerModifier(card, player) {
             const effect = character.effects?.find(cardEffect => cardEffect.id === "BK01-016-guts-rush-leader-power");
             return total + Number(effect?.leaderPowerModifier ?? 0);
         }, 0);
+}
+
+function getHigurumaLeaderPowerModifier(card, player) {
+    if (!card || !player || card.cardType !== "leader" || player.stage) {
+        return 0;
+    }
+
+    return player.characters
+        .filter(character => character?.cardNumber === "JK01-006" && !areCardEffectsNegated(character))
+        .length * 1000;
+}
+
+function getJujutsuProtectionPowerModifier(card, player) {
+    if (!card || !player || card.cardType !== "character" || areCardEffectsNegated(card)) {
+        return 0;
+    }
+
+    if (card.cardNumber === "JK01-008") {
+        return hasJujutsuOrCullingGameLeader(player) ? 2000 : 0;
+    }
+
+    if (card.cardNumber === "JK01-009") {
+        return hasTypeText(player.leader, "Culling Game Participant") ? 2000 : 0;
+    }
+
+    return 0;
 }
 
 function getRimuruTempestPowerModifier(card, player) {
