@@ -186,29 +186,6 @@ body {
     gap: 8px;
 }
 
-.deck-setting-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-
-    min-height: 46px;
-    padding: 10px 14px;
-
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    background: rgba(255, 255, 255, 0.09);
-
-    color: #dddddd;
-    font-size: 0.92rem;
-    font-weight: 600;
-}
-
-.deck-setting-toggle input {
-    width: 16px;
-    height: 16px;
-    margin: 0;
-}
-
 .saved-deck-box {
     display: flex;
     flex-direction: column;
