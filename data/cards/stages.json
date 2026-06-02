@@ -162,5 +162,28 @@
         "text": "On Play: Choose up to 1 of your Opponent's Characters and place it on your field. When that Character is removed from field; trash this Stage."
       }
     ]
+  },
+
+  "JK01-011": {
+    "id": "JK01-011",
+    "cardNumber": "JK01-011",
+    "name": "Deadly Sentencing",
+    "cardType": "stage",
+    "type": "Deadly Sentencing",
+    "color": "blue",
+    "cost": 2,
+    "image": "../images/UB Higuruma/JK01-011.png",
+    "effects": [
+      {
+        "id": "JK01-011-activate-main",
+        "type": "activateMain",
+        "text": "Activate: Main: You may rest this stage If your leader is [Hiromi Higuruma] trash the top 2 cards of your deck, and then Draw 1 trash 1."
+      },
+      {
+        "id": "JK01-011-on-ko",
+        "type": "onKO",
+        "text": "On K.O.: Draw 1 trash 1."
+      }
+    ]
   }
 }

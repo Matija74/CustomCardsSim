@@ -142,5 +142,32 @@
         "text": "Start of Your Turn: Look at 3 cards from the top of your deck; reveal up to 1 [Parfum] and add it to your hand. Then, place the rest on the top or bottom of your deck in any order."
       }
     ]
+  },
+
+  "JK01-001": {
+    "id": "JK01-001",
+    "cardNumber": "JK01-001",
+    "name": "Hiromi Higuruma",
+    "cardType": "leader",
+    "type": "Culling Game Participants",
+    "color": "blue/black",
+    "attribute": "strike",
+    "power": 4000,
+    "life": 6,
+    "image": "../images/UB Higuruma/JK01-001.png",
+    "aliases": [],
+    "keywords": [],
+    "effects": [
+      {
+        "id": "JK01-001-deck-rule",
+        "type": "continuous",
+        "text": "Under the rules of this game, you can have up to 6 copies of any \"Deadly Sentencing\" type event cards in your deck. Additionally, if you have 7 or less DON!! cards in your field, you cannot activate event cards that are cost 7 or higher from your trash."
+      },
+      {
+        "id": "JK01-001-on-opponent-attack",
+        "type": "onOpponentAttack",
+        "text": "On Your Opponent's Attack Twice Per Turn: Activate an event card with a Counter from your trash. Then, draw 1 trash 1."
+      }
+    ]
   }
 }

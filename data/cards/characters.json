@@ -1408,5 +1408,133 @@
         "text": "Trigger: Draw 2 cards and trash 1."
       }
     ]
+  },
+
+  "JK01-006": {
+    "id": "JK01-006",
+    "cardNumber": "JK01-006",
+    "name": "Hiromi Higuruma",
+    "cardType": "character",
+    "type": "Culling Game Participants",
+    "color": "black",
+    "cost": 10,
+    "power": 10000,
+    "counter": 0,
+    "attribute": "strike",
+    "image": "../images/UB Higuruma/JK01-006.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "JK01-006-continuous",
+        "type": "continuous",
+        "text": "If you have no stage cards on your stage field, give your leader +1000 power, and this character gains Rush."
+      },
+      {
+        "id": "JK01-006-when-attacking",
+        "type": "whenAttacking",
+        "text": "When Attacking: When this character deals damage to your opponent's leader, your opponent puts all their life cards to their hand."
+      }
+    ]
+  },
+
+  "JK01-007": {
+    "id": "JK01-007",
+    "cardNumber": "JK01-007",
+    "name": "Yuji Itadori",
+    "cardType": "character",
+    "type": "Culling Game Participants/Jujutsu High",
+    "color": "black",
+    "cost": 4,
+    "power": 6000,
+    "counter": 0,
+    "attribute": "strike",
+    "image": "../images/UB Higuruma/JK01-007.png",
+    "keywords": ["rush"],
+    "effects": [
+      {
+        "id": "JK01-007-on-play",
+        "type": "onPlay",
+        "text": "On Play: If your leader is [Hiromi Higuruma], trash the top 5 cards of your deck."
+      },
+      {
+        "id": "JK01-007-when-attacking",
+        "type": "whenAttacking",
+        "oncePerTurn": true,
+        "text": "When Attacking Once Per Turn: Place a [Hiromi Higuruma] card from your trash to your hand."
+      }
+    ]
+  },
+
+  "JK01-008": {
+    "id": "JK01-008",
+    "cardNumber": "JK01-008",
+    "name": "Yuta Okkotsu",
+    "cardType": "character",
+    "type": "Culling Game Participants/Jujutsu High",
+    "color": "black",
+    "cost": 6,
+    "power": 8000,
+    "counter": 0,
+    "attribute": "strike",
+    "image": "../images/UB Higuruma/JK01-008.png",
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "JK01-008-continuous",
+        "type": "continuous",
+        "oncePerTurn": true,
+        "text": "If your leader either has \"Culling Game Participant\" or \"Jujutsu High\" type, this character cannot be removed from the field or rested by your opponent's effects and gains +2000 power."
+      }
+    ]
+  },
+
+  "JK01-009": {
+    "id": "JK01-009",
+    "cardNumber": "JK01-009",
+    "name": "Takako Uro",
+    "cardType": "character",
+    "type": "Culling Game Participants",
+    "color": "black",
+    "cost": 6,
+    "power": 8000,
+    "counter": 0,
+    "attribute": "special",
+    "image": "../images/UB Higuruma/JK01-009.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "JK01-009-continuous",
+        "type": "continuous",
+        "oncePerTurn": true,
+        "text": "If your leader either has \"Culling Game Participant\" type, this character cannot be removed from the field or rested by your opponent's effects and gains +2000 power."
+      },
+      {
+        "id": "JK01-009-on-opponent-attack",
+        "type": "onOpponentAttack",
+        "text": "When your opponent attacks your leader, you may activate an event card's Counter from your hand that has the base cost of 6 or less."
+      }
+    ]
+  },
+
+  "JK01-010": {
+    "id": "JK01-010",
+    "cardNumber": "JK01-010",
+    "name": "Hajime Kashimo",
+    "cardType": "character",
+    "type": "Culling Game Participants",
+    "color": "black",
+    "cost": 3,
+    "power": 3000,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/UB Higuruma/JK01-010.png",
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "JK01-010-on-play",
+        "type": "onPlay",
+        "text": "On Play: If you have taken any life cards from your life area, draw 2 trash 2."
+      }
+    ]
   }
 }

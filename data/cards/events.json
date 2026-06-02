@@ -404,5 +404,77 @@
         "text": "Trigger: Add 1 card from your Trash to your hand."
       }
     ]
+  },
+
+  "JK01-002": {
+    "id": "JK01-002",
+    "cardNumber": "JK01-002",
+    "name": "Evidence",
+    "cardType": "event",
+    "type": "Deadly Sentencing",
+    "color": "blue",
+    "cost": 3,
+    "image": "../images/UB Higuruma/JK01-002.png",
+    "effects": [
+      {
+        "id": "JK01-002-counter",
+        "type": "counter",
+        "text": "Counter: If your opponent's attack is 7000 power or lower, you may negate it. If you did, reveal the top card of your life, if it is either \"Culling Game Participant\" or \"Deadly Sentencing\" type, you may either add it to your hand, or draw 1 from the top or bottom of your deck. Then, flip the top card of your life down."
+      }
+    ]
+  },
+
+  "JK01-003": {
+    "id": "JK01-003",
+    "cardNumber": "JK01-003",
+    "name": "Guilty, Confiscation",
+    "cardType": "event",
+    "type": "Deadly Sentencing",
+    "color": "black",
+    "cost": 4,
+    "image": "../images/UB Higuruma/JK01-003.png",
+    "effects": [
+      {
+        "id": "JK01-003-counter",
+        "type": "counter",
+        "text": "Counter: If your opponent's attack is 7000 power or lower, you may negate it. If you did, K.O your own stage card, then negate one of your opponent character's effect."
+      }
+    ]
+  },
+
+  "JK01-004": {
+    "id": "JK01-004",
+    "cardNumber": "JK01-004",
+    "name": "Guilty, Confiscation, Death Penalty!!!",
+    "cardType": "event",
+    "type": "Deadly Sentencing",
+    "color": "black",
+    "cost": 7,
+    "image": "../images/UB Higuruma/JK01-004.png",
+    "effects": [
+      {
+        "id": "JK01-004-counter",
+        "type": "counter",
+        "text": "Counter: If your opponent's attack is 10000 power or lower, you may negate it. If you did, If you have 3 or less life cards in your life area, your leader's base power becomes 9000 and gains Double Attack until the end of your next turn."
+      }
+    ]
+  },
+
+  "JK01-005": {
+    "id": "JK01-005",
+    "cardNumber": "JK01-005",
+    "name": "Yeah, I did that, I'm not lying, and I won't deny it",
+    "cardType": "event",
+    "type": "Deadly Sentencing",
+    "color": "black",
+    "cost": 10,
+    "image": "../images/UB Higuruma/JK01-005.jpg",
+    "effects": [
+      {
+        "id": "JK01-005-counter",
+        "type": "counter",
+        "text": "Counter: If your opponent's attack is 12000 power or lower, you may negate it. If you did, you may rest 10 of your DON!! cards. If you have 2 or less life cards in your life area, your leader's base power becomes 9000, and gains Double Attack and Banish. Additionally, if your opponent's life hits 0 during this turn, you win the game."
+      }
+    ]
   }
 }
