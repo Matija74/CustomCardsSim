@@ -6,7 +6,7 @@ interactions, and run self-play games without installing a full game client.
 
 ## Patch Notes
 
-### 0.41
+### 0.5
 
 - Added the `UB Higuruma` preset deck.
 - Notice: this deck has not yet been fully tested for bugs.
