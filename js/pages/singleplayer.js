@@ -3882,7 +3882,9 @@ function showBoardCardChoice({
 
         const name = document.createElement("span");
         name.className = "look-top-card-name";
-        name.textContent = choice.card.name;
+        name.textContent = choice.choiceLabel
+            ? `${choice.card.name} (${choice.choiceLabel})`
+            : choice.card.name;
 
         cardButton.appendChild(img);
         cardButton.appendChild(name);

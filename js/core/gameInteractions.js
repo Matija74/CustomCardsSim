@@ -229,68 +229,19 @@ function lockCardForNextRefresh(card) {
 }
 
 function chooseTrashCard(player, sourceCard, ui, options = {}) {
-    const validCards = (player?.trash || [])
-        .map((card, trashIndex) => ({
-            card,
-            value: trashIndex
-        }))
-        .filter(entry => entry.card && (!options.filter || options.filter(entry.card)));
-
-    if (validCards.length === 0) {
-        return options.emptyMessage || `${sourceCard.name} found no valid cards in trash.`;
-    }
-
-    const finishSelection = (selectedValue) => {
-        if (!selectedValue) {
-            if (typeof options.onSkip === "function") {
-                options.onSkip();
-            }
-
-            addGameLog(options.skipMessage || `${player.name} did not choose a trash card for ${sourceCard.name}.`);
-            return;
-        }
-
-        const trashIndex = Number(selectedValue);
-
-        if (!Number.isInteger(trashIndex) || trashIndex < 0 || trashIndex >= player.trash.length) {
-            addGameLog(`${sourceCard.name} could not find that trash card anymore.`);
-            return;
-        }
-
-        const card = player.trash[trashIndex];
-
-        options.onSelect?.({
-            card,
-            trashIndex
-        });
-    };
-
-    if (ui?.chooseEffectOption) {
-        ui.chooseEffectOption({
-            player,
-            sourceCard,
-            title: sourceCard.name,
+    return chooseBoardCard(
+        player,
+        sourceCard,
+        getTrashCardChoices(player, options.filter),
+        {
+            ...options,
+            filter: null,
             prompt: options.prompt || "Choose a card from your trash.",
-            options: [
-                ...validCards.map(({ card, value }) => ({
-                    label: `${card.name} (${card.cardNumber})`,
-                    value
-                })),
-                {
-                    label: "Skip",
-                    value: null,
-                    secondary: true,
-                    disabled: !options.optional
-                }
-            ],
-            onComplete: finishSelection
-        });
-
-        return `${player.name} is choosing a card from trash for ${sourceCard.name}.`;
-    }
-
-    finishSelection(options.optional ? null : validCards[0].value);
-    return `${sourceCard.name}'s effect resolved.`;
+            optional: options.optional !== false,
+            skipMessage: options.skipMessage || `${player.name} did not choose a trash card for ${sourceCard.name}.`,
+            emptyMessage: options.emptyMessage || `${sourceCard.name} found no valid cards in trash.`
+        }
+    );
 }
 
 function addCardFromTrashToHand(player, sourceCard, ui, options = {}) {
@@ -3232,6 +3183,19 @@ function getTrashCharacterChoices(player, filter) {
         .filter(choice => choice.card?.cardType === "character" && (!filter || filter(choice.card, choice)));
 }
 
+function getTrashCardChoices(player, filter) {
+    const playerKey = getPlayerKey(player);
+
+    return player?.trash
+        ?.map((card, trashIndex) => ({
+            playerKey,
+            cardType: "trash",
+            trashIndex,
+            card
+        }))
+        .filter(choice => choice.card && (!filter || filter(choice.card, choice))) ?? [];
+}
+
 function chooseCardsFromHandToTrash(player, sourceCard, ui, amount, onComplete) {
     const chosenCards = [];
 
@@ -5920,24 +5884,21 @@ function resolveHiromiHigurumaLeaderOnOpponentAttack(player, leader, ui, options
         }
     };
 
-    if (ui?.chooseEffectOption) {
-        ui.chooseEffectOption({
+    if (ui?.chooseBoardCard) {
+        ui.chooseBoardCard({
             player,
             sourceCard: leader,
-            title: leader.name,
             prompt: "Choose a Counter event from your trash to activate.",
-            options: [
-                ...validChoices.map(({ card, trashIndex }) => ({
-                    label: `${card.name} (${card.cardNumber})`,
-                    value: trashIndex
-                })),
-                {
-                    label: "Skip",
-                    value: null,
-                    secondary: true
-                }
-            ],
-            onComplete: chooseEvent
+            choices: validChoices.map(({ card, trashIndex }) => ({
+                playerKey: getPlayerKey(player),
+                cardType: "trash",
+                trashIndex,
+                card
+            })),
+            optional: true,
+            onComplete: (choice) => {
+                chooseEvent(choice ? choice.trashIndex : null);
+            }
         });
 
         return `${player.name} is choosing a Counter event from trash for ${leader.name}.`;
@@ -6177,32 +6138,17 @@ function resolveDavidTaglavnovicCharacterMain(player, sourceCard, ui) {
         );
     };
 
-    if (ui?.chooseEffectOption) {
-        ui.chooseEffectOption({
+    if (ui?.chooseBoardCard) {
+        ui.chooseBoardCard({
             player,
             sourceCard,
-            title: sourceCard.name,
             prompt: `Choose a B.R.A.N.K.O. from your hand or trash with cost ${maxCost} or less to play.`,
-            options: [
-                ...choices.map((choice, index) => ({
-                    label: `${choice.zone === "hand" ? "Hand" : "Trash"}: ${choice.card.name} (${choice.card.cost})`,
-                    value: index
-                })),
-                {
-                    label: "Skip",
-                    value: null,
-                    secondary: true
-                }
-            ],
-            onComplete: (selectedIndex) => {
-                const selectedChoice = selectedIndex === null
-                    ? null
-                    : Number.isInteger(selectedIndex)
-                    ? choices[selectedIndex]
-                    : choices[Number(selectedIndex)];
-
-                completePlay(selectedChoice);
-            }
+            choices: choices.map(choice => ({
+                ...choice,
+                choiceLabel: choice.zone === "hand" ? "Hand" : "Trash"
+            })),
+            optional: true,
+            onComplete: completePlay
         });
 
         ui?.renderCharacters?.();
