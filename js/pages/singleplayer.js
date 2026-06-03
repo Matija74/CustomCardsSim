@@ -1735,6 +1735,9 @@ function showSelectedCounterActions() {
     const counterValue = typeof getCounterPowerForUse === "function"
         ? getCounterPowerForUse(card, player)
         : getCardCounterValue(card, player);
+    const handCounterCost = typeof getHandCounterEventCost === "function"
+        ? getHandCounterEventCost(card, player)
+        : 0;
 
     const counterButton = document.createElement("button");
 
@@ -1744,6 +1747,10 @@ function showSelectedCounterActions() {
         counterButton.disabled = true;
         counterButton.textContent = "Not Def.";
         counterButton.title = "Only the defending player can counter with their own hand.";
+    } else if (card.cardType === "event" && player.don < handCounterCost) {
+        counterButton.disabled = true;
+        counterButton.textContent = `Need ${handCounterCost}`;
+        counterButton.title = `${card.name} needs ${handCounterCost} active DON!! to be used as a Counter from hand.`;
     } else if (!canCardBeUsedAsCounter(card, player)) {
         counterButton.disabled = true;
         counterButton.textContent = "No Counter";

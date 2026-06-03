@@ -1454,7 +1454,19 @@ function getEventCounterBonusFromBoard(card, player) {
         }, 0);
 }
 
+function getHandCounterEventCost(card, player) {
+    if (!card || card.cardType !== "event") {
+        return 0;
+    }
+
+    return getCardPlayCost(card, player);
+}
+
 function canCardBeUsedAsCounter(card, player = null) {
+    if (card?.cardType === "event" && player && player.don < getHandCounterEventCost(card, player)) {
+        return false;
+    }
+
     return getCardCounterValue(card, player) > 0 ||
         getCounterEffects(card, player).length > 0;
 }
@@ -1478,6 +1490,16 @@ function useCounterFromHand(player, handIndex, ui) {
             success: false,
             counterPower: 0,
             message: `${card.name} has no usable counter effect right now.`
+        };
+    }
+
+    const counterCost = getHandCounterEventCost(card, player);
+
+    if (counterCost > 0 && !restDonForCost(player, counterCost, ui)) {
+        return {
+            success: false,
+            counterPower: 0,
+            message: `${player.name} does not have enough active DON!! to use ${card.name} as a Counter.`
         };
     }
 
@@ -5126,6 +5148,33 @@ function negateCurrentAttack(sourceCard) {
     return true;
 }
 
+function queueAutoResolveNegatedAttack() {
+    if (typeof currentAttack === "undefined" || !currentAttack?.negated || currentAttack.autoResolvingNegated) {
+        return;
+    }
+
+    currentAttack.autoResolvingNegated = true;
+
+    const resolveLater = () => {
+        if (typeof currentAttack === "undefined" || !currentAttack?.negated) {
+            return;
+        }
+
+        if (typeof resolveCurrentAttack === "function") {
+            Promise.resolve(resolveCurrentAttack()).catch(error => {
+                console.error("Failed to auto-resolve negated attack.", error);
+            });
+        }
+    };
+
+    if (typeof window !== "undefined" && typeof window.setTimeout === "function") {
+        window.setTimeout(resolveLater, 0);
+        return;
+    }
+
+    resolveLater();
+}
+
 function resolveEvidenceCounterEffect(player, sourceCard, ui, options = {}) {
     const finish = (...args) => {
         if (typeof queueMultiplayerStateSync === "function") {
@@ -5133,6 +5182,10 @@ function resolveEvidenceCounterEffect(player, sourceCard, ui, options = {}) {
         }
 
         options.onComplete?.(...args);
+
+        if (options.autoResolveNegatedAttack !== false) {
+            queueAutoResolveNegatedAttack();
+        }
     };
 
     if (typeof currentAttack === "undefined" || !currentAttack) {
@@ -5272,6 +5325,10 @@ function resolveConfiscationCounterEffect(player, sourceCard, ui, options = {}) 
         }
 
         options.onComplete?.(...args);
+
+        if (options.autoResolveNegatedAttack !== false) {
+            queueAutoResolveNegatedAttack();
+        }
     };
 
     if (typeof currentAttack === "undefined" || !currentAttack) {
@@ -5333,6 +5390,10 @@ function resolveDeathPenaltyCounterEffect(player, sourceCard, ui, options = {}) 
         }
 
         options.onComplete?.(...args);
+
+        if (options.autoResolveNegatedAttack !== false) {
+            queueAutoResolveNegatedAttack();
+        }
     };
 
     if (typeof currentAttack === "undefined" || !currentAttack) {
@@ -5495,6 +5556,10 @@ function resolveConfessionCounterEffect(player, sourceCard, ui, options = {}) {
         }
 
         options.onComplete?.(...args);
+
+        if (options.autoResolveNegatedAttack !== false) {
+            queueAutoResolveNegatedAttack();
+        }
     };
 
     if (typeof currentAttack === "undefined" || !currentAttack) {
@@ -5593,6 +5658,7 @@ function resolveHigurumaTrashCounterEffect(player, leader, eventCard, effect, ui
         }
 
         onComplete?.();
+        queueAutoResolveNegatedAttack();
     };
 
     const drawAndTrash = () => {
@@ -5643,7 +5709,8 @@ function resolveHigurumaTrashCounterEffect(player, leader, eventCard, effect, ui
 
     if (effect.id === "JK01-002-counter") {
         const message = resolveEvidenceCounterEffect(player, eventCard, ui, {
-            onComplete: drawAndTrash
+            onComplete: drawAndTrash,
+            autoResolveNegatedAttack: false
         });
 
         return message || `${eventCard.name} activated from trash.`;
@@ -5651,7 +5718,8 @@ function resolveHigurumaTrashCounterEffect(player, leader, eventCard, effect, ui
 
     if (effect.id === "JK01-003-counter") {
         const message = resolveConfiscationCounterEffect(player, eventCard, ui, {
-            onComplete: drawAndTrash
+            onComplete: drawAndTrash,
+            autoResolveNegatedAttack: false
         });
 
         return message || `${eventCard.name} activated from trash.`;
@@ -5659,7 +5727,8 @@ function resolveHigurumaTrashCounterEffect(player, leader, eventCard, effect, ui
 
     if (effect.id === "JK01-004-counter") {
         const message = resolveDeathPenaltyCounterEffect(player, eventCard, ui, {
-            onComplete: drawAndTrash
+            onComplete: drawAndTrash,
+            autoResolveNegatedAttack: false
         });
 
         return message || `${eventCard.name} activated from trash.`;
@@ -5667,7 +5736,8 @@ function resolveHigurumaTrashCounterEffect(player, leader, eventCard, effect, ui
 
     if (effect.id === "JK01-005-counter") {
         const message = resolveConfessionCounterEffect(player, eventCard, ui, {
-            onComplete: drawAndTrash
+            onComplete: drawAndTrash,
+            autoResolveNegatedAttack: false
         });
 
         return message || `${eventCard.name} activated from trash.`;
