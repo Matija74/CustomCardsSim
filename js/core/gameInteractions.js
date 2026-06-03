@@ -1869,6 +1869,27 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
         return trashTopCardsOfDeck(player, 5, ui).message;
     }
 
+    if (effect.id === "JK01-010-on-play") {
+        if (!hasTakenLifeFromLifeArea(player)) {
+            return `${sourceCard.name}'s On Play effect did not resolve because ${player.name} has not taken any life cards from their life area.`;
+        }
+
+        return resolveDrawTwoTrashTwo(player, sourceCard, ui);
+    }
+
+    if (effect.id === "JK01-012-on-play") {
+        const lifeResult = takeLifeToHandUntilCount(player, ui, 1);
+
+        if (!lifeResult.success) {
+            return `${sourceCard.name}'s On Play effect did not add any life cards to hand.`;
+        }
+
+        addPersistentPowerBonus(player.leader, 2000);
+        ui?.renderLeaders?.();
+
+        return `${lifeResult.message} ${player.leader.name} gained +2000 power for the rest of the game.`;
+    }
+
     if (effect.actionId === "lookTopFiveDandadan") {
         return lookTopCardsForType(player, sourceCard, 5, "Dandadan", ui);
     }
@@ -4800,6 +4821,53 @@ function takeAllLifeToHand(player, ui) {
     };
 }
 
+function takeLifeToHandUntilCount(player, ui, minimumLifeToKeep = 1) {
+    if (!player) {
+        return {
+            success: false,
+            cardsMoved: 0,
+            remainingLife: 0,
+            message: "No player was found."
+        };
+    }
+
+    const movedCards = [];
+
+    while (player.life.length > minimumLifeToKeep) {
+        const card = player.life.shift();
+
+        if (!card) {
+            break;
+        }
+
+        card.faceUp = false;
+        player.hand.push(card);
+        movedCards.push(card);
+    }
+
+    ui?.renderLifeCards?.();
+    ui?.renderHands?.();
+
+    return {
+        success: movedCards.length > 0,
+        cardsMoved: movedCards.length,
+        remainingLife: player.life.length,
+        message: movedCards.length > 0
+            ? `${player.name} added ${movedCards.length} life card${movedCards.length === 1 ? "" : "s"} to hand and kept ${player.life.length} in life.`
+            : `${player.name} already had ${player.life.length} or fewer life cards.`
+    };
+}
+
+function hasTakenLifeFromLifeArea(player) {
+    if (!player) {
+        return false;
+    }
+
+    const startingLife = Number(player.startingLife ?? player.leader?.life ?? 0);
+
+    return startingLife > 0 && Number(player.life?.length || 0) < startingLife;
+}
+
 function hasJujutsuOrCullingGameLeader(player) {
     const leader = player?.leader;
 
@@ -4847,6 +4915,46 @@ function isProtectedFromOpponentEffects(card, cardPlayerKey, actingPlayer) {
     const actingPlayerKey = getPlayerKey(actingPlayer);
 
     return actingPlayerKey && actingPlayerKey !== cardPlayerKey;
+}
+
+function resolveDrawTwoTrashTwo(player, sourceCard, ui, options = {}) {
+    const finish = () => {
+        if (typeof queueMultiplayerStateSync === "function") {
+            queueMultiplayerStateSync();
+        }
+
+        options.onComplete?.();
+    };
+
+    const drawResult = drawCards(player, 2, ui);
+
+    if (drawResult?.deckOut) {
+        finish();
+        return `${sourceCard.name}'s effect tried to draw 2 cards, but ${player.name} lost by deck out.`;
+    }
+
+    if (player.hand.length === 0) {
+        finish();
+        return `${sourceCard.name}'s effect drew 2 cards, but found no cards in hand to trash.`;
+    }
+
+    const trashAmount = Math.min(2, player.hand.length);
+
+    chooseCardsFromHandToTrash(player, sourceCard, ui, trashAmount, () => {
+        addGameLog(`${sourceCard.name}'s effect drew 2 cards and trashed ${trashAmount} card${trashAmount === 1 ? "" : "s"}.`);
+        finish();
+    });
+
+    return `${sourceCard.name}'s effect drew 2 cards and is choosing ${trashAmount} card${trashAmount === 1 ? "" : "s"} to trash.`;
+}
+
+function addPersistentPowerBonus(card, amount) {
+    if (!card) {
+        return;
+    }
+
+    card.persistentPowerBonus = Number(card.persistentPowerBonus || 0) + Number(amount || 0);
+    refreshCardStatDisplay(card);
 }
 
 function resolveGutsLeaderCharacterRemovedBonus(removedCharacterPlayer, ui) {

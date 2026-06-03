@@ -1536,5 +1536,27 @@
         "text": "On Play: If you have taken any life cards from your life area, draw 2 trash 2."
       }
     ]
+  },
+
+  "JK01-012": {
+    "id": "JK01-012",
+    "cardNumber": "JK01-012",
+    "name": "Ryomen Sukuna",
+    "cardType": "character",
+    "type": "Culling Game Participants/King of Curses",
+    "color": "black",
+    "cost": 8,
+    "power": 10000,
+    "counter": 0,
+    "attribute": "ranged",
+    "image": "../images/UB Higuruma/JK01-012.png",
+    "keywords": ["rush"],
+    "effects": [
+      {
+        "id": "JK01-012-on-play",
+        "type": "onPlay",
+        "text": "On Play: Add life cards to your hand until your life area has 1 card. If you did, your leader gains +2000 power for the rest of the game."
+      }
+    ]
   }
 }

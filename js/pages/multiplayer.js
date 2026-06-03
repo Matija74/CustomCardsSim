@@ -5336,6 +5336,7 @@ function getPowerModifier(card, player = null) {
         getRimuruTempestPowerModifier(card, player) +
         getOpponentTurnPowerModifier(card, player) +
         getAttachedDonPowerModifier(card, player) +
+        getPersistentPowerModifier(card) +
         getTemporaryPowerModifier(card) +
         getDurationPowerModifier(card) +
         getDonAttachedPowerModifier(card) +
@@ -5537,6 +5538,10 @@ function getAttachedDonPowerModifier(card, player) {
     }
 
     return Number(card?.attachedDon ?? 0) * 1000;
+}
+
+function getPersistentPowerModifier(card) {
+    return Number(card?.persistentPowerBonus ?? 0);
 }
 
 function getTemporaryPowerModifier(card) {

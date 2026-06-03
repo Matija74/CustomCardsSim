@@ -161,6 +161,7 @@ function setupLifeCards(player) {
     player.life = [];
 
     const lifeAmount = player.leader.life;
+    player.startingLife = lifeAmount;
 
     for (let i = 0; i < lifeAmount; i++) {
         const card = player.deck.shift();

@@ -101,6 +101,19 @@ const uTaglavnovicDeckText = `
 4xPOG1-014
 `;
 
+const ubHigurumaDeckText = `
+6xJK01-002
+6xJK01-003
+6xJK01-004
+6xJK01-005
+4xJK01-006
+4xJK01-007
+4xJK01-008
+6xJK01-009
+4xJK01-010
+4xJK01-012
+`;
+
 const availableDecks = [
     {
         id: "okarun-deck",
@@ -131,6 +144,12 @@ const availableDecks = [
         name: "U Taglavnovič by Porentov",
         leaderKey: "POG1-001",
         deckText: uTaglavnovicDeckText
+    },
+    {
+        id: "ub-higuruma-deck",
+        name: "UB Higuruma",
+        leaderKey: "JK01-001",
+        deckText: ubHigurumaDeckText
     }
 ];
 
