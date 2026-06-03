@@ -109,7 +109,7 @@ const ubHigurumaDeckText = `
 4xJK01-006
 4xJK01-007
 4xJK01-008
-6xJK01-009
+2xJK01-009
 4xJK01-010
 4xJK01-012
 `;
