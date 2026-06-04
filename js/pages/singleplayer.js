@@ -1623,6 +1623,7 @@ function showSelectedCardActions() {
     const canAfford = canPlayerAffordCard(player, card);
     const openSlotIndex = getFirstOpenCharacterSlotIndex(player);
     const canPlayNow = canPlayerPlayCards(player);
+    const canPlayEventMain = card.cardType !== "event" || canPlayEventInMainPhase(card);
 
     if (!canPlayNow) {
         playButton.disabled = true;
@@ -1644,6 +1645,10 @@ function showSelectedCardActions() {
         playButton.disabled = true;
         playButton.textContent = `Need ${cardCost}`;
         playButton.title = `${player.name} does not have enough active DON!! to play this card.`;
+    } else if (!canPlayEventMain) {
+        playButton.disabled = true;
+        playButton.textContent = "Counter Only";
+        playButton.title = `${card.name} does not have a Main effect, so it cannot be played during the main phase.`;
     } else if (card.cardType === "character" && openSlotIndex === -1) {
         playButton.textContent = `Replace ${cardCost}`;
         playButton.title = `${player.name}'s board is full. Click to choose a character to replace.`;

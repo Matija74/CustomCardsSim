@@ -1532,8 +1532,8 @@
     "effects": [
       {
         "id": "JK01-010-on-play",
-        "type": "onPlay",
-        "text": "On Play: If you have taken any life cards from your life area, draw 2 trash 2."
+        "type": "continuous",
+        "text": "If you have taken any life cards from your life area, draw 2 trash 2."
       }
     ]
   },

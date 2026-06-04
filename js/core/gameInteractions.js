@@ -95,6 +95,14 @@ function canPlayerAffordCard(player, card) {
     return player.don >= cardCost;
 }
 
+function getMainPhaseEventEffects(card) {
+    return card?.effects?.filter(effect => effect.type === "main") ?? [];
+}
+
+function canPlayEventInMainPhase(card) {
+    return card?.cardType === "event" && getMainPhaseEventEffects(card).length > 0;
+}
+
 function getRimuruPlayCostModifier(card, player) {
     if (!card || !player || !isRimuruTempestLeader(player)) {
         return 0;
@@ -216,8 +224,33 @@ function addTemporaryEffectNegation(card, expiresAtPlayerKey, expiresAtEndOfTurn
     });
 }
 
-function canPlayStageToArea(player) {
-    return !player?.stage;
+function canPlayStageToArea(player, incomingStage = null) {
+    if (!player?.stage) {
+        return true;
+    }
+
+    if (!incomingStage) {
+        return false;
+    }
+
+    return !(isParfumStage(player.stage) && isParfumStage(incomingStage));
+}
+
+function replaceStageOnFieldIfNeeded(player, incomingStage, ui) {
+    if (!player?.stage) {
+        return "";
+    }
+
+    if (!canPlayStageToArea(player, incomingStage)) {
+        return `${player.name} cannot play ${incomingStage?.name || "that stage"} because Parfum is already in play.`;
+    }
+
+    const replacedStage = player.stage;
+    const replacementMessage = trashStageFromField(player, replacedStage, ui);
+
+    return replacementMessage
+        ? `${player.name} trashed ${replacedStage.name} to play ${incomingStage.name}. ${replacementMessage}`
+        : `${player.name} trashed ${replacedStage.name} to play ${incomingStage.name}.`;
 }
 
 function lockCardForNextRefresh(card) {
@@ -621,9 +654,11 @@ function playCardFromDeckWithoutCost(player, sourceCard, card, ui, sourceZoneLab
     }
 
     if (card.cardType === "stage") {
-        if (!canPlayStageToArea(player)) {
-            return `${sourceCard.name} could not play ${card.name} from the ${sourceZoneLabel} because ${player.name}'s stage area is already occupied.`;
+        if (!canPlayStageToArea(player, card)) {
+            return `${sourceCard.name} could not play ${card.name} from the ${sourceZoneLabel} because Parfum is already in play.`;
         }
+
+        const replacementMessage = replaceStageOnFieldIfNeeded(player, card, ui);
 
         card.state = "active";
         card.uiAnimation = "played";
@@ -632,9 +667,14 @@ function playCardFromDeckWithoutCost(player, sourceCard, card, ui, sourceZoneLab
         const effectMessages = resolveOnPlayEffects(player, card, ui);
 
         ui?.renderStages?.();
-        return effectMessages.length > 0
+
+        const playMessage = effectMessages.length > 0
             ? `${sourceCard.name} played ${card.name} from the ${sourceZoneLabel}. ${effectMessages.join(" ")}`
             : `${sourceCard.name} played ${card.name} from the ${sourceZoneLabel}.`;
+
+        return replacementMessage
+            ? `${replacementMessage} ${playMessage}`
+            : playMessage;
     }
 
     if (card.cardType === "event") {
@@ -684,10 +724,10 @@ function resolveJeremicOnPlay(player, sourceCard, ui) {
 
         const chosenCard = player.deck[deckIndex];
 
-        if (chosenCard?.cardType === "stage" && !canPlayStageToArea(player)) {
+        if (chosenCard?.cardType === "stage" && !canPlayStageToArea(player, chosenCard)) {
             shuffleDeck(player.deck);
             ui?.renderDecks?.();
-            addGameLog(`${sourceCard.name} found ${chosenCard.name}, but ${player.name}'s stage area is already occupied. The deck was shuffled.`);
+            addGameLog(`${sourceCard.name} found ${chosenCard.name}, but Parfum is already in play. The deck was shuffled.`);
             return;
         }
 
@@ -1637,10 +1677,10 @@ function playStageCard(player, handIndex, ui) {
         };
     }
 
-    if (!canPlayStageToArea(player)) {
+    if (!canPlayStageToArea(player, card)) {
         return {
             success: false,
-            message: `${player.name} cannot play ${card.name} because a stage is already in play.`
+            message: `${player.name} cannot play ${card.name} because Parfum is already in play.`
         };
     }
 
@@ -1663,6 +1703,7 @@ function playStageCard(player, handIndex, ui) {
     }
 
     const playedStage = player.hand.splice(handIndex, 1)[0];
+    const replacementMessage = replaceStageOnFieldIfNeeded(player, playedStage, ui);
 
     playedStage.state = "active";
     playedStage.uiAnimation = "played";
@@ -1682,7 +1723,9 @@ function playStageCard(player, handIndex, ui) {
 
     return {
         success: true,
-        message: `${player.name} played ${playedStage.name} to the stage area.${effectText}`
+        message: replacementMessage
+            ? `${replacementMessage} ${player.name} played ${playedStage.name} to the stage area.${effectText}`
+            : `${player.name} played ${playedStage.name} to the stage area.${effectText}`
     };
 }
 
@@ -1840,14 +1883,6 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
         }
 
         return trashTopCardsOfDeck(player, 5, ui).message;
-    }
-
-    if (effect.id === "JK01-010-on-play") {
-        if (!hasTakenLifeFromLifeArea(player)) {
-            return `${sourceCard.name}'s On Play effect did not resolve because ${player.name} has not taken any life cards from their life area.`;
-        }
-
-        return resolveDrawTwoTrashTwo(player, sourceCard, ui);
     }
 
     if (effect.id === "JK01-012-on-play") {
@@ -3847,16 +3882,6 @@ function playZangetsuStageFromDeck(player, sourceCard, ui, targetCost) {
         return "";
     }
 
-    if (!canPlayStageToArea(player)) {
-        shuffleDeck(player.deck);
-
-        if (ui?.renderDecks) {
-            ui.renderDecks();
-        }
-
-        return `${sourceCard.name} could not play a Zangetsu stage because ${player.name}'s stage area is already occupied. ${player.name} shuffled the deck.`;
-    }
-
     const stageLocation = findZangetsuStageInDeck(player, targetCost);
 
     if (!stageLocation) {
@@ -3869,6 +3894,18 @@ function playZangetsuStageFromDeck(player, sourceCard, ui, targetCost) {
         return `${sourceCard.name} found no cost ${targetCost} Zangetsu stage in ${player.name}'s deck. ${player.name} shuffled the deck.`;
     }
 
+    const previewStage = stageLocation.zone.cards[stageLocation.index];
+
+    if (!canPlayStageToArea(player, previewStage)) {
+        shuffleDeck(player.deck);
+
+        if (ui?.renderDecks) {
+            ui.renderDecks();
+        }
+
+        return `${sourceCard.name} could not play a Zangetsu stage because Parfum is already in play. ${player.name} shuffled the deck.`;
+    }
+
     const stage = stageLocation.zone.cards.splice(stageLocation.index, 1)[0];
 
     if (stageLocation.zone.name === "hand" && player.deck.length) {
@@ -3878,6 +3915,8 @@ function playZangetsuStageFromDeck(player, sourceCard, ui, targetCost) {
     if (stageLocation.zone.name === "life" && player.deck.length) {
         player.life.push(assignCardInstance(player.deck.shift()));
     }
+
+    const replacementMessage = replaceStageOnFieldIfNeeded(player, stage, ui);
 
     stage.state = "active";
     stage.uiAnimation = "played";
@@ -3905,7 +3944,9 @@ function playZangetsuStageFromDeck(player, sourceCard, ui, targetCost) {
         ui.renderTrash();
     }
 
-    return `${sourceCard.name} played ${stage.name} from the deck, then shuffled the deck.`;
+    return replacementMessage
+        ? `${replacementMessage} ${sourceCard.name} played ${stage.name} from the deck, then shuffled the deck.`
+        : `${sourceCard.name} played ${stage.name} from the deck, then shuffled the deck.`;
 }
 
 function resolveKurosakiIchigoGameStart(player, ui) {
@@ -4751,6 +4792,12 @@ function takeTopLifeToHand(player, ui) {
         ui.renderHands();
     }
 
+    const kashimoMessage = resolveHajimeKashimoLifeTakenEffects(player, ui);
+
+    if (kashimoMessage) {
+        addGameLog(kashimoMessage);
+    }
+
     return card;
 }
 
@@ -4783,6 +4830,14 @@ function takeAllLifeToHand(player, ui) {
 
     ui?.renderLifeCards?.();
     ui?.renderHands?.();
+
+    if (movedCards.length > 0) {
+        const kashimoMessage = resolveHajimeKashimoLifeTakenEffects(player, ui);
+
+        if (kashimoMessage) {
+            addGameLog(kashimoMessage);
+        }
+    }
 
     const winCondition = getLifeZeroWinConditionWinner(player);
 
@@ -4834,6 +4889,14 @@ function takeLifeToHandUntilCount(player, ui, minimumLifeToKeep = 1) {
     ui?.renderLifeCards?.();
     ui?.renderHands?.();
 
+    if (movedCards.length > 0) {
+        const kashimoMessage = resolveHajimeKashimoLifeTakenEffects(player, ui);
+
+        if (kashimoMessage) {
+            addGameLog(kashimoMessage);
+        }
+    }
+
     return {
         success: movedCards.length > 0,
         cardsMoved: movedCards.length,
@@ -4842,16 +4905,6 @@ function takeLifeToHandUntilCount(player, ui, minimumLifeToKeep = 1) {
             ? `${player.name} added ${movedCards.length} life card${movedCards.length === 1 ? "" : "s"} to hand and kept ${player.life.length} in life.`
             : `${player.name} already had ${player.life.length} or fewer life cards.`
     };
-}
-
-function hasTakenLifeFromLifeArea(player) {
-    if (!player) {
-        return false;
-    }
-
-    const startingLife = Number(player.startingLife ?? player.leader?.life ?? 0);
-
-    return startingLife > 0 && Number(player.life?.length || 0) < startingLife;
 }
 
 function hasJujutsuOrCullingGameLeader(player) {
@@ -4934,6 +4987,55 @@ function resolveDrawTwoTrashTwo(player, sourceCard, ui, options = {}) {
     return `${sourceCard.name}'s effect drew 2 cards and is choosing ${trashAmount} card${trashAmount === 1 ? "" : "s"} to trash.`;
 }
 
+function resolveHajimeKashimoLifeTakenEffects(player, ui) {
+    const kashimos = player?.characters?.filter(card => {
+        return card?.cardNumber === "JK01-010" && !areCardEffectsNegated(card);
+    }) ?? [];
+
+    if (kashimos.length === 0) {
+        return "";
+    }
+
+    const shouldDeferCombatResolution = Boolean(
+        typeof currentAttack !== "undefined" &&
+        currentAttack &&
+        typeof ui?.beginDeferredCombatResolution === "function" &&
+        typeof ui?.endDeferredCombatResolution === "function"
+    );
+
+    if (shouldDeferCombatResolution) {
+        ui.beginDeferredCombatResolution();
+    }
+
+    let effectIndex = 0;
+
+    const finish = () => {
+        if (shouldDeferCombatResolution) {
+            ui.endDeferredCombatResolution();
+        }
+    };
+
+    const resolveNext = () => {
+        if (effectIndex >= kashimos.length) {
+            finish();
+            return;
+        }
+
+        const kashimo = kashimos[effectIndex++];
+        const message = resolveDrawTwoTrashTwo(player, kashimo, ui, {
+            onComplete: resolveNext
+        });
+
+        if (message) {
+            addGameLog(message);
+        }
+    };
+
+    resolveNext();
+
+    return `${player.name} is resolving Hajime Kashimo's effect.`;
+}
+
 function addPersistentPowerBonus(card, amount) {
     if (!card) {
         return;
@@ -5001,13 +5103,16 @@ function playTurboGrannyFormFromDeck(player, sourceCard, ui) {
         return `${sourceCard.name} found no Turbo Granny Form in the deck. ${player.name} shuffled the deck.`;
     }
 
-    if (!canPlayStageToArea(player)) {
+    const previewStage = player.deck[stageIndex];
+
+    if (!canPlayStageToArea(player, previewStage)) {
         shuffleDeck(player.deck);
         ui.renderDecks();
-        return `${sourceCard.name} found Turbo Granny Form, but ${player.name}'s stage area is already occupied. ${player.name} shuffled the deck.`;
+        return `${sourceCard.name} found Turbo Granny Form, but Parfum is already in play. ${player.name} shuffled the deck.`;
     }
 
     const stage = player.deck.splice(stageIndex, 1)[0];
+    const replacementMessage = replaceStageOnFieldIfNeeded(player, stage, ui);
 
     stage.state = "active";
     player.stage = stage;
@@ -5018,7 +5123,9 @@ function playTurboGrannyFormFromDeck(player, sourceCard, ui) {
     ui.renderStages();
     ui.renderTrash();
 
-    return `${sourceCard.name} played ${stage.name} from the deck, then shuffled the deck.`;
+    return replacementMessage
+        ? `${replacementMessage} ${sourceCard.name} played ${stage.name} from the deck, then shuffled the deck.`
+        : `${sourceCard.name} played ${stage.name} from the deck, then shuffled the deck.`;
 }
 
 function getPlayerFieldDonCount(player) {
@@ -5214,6 +5321,12 @@ function resolveEvidenceCounterEffect(player, sourceCard, ui, options = {}) {
                 ui?.renderLifeCards?.();
                 ui?.renderHands?.();
                 addGameLog(`${player.name} added ${addedLifeCard.name} from life to hand with ${sourceCard.name}.`);
+
+                const kashimoMessage = resolveHajimeKashimoLifeTakenEffects(player, ui);
+
+                if (kashimoMessage) {
+                    addGameLog(kashimoMessage);
+                }
             }
 
             finish();
@@ -6028,8 +6141,7 @@ function resolveMainEffects(player, card, ui, options = {}) {
 
     const messages = [];
 
-    card.effects
-        ?.filter(effect => effect.type === "main")
+    getMainPhaseEventEffects(card)
         .forEach(effect => {
             const message = resolveEffectAction(player, card, effect, ui, options);
 
@@ -6212,6 +6324,13 @@ function playEventCard(player, handIndex, ui) {
         return {
             success: false,
             message: `${card.name} is not an event card.`
+        };
+    }
+
+    if (!canPlayEventInMainPhase(card)) {
+        return {
+            success: false,
+            message: `${card.name} cannot be played during the main phase because it does not have a Main effect.`
         };
     }
 
@@ -6422,6 +6541,14 @@ function takeLifeDamage(player, amount, ui) {
 
     ui.renderLifeCards();
     ui.renderHands();
+
+    if (lifeTaken > 0) {
+        const kashimoMessage = resolveHajimeKashimoLifeTakenEffects(player, ui);
+
+        if (kashimoMessage) {
+            addGameLog(kashimoMessage);
+        }
+    }
 
     const triggerText = triggerMessages.length > 0
         ? ` ${triggerMessages.join(" ")}`
@@ -6677,10 +6804,12 @@ function playCardFromTrigger(player, card, ui) {
     }
 
     if (card.cardType === "stage") {
-        if (!canPlayStageToArea(player)) {
+        if (!canPlayStageToArea(player, card)) {
             player.hand.push(card);
-            return `${card.name}'s Trigger could not play it because ${player.name}'s stage area is already occupied, so it was added to hand.`;
+            return `${card.name}'s Trigger could not play it because Parfum is already in play, so it was added to hand.`;
         }
+
+        const replacementMessage = replaceStageOnFieldIfNeeded(player, card, ui);
 
         card.state = "active";
         player.stage = card;
@@ -6689,9 +6818,13 @@ function playCardFromTrigger(player, card, ui) {
 
         ui.renderStages();
 
-        return effectMessages.length > 0
+        const playMessage = effectMessages.length > 0
             ? `${card.name}'s Trigger played it to the stage area. ${effectMessages.join(" ")}`
             : `${card.name}'s Trigger played it to the stage area.`;
+
+        return replacementMessage
+            ? `${replacementMessage} ${playMessage}`
+            : playMessage;
     }
 
     player.hand.push(card);
