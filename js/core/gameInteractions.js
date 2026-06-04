@@ -4238,21 +4238,39 @@ function chooseBoardCard(player, sourceCard, choices, options = {}) {
         return options.emptyMessage || `${sourceCard.name} found no eligible cards.`;
     }
 
-    const finishSelection = (choice) => {
-        if (!choice) {
-            addGameLog(options.skipMessage || `${player.name} did not choose a card for ${sourceCard.name}.`);
+    const shouldDeferCombatChoice = Boolean(
+        typeof currentAttack !== "undefined" &&
+        currentAttack &&
+        gameState?.currentPhase === "attackResolving" &&
+        typeof ui?.beginDeferredCombatResolution === "function" &&
+        typeof ui?.endDeferredCombatResolution === "function"
+    );
 
-            if (typeof options.onSkip === "function") {
-                options.onSkip();
+    const finishSelection = (choice) => {
+        try {
+            if (!choice) {
+                addGameLog(options.skipMessage || `${player.name} did not choose a card for ${sourceCard.name}.`);
+
+                if (typeof options.onSkip === "function") {
+                    options.onSkip();
+                }
+
+                return;
             }
 
-            return;
+            options.onSelect(choice);
+        } finally {
+            if (shouldDeferCombatChoice) {
+                ui.endDeferredCombatResolution();
+            }
         }
-
-        options.onSelect(choice);
     };
 
     if (ui && typeof ui.chooseBoardCard === "function") {
+        if (shouldDeferCombatChoice) {
+            ui.beginDeferredCombatResolution();
+        }
+
         ui.chooseBoardCard({
             player,
             sourceCard,

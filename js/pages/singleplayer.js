@@ -23,6 +23,8 @@ let pendingAttack = null;
 let currentAttack = null;
 let pendingBlock = null;
 let pendingTrashChoice = null;
+let pendingDeferredCombatChoices = 0;
+let deferredCombatContinuation = null;
 
 const renderedBoardCardStates = new Map();
 
@@ -119,6 +121,28 @@ function createUiBridge() {
         chooseEffectActivation,
         chooseEffectOption,
         chooseNumberValue,
+        beginDeferredCombatResolution: () => {
+            pendingDeferredCombatChoices += 1;
+        },
+        endDeferredCombatResolution: () => {
+            pendingDeferredCombatChoices = Math.max(0, pendingDeferredCombatChoices - 1);
+
+            if (pendingDeferredCombatChoices === 0 && typeof deferredCombatContinuation === "function") {
+                const continueCombat = deferredCombatContinuation;
+
+                deferredCombatContinuation = null;
+                continueCombat();
+            }
+        },
+        hasDeferredCombatResolution: () => pendingDeferredCombatChoices > 0,
+        deferCombatContinuation: (continuation) => {
+            if (pendingDeferredCombatChoices > 0) {
+                deferredCombatContinuation = continuation;
+                return true;
+            }
+
+            return false;
+        },
         revealCards: () => {}
     };
 }
@@ -3049,6 +3073,21 @@ function resolveWhenAttackingEffectsBeforeBattle(attackerPlayer, attackerData, o
     const attackerCard = getBoardCardFromData(attackerData);
 
     promptOptionalWhenAttackingEffects(attackerPlayer, attackerCard, () => {
+        const continueAfterAttackEffects = () => {
+            const trashEffect = attackerCard?.effects?.find(effect => {
+                return effect.type === "whenAttacking" && effect.actionId === "trashOneCard";
+            });
+
+            if (trashEffect && !isAttackEffectSkipped(attackerCard, trashEffect.id)) {
+                promptTrashOneCardForAttack(attackerPlayer, attackerCard, trashEffect, onComplete);
+                return;
+            }
+
+            if (typeof onComplete === "function") {
+                onComplete();
+            }
+        };
+
         CardEffects.resolveWhenAttackingEffects(
             gameState,
             attackerPlayer,
@@ -3058,18 +3097,11 @@ function resolveWhenAttackingEffectsBeforeBattle(attackerPlayer, attackerData, o
             addGameLog(result.message);
         });
 
-        const trashEffect = attackerCard?.effects?.find(effect => {
-            return effect.type === "whenAttacking" && effect.actionId === "trashOneCard";
-        });
-
-        if (trashEffect && !isAttackEffectSkipped(attackerCard, trashEffect.id)) {
-            promptTrashOneCardForAttack(attackerPlayer, attackerCard, trashEffect, onComplete);
+        if (ui?.deferCombatContinuation?.(continueAfterAttackEffects)) {
             return;
         }
 
-        if (typeof onComplete === "function") {
-            onComplete();
-        }
+        continueAfterAttackEffects();
     });
 }
 
