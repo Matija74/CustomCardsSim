@@ -18,6 +18,7 @@ const connectionStatus = document.getElementById("connectionStatus");
 const createRoomBtn = document.getElementById("createRoomBtn");
 const joinRoomBtn = document.getElementById("joinRoomBtn");
 const queueDeckButton = document.getElementById("queueDeckButton");
+const queueDeckHelp = document.getElementById("queueDeckHelp");
 const roomCodeInput = document.getElementById("roomCodeInput");
 const roomStatus = document.getElementById("roomStatus");
 const roomCodeDisplay = document.getElementById("roomCodeDisplay");
@@ -30,6 +31,8 @@ let currentUser = null;
 let currentRoomCode = null;
 let playerSlot = null;
 let unsubscribeMatch = null;
+let currentMatch = null;
+let queueBusy = true;
 
 function initializeDeckPicker() {
     if (!queueDeckButton || !window.getAvailableDecks) {
@@ -47,10 +50,19 @@ function initializeDeckPicker() {
     updateQueueDeckButtonLabel();
 
     queueDeckButton.addEventListener("click", () => {
+        if (isQueueDeckLocked()) {
+            return;
+        }
+
         window.openDeckPickerPopup?.({
             title: "Online Deck",
             initialSelection: (window.getStoredDeckSelection?.() || {}).onlineSelection,
             onConfirm: async (selection) => {
+                if (isQueueDeckLocked()) {
+                    updateQueueDeckButtonLabel();
+                    return;
+                }
+
                 saveQueueDeckSelection(selection);
                 updateQueueDeckButtonLabel();
 
@@ -88,20 +100,82 @@ function updateQueueDeckButtonLabel() {
     const onlineSelection = (window.getStoredDeckSelection?.() || {}).onlineSelection;
     const deck = window.resolveDeckSelection?.(onlineSelection);
     queueDeckButton.textContent = deck?.name || "Choose Deck";
+    updateQueueDeckHelpText();
 }
 
-function setQueueControlsDisabled(disabled) {
-    createRoomBtn.disabled = disabled;
-    joinRoomBtn.disabled = disabled;
-    roomCodeInput.disabled = disabled;
-    if (queueDeckButton) {
-        queueDeckButton.disabled = disabled;
+function hasActiveRoom() {
+    return Boolean(currentRoomCode && playerSlot);
+}
+
+function isQueueDeckLocked(match = currentMatch) {
+    if (queueBusy) {
+        return true;
     }
+
+    if (!hasActiveRoom()) {
+        return false;
+    }
+
+    const ownPlayer = playerSlot ? match?.players?.[playerSlot] : null;
+    return Boolean(ownPlayer?.ready);
+}
+
+function updateQueueDeckHelpText(match = currentMatch) {
+    if (!queueDeckHelp) {
+        return;
+    }
+
+    if (queueBusy) {
+        queueDeckHelp.textContent = hasActiveRoom()
+            ? "Updating room state..."
+            : "Pick the deck you want to use in this room.";
+        return;
+    }
+
+    if (isQueueDeckLocked(match)) {
+        queueDeckHelp.textContent = "Deck is locked while you are ready. Cancel Ready to change it.";
+        return;
+    }
+
+    if (hasActiveRoom()) {
+        queueDeckHelp.textContent = "You can change decks until you ready up.";
+        return;
+    }
+
+    queueDeckHelp.textContent = "Pick the deck you want to use in this room.";
+}
+
+function refreshQueueControlStates(match = currentMatch) {
+    const ownPlayer = playerSlot ? match?.players?.[playerSlot] : null;
+    const selectedDeck = getSelectedQueueDeck();
+    const inRoom = hasActiveRoom();
+    const canReady = Boolean(
+        currentRoomCode &&
+        playerSlot &&
+        selectedDeck &&
+        ownPlayer?.connected
+    );
+
+    createRoomBtn.disabled = queueBusy || inRoom;
+    joinRoomBtn.disabled = queueBusy || inRoom;
+    roomCodeInput.disabled = queueBusy || inRoom;
+
+    if (queueDeckButton) {
+        queueDeckButton.disabled = isQueueDeckLocked(match);
+        queueDeckButton.title = ownPlayer?.ready ? "Cancel Ready to change decks." : "";
+    }
+
+    if (readyUpBtn) {
+        readyUpBtn.disabled = queueBusy || !canReady;
+    }
+
+    updateQueueDeckHelpText(match);
 }
 
 function setRoomCode(roomCode) {
     currentRoomCode = roomCode;
     roomCodeDisplay.textContent = roomCode || "------";
+    refreshQueueControlStates();
 }
 
 function getSelectedQueueDeck() {
@@ -148,8 +222,15 @@ function subscribeToCurrentRoom() {
 
     unsubscribeMatch = subscribeToMatch(currentRoomCode, match => {
         if (!match) {
+            currentMatch = null;
+            currentRoomCode = null;
+            playerSlot = null;
+            roomCodeDisplay.textContent = "------";
             roomStatus.textContent = "Room no longer exists.";
+            player1Status.textContent = "Player 1: Empty";
+            player2Status.textContent = "Player 2: Empty";
             startGameBtn.disabled = true;
+            refreshQueueControlStates();
             return;
         }
 
@@ -158,6 +239,8 @@ function subscribeToCurrentRoom() {
 }
 
 function updateRoomUI(match) {
+    currentMatch = match;
+
     if (match.status === "started") {
         goToMatchPage();
         return;
@@ -168,7 +251,6 @@ function updateRoomUI(match) {
     const bothPlayersConnected = Boolean(match.players?.p1?.connected && match.players?.p2?.connected);
     const bothPlayersReady = Boolean(match.players?.p1?.ready && match.players?.p2?.ready);
     const ownPlayer = playerSlot ? match.players?.[playerSlot] : null;
-    const hasSelectedDeck = Boolean(getSelectedQueueDeck());
 
     player1Status.textContent = hasPlayer1
         ? `Player 1: ${match.players.p1.connected ? "Connected" : "Disconnected"}${match.players.p1.ready ? " • Ready" : ""}`
@@ -191,17 +273,17 @@ function updateRoomUI(match) {
     }
 
     if (readyUpBtn) {
-        const canReady = Boolean(currentRoomCode && playerSlot && hasSelectedDeck && ownPlayer?.connected);
-        readyUpBtn.disabled = !canReady;
         readyUpBtn.textContent = ownPlayer?.ready ? "Cancel Ready" : "Ready Up";
     }
 
     startGameBtn.disabled = !(bothPlayersConnected && bothPlayersReady && playerSlot === "p1");
+    refreshQueueControlStates(match);
 }
 
 createRoomBtn.addEventListener("click", async () => {
     try {
-        setQueueControlsDisabled(true);
+        queueBusy = true;
+        refreshQueueControlStates();
         roomStatus.textContent = "Creating room...";
 
         const roomCode = await createRoom(currentUser);
@@ -213,9 +295,12 @@ createRoomBtn.addEventListener("click", async () => {
         subscribeToCurrentRoom();
 
         roomStatus.textContent = "Room created. Waiting for Player 2.";
+        queueBusy = false;
+        refreshQueueControlStates();
     } catch (error) {
         roomStatus.textContent = error.message;
-        setQueueControlsDisabled(false);
+        queueBusy = false;
+        refreshQueueControlStates();
     }
 });
 
@@ -228,7 +313,8 @@ joinRoomBtn.addEventListener("click", async () => {
             return;
         }
 
-        setQueueControlsDisabled(true);
+        queueBusy = true;
+        refreshQueueControlStates();
         roomStatus.textContent = "Joining room...";
 
         const joinedRoomCode = await joinRoom(roomCode, currentUser);
@@ -238,9 +324,12 @@ joinRoomBtn.addEventListener("click", async () => {
         await registerRoomPresence(joinedRoomCode, playerSlot, currentUser);
         await saveCurrentPlayerDeck(joinedRoomCode);
         subscribeToCurrentRoom();
+        queueBusy = false;
+        refreshQueueControlStates();
     } catch (error) {
         roomStatus.textContent = error.message;
-        setQueueControlsDisabled(false);
+        queueBusy = false;
+        refreshQueueControlStates();
     }
 });
 
@@ -271,7 +360,8 @@ readyUpBtn?.addEventListener("click", async () => {
             return;
         }
 
-        readyUpBtn.disabled = true;
+        queueBusy = true;
+        refreshQueueControlStates();
         roomStatus.textContent = "Updating ready status...";
 
         const currentMatch = await getMatch(currentRoomCode);
@@ -282,13 +372,16 @@ readyUpBtn?.addEventListener("click", async () => {
         await setCurrentPlayerReady(nextReadyState);
     } catch (error) {
         roomStatus.textContent = error.message;
-        readyUpBtn.disabled = false;
+    } finally {
+        queueBusy = false;
+        refreshQueueControlStates();
     }
 });
 
 async function initializeQueuePage() {
     try {
-        setQueueControlsDisabled(true);
+        queueBusy = true;
+        refreshQueueControlStates();
         startGameBtn.disabled = true;
         connectionStatus.textContent = "Loading cards...";
 
@@ -301,10 +394,13 @@ async function initializeQueuePage() {
         currentUser = await waitForUser();
 
         connectionStatus.textContent = "Connected as guest player.";
-        setQueueControlsDisabled(false);
+        queueBusy = false;
+        refreshQueueControlStates();
     } catch (error) {
         connectionStatus.textContent = "Could not connect.";
         roomStatus.textContent = error.message;
+        queueBusy = false;
+        refreshQueueControlStates();
     }
 }
 

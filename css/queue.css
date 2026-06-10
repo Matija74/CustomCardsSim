@@ -125,6 +125,11 @@ body {
     cursor: pointer;
 }
 
+.deck-picker-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
 .deck-picker-summary {
     color: #d0d0d0;
     font-size: 0.82rem;
@@ -210,6 +215,10 @@ body {
 .room-panel {
     display: grid;
     gap: 14px;
+}
+
+.room-deck-picker {
+    width: min(360px, 100%);
 }
 
 .room-label {
