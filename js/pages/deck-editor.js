@@ -642,16 +642,21 @@ class DeckEditor {
             return;
         }
 
-        const leader = this.leaders?.[deckDefinition.leaderKey];
+        const leaderKey = String(
+            deckDefinition.leaderKey ||
+            window.getDeckLeaderKey?.(deckDefinition) ||
+            ""
+        ).trim();
+        const leader = this.leaders?.[leaderKey];
 
         if (!leader) {
-            alert(`Leader not found: ${deckDefinition.leaderKey}`);
+            alert(`Leader not found: ${leaderKey || deckDefinition.leaderKey}`);
             return;
         }
 
         const entries = Array.isArray(deckDefinition.cards)
             ? deckDefinition.cards
-            : window.parseDeckEntriesFromText?.(deckDefinition.deckText || "").entries || [];
+            : window.parseDeckListData?.(deckDefinition.deckText || "").entries || [];
         const nextDeckCards = [];
 
         for (const entry of entries) {

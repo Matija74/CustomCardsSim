@@ -42,6 +42,24 @@ function buildDeckTextWithLeader(leaderKey, entries = []) {
     return deckText ? `${deckText}\n` : "";
 }
 
+function getDeckEntriesFromDefinition(deck) {
+    if (Array.isArray(deck?.cards)) {
+        return normalizeDeckEntries(deck.cards);
+    }
+
+    return parseDeckListData(deck?.deckText || "").entries || [];
+}
+
+function getDeckLeaderKey(deck) {
+    const explicitLeaderKey = String(deck?.leaderKey || "").trim();
+
+    if (explicitLeaderKey) {
+        return explicitLeaderKey;
+    }
+
+    return parseDeckListData(deck?.deckText || "").leaderKey || "";
+}
+
 function parseDeckEntriesFromText(deckText) {
     const entries = [];
     const errors = [];
@@ -157,7 +175,7 @@ function createDeckDefinition({
         id,
         name: String(name || "Custom Deck").trim() || "Custom Deck",
         leaderKey: String(leaderKey || "").trim(),
-        deckText: buildDeckTextFromEntries(normalizedEntries),
+        deckText: buildDeckTextWithLeader(leaderKey, normalizedEntries),
         cards: normalizedEntries,
         source,
         updatedAt
@@ -172,8 +190,8 @@ function cloneDeckDefinition(deck) {
     return createDeckDefinition({
         id: deck.id,
         name: deck.name,
-        leaderKey: deck.leaderKey,
-        entries: deck.cards || parseDeckEntriesFromText(deck.deckText).entries,
+        leaderKey: getDeckLeaderKey(deck),
+        entries: getDeckEntriesFromDefinition(deck),
         source: deck.source || "local",
         updatedAt: deck.updatedAt || Date.now()
     });
@@ -236,7 +254,7 @@ function createPresetSelection(deckId) {
 }
 
 function resolveDeckSelection(selection, fallbackDeckId = "") {
-    if (selection?.deckData?.leaderKey && selection?.deckData?.deckText !== undefined) {
+    if (selection?.deckData && (selection.deckData.deckText !== undefined || Array.isArray(selection.deckData.cards))) {
         return cloneDeckDefinition(selection.deckData) || {
             ...selection.deckData
         };
@@ -371,8 +389,11 @@ function openDeckPickerPopup({
 
     const pasteTextarea = document.createElement("textarea");
     pasteTextarea.className = "deck-picker-textarea";
-    pasteTextarea.placeholder = "1xDD01-001\n2xDD01-002\n4xDD01-003";
-    pasteTextarea.value = resolvedSelection?.deckText || "";
+    pasteTextarea.placeholder = "1xLEADER-ID\n4xCARD-ID\n4xCARD-ID";
+    pasteTextarea.value = buildDeckTextWithLeader(
+        resolvedSelection?.leaderKey,
+        getDeckEntriesFromDefinition(resolvedSelection)
+    );
 
     const presetSelect = document.createElement("select");
     presetSelect.className = "deck-picker-select";
@@ -412,6 +433,7 @@ function openDeckPickerPopup({
     panels.paste.appendChild(createDeckPickerField("Deck Name", pasteNameInput));
     panels.paste.appendChild(createDeckPickerField("Leader", pasteLeaderSelect));
     panels.paste.appendChild(createDeckPickerField("Deck Text", pasteTextarea));
+    panels.paste.appendChild(createDeckPickerHelp("If the pasted deck text includes a leader line like 1xJK01-001, that leader is used automatically."));
 
     panels.preset.appendChild(createDeckPickerField("Preset Deck", presetSelect));
     panels.preset.appendChild(createDeckPickerHelp("Uses the current preset deck system."));
@@ -505,6 +527,14 @@ function openDeckPickerPopup({
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
 
+    pasteTextarea.addEventListener("input", () => {
+        const parsedDeck = parseDeckListData(pasteTextarea.value);
+
+        if (parsedDeck?.leaderKey && window.leaders?.[parsedDeck.leaderKey]) {
+            pasteLeaderSelect.value = parsedDeck.leaderKey;
+        }
+    });
+
     function renderActiveTab() {
         [...tabs.children].forEach((button, index) => {
             button.classList.toggle("active", tabConfig[index].key === activeTab);
@@ -542,6 +572,8 @@ window.savedDeckStorageKey = savedDeckStorageKey;
 window.deckSelectionStorageKey = deckSelectionStorageKey;
 window.buildDeckTextFromEntries = buildDeckTextFromEntries;
 window.buildDeckTextWithLeader = buildDeckTextWithLeader;
+window.getDeckEntriesFromDefinition = getDeckEntriesFromDefinition;
+window.getDeckLeaderKey = getDeckLeaderKey;
 window.parseDeckEntriesFromText = parseDeckEntriesFromText;
 window.parseDeckListData = parseDeckListData;
 window.validateDeckEntries = validateDeckEntries;
