@@ -1,0 +1,553 @@
+:root {
+    --galaxy-bg: #040611;
+    --galaxy-bg-deep: #090f24;
+    --galaxy-panel: linear-gradient(145deg, rgba(11, 18, 42, 0.82), rgba(22, 13, 44, 0.72));
+    --galaxy-panel-strong: linear-gradient(160deg, rgba(14, 22, 52, 0.94), rgba(28, 14, 56, 0.88));
+    --galaxy-panel-soft: rgba(255, 255, 255, 0.08);
+    --galaxy-border: rgba(173, 203, 255, 0.22);
+    --galaxy-border-strong: rgba(187, 218, 255, 0.34);
+    --galaxy-highlight: #77c8ff;
+    --galaxy-highlight-2: #a86dff;
+    --galaxy-highlight-3: #ff6ec7;
+    --galaxy-text: #f4f7ff;
+    --galaxy-text-muted: rgba(224, 232, 255, 0.76);
+    --galaxy-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+    --galaxy-shadow-glow: 0 0 48px rgba(112, 157, 255, 0.18);
+    --font-display: "Arial Black", "Franklin Gothic Medium", "Segoe UI", sans-serif;
+    --font-body: "Trebuchet MS", "Segoe UI", sans-serif;
+}
+
+html {
+    background: var(--galaxy-bg);
+}
+
+body {
+    position: relative;
+    background:
+        radial-gradient(circle at 18% 18%, rgba(116, 101, 255, 0.26), transparent 28%),
+        radial-gradient(circle at 83% 23%, rgba(76, 171, 255, 0.18), transparent 24%),
+        radial-gradient(circle at 50% 82%, rgba(255, 110, 199, 0.16), transparent 30%),
+        linear-gradient(145deg, #02030c 0%, #070b1f 48%, #02040f 100%);
+    color: var(--galaxy-text);
+    font-family: var(--font-body);
+    background-attachment: fixed;
+}
+
+body::before,
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+body::before {
+    background:
+        radial-gradient(circle at 32% 38%, rgba(255, 255, 255, 0.08), transparent 18%),
+        radial-gradient(circle at 72% 62%, rgba(126, 108, 255, 0.16), transparent 22%),
+        radial-gradient(circle at 42% 78%, rgba(77, 179, 255, 0.12), transparent 20%);
+    filter: blur(24px);
+    opacity: 0.95;
+}
+
+body::after {
+    background:
+        radial-gradient(circle at center, transparent 48%, rgba(0, 0, 0, 0.48) 100%);
+}
+
+.main-menu,
+.play-page,
+.queue-page,
+.settings-container,
+.preset-decks-page,
+.patch-notes-page,
+.deck-editor-page,
+.singleplayer-page,
+.multiplayer-page,
+body > .btn-back {
+    position: relative;
+    z-index: 1;
+}
+
+.galaxy-stars {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.95;
+}
+
+h1,
+h2,
+h3,
+.menu-side h2,
+.header-title-group h1,
+.preset-title-group h1,
+.settings-header h1 {
+    font-family: var(--font-display);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+p,
+.menu-header p,
+.header-title-group p,
+.play-side p,
+.queue-side p,
+.room-panel p,
+.patch-note-entry p,
+.patch-sub-entry p,
+.setting-description,
+.preview-placeholder {
+    color: var(--galaxy-text-muted);
+}
+
+.main-menu,
+.play-page,
+.queue-page,
+.settings-container,
+.preset-decks-page,
+.patch-notes-page,
+.deck-editor-page,
+.singleplayer-page,
+.multiplayer-page {
+    animation: galaxyFadeIn 0.7s ease both;
+}
+
+.menu-header,
+.play-header,
+.queue-header,
+.settings-header,
+.preset-decks-header,
+.patch-notes-header,
+.deck-editor-header {
+    text-shadow: 0 0 18px rgba(84, 144, 255, 0.18);
+}
+
+.menu-logo {
+    filter:
+        drop-shadow(0 0 24px rgba(115, 178, 255, 0.26))
+        drop-shadow(0 0 48px rgba(143, 93, 255, 0.18));
+}
+
+.menu-panel,
+.play-panel,
+.queue-panel,
+.settings-main,
+.preset-decks-panel,
+.patch-notes-panel,
+.deck-panel,
+.library-panel,
+.room-panel,
+.queue-status,
+.filter-box,
+.setting-item,
+.preset-deck-card,
+.patch-note-entry,
+.patch-sub-entry,
+.deck-card-item,
+.library-card,
+.deck-modal,
+.deck-picker-modal,
+.card-preview-box,
+.look-top-popup,
+.search-card-image-popup,
+.game-over-popup,
+.card-preview,
+.game-log,
+.play-area,
+.tabs-navigation {
+    background: var(--galaxy-panel);
+    border: 1px solid var(--galaxy-border);
+    box-shadow: var(--galaxy-shadow), var(--galaxy-shadow-glow);
+    backdrop-filter: blur(18px);
+}
+
+.menu-panel,
+.play-panel,
+.queue-panel,
+.settings-main,
+.preset-decks-panel,
+.patch-notes-panel,
+.deck-panel,
+.library-panel,
+.deck-modal,
+.deck-picker-modal,
+.card-preview-box {
+    border-color: var(--galaxy-border-strong);
+}
+
+.menu-panel,
+.play-panel,
+.queue-panel,
+.settings-main,
+.preset-decks-panel,
+.patch-notes-panel {
+    overflow: hidden;
+}
+
+.menu-divider,
+.play-divider,
+.queue-divider,
+.patch-divider,
+.divider {
+    background:
+        linear-gradient(90deg, transparent, rgba(124, 180, 255, 0.52), transparent);
+}
+
+.panel-header,
+.tabs-navigation,
+.deck-modal-header {
+    border-color: rgba(170, 208, 255, 0.18);
+}
+
+.btn,
+.btn-save,
+.btn-back,
+.tab-button,
+.deck-action-button,
+.add-card-button,
+.deck-action-button.primary,
+.deck-action-button.secondary,
+.deck-picker-tab,
+.deck-modal-close,
+.card-preview-close,
+.phase-button,
+.card-action-button,
+.look-top-action-button,
+.game-over-button,
+.board-action-button-on-card,
+.quantity-button,
+.small-remove-button {
+    border: 1px solid rgba(182, 220, 255, 0.24);
+    box-shadow:
+        0 12px 28px rgba(0, 0, 0, 0.24),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.btn,
+.btn-save,
+.deck-action-button,
+.add-card-button,
+.phase-button,
+.card-action-button,
+.look-top-action-button,
+.game-over-button,
+.deck-picker-tab.active,
+.btn-primary,
+.save-button,
+.deck-action-button.primary,
+.activate-main-button {
+    background:
+        linear-gradient(135deg, rgba(88, 141, 255, 0.92), rgba(166, 94, 255, 0.82));
+}
+
+.btn-secondary,
+.btn-back,
+.clear-button,
+.tab-button,
+.deck-picker-tab,
+.deck-modal-close,
+.card-preview-close,
+.board-action-button-on-card,
+.quantity-button:first-child,
+.small-remove-button,
+.look-top-action-button.secondary,
+.game-over-button.main-menu,
+.deck-action-button.secondary {
+    background:
+        linear-gradient(135deg, rgba(35, 54, 106, 0.92), rgba(51, 23, 88, 0.88));
+}
+
+.btn:hover:not(:disabled),
+.btn-save:hover,
+.btn-back:hover,
+.tab-button:hover,
+.deck-action-button:hover,
+.add-card-button:hover,
+.deck-picker-tab:hover,
+.deck-modal-close:hover,
+.card-preview-close:hover,
+.phase-button:hover,
+.card-action-button:hover:not(:disabled),
+.look-top-action-button:hover:not(:disabled),
+.game-over-button:hover,
+.board-action-button-on-card:hover:not(:disabled),
+.quantity-button:hover,
+.small-remove-button:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 18px 32px rgba(0, 0, 0, 0.32),
+        0 0 22px rgba(119, 200, 255, 0.16);
+    filter: brightness(1.08);
+}
+
+.btn:disabled,
+.deck-action-button:disabled,
+.add-card-button:disabled,
+.deck-picker-button:disabled,
+.look-top-action-button:disabled,
+.card-action-button:disabled,
+.quantity-button:disabled {
+    opacity: 0.42;
+}
+
+.deck-name-box input,
+.saved-deck-box select,
+.saved-deck-box textarea,
+.filter-group input,
+.filter-group select,
+.deck-picker-button,
+.deck-picker-select,
+.deck-picker-input,
+.deck-picker-textarea,
+.join-box input,
+.deck-search-input {
+    background: rgba(7, 12, 29, 0.72);
+    border: 1px solid rgba(177, 215, 255, 0.18);
+    color: var(--galaxy-text);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+.deck-name-box input::placeholder,
+.saved-deck-box textarea::placeholder,
+.filter-group input::placeholder,
+.join-box input::placeholder,
+.deck-search-input::placeholder {
+    color: rgba(224, 232, 255, 0.48);
+}
+
+.deck-name-box input:focus,
+.saved-deck-box select:focus,
+.saved-deck-box textarea:focus,
+.filter-group input:focus,
+.filter-group select:focus,
+.deck-picker-button:focus,
+.deck-picker-select:focus,
+.deck-picker-input:focus,
+.deck-picker-textarea:focus,
+.join-box input:focus,
+.deck-search-input:focus {
+    outline: none;
+    border-color: rgba(132, 204, 255, 0.62);
+    box-shadow:
+        0 0 0 3px rgba(119, 200, 255, 0.14),
+        0 0 18px rgba(119, 200, 255, 0.16);
+}
+
+.filter-group select option,
+.saved-deck-box select option {
+    color: #111827;
+}
+
+.checkbox-custom,
+.slider,
+.switch input:checked + .slider,
+.deck-count,
+.room-label,
+#roomCodeDisplay,
+.deck-id-badge,
+.deck-meta-item,
+.life-count,
+.trash-count,
+.deck-count-badge,
+.power-modifier-badge,
+.cost-modifier-badge,
+.base-power-badge,
+.attached-don-badge,
+.bottom-order-badge {
+    box-shadow:
+        0 10px 22px rgba(0, 0, 0, 0.26),
+        0 0 18px rgba(119, 200, 255, 0.1);
+}
+
+.deck-count,
+.queue-status,
+.room-panel,
+.deck-meta-item,
+.queue-status,
+.room-label,
+.room-panel strong {
+    color: var(--galaxy-text);
+}
+
+.tab-button.active,
+.deck-picker-tab.active,
+.setting-checkbox:checked + .checkbox-custom,
+.switch input:checked + .slider {
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.08),
+        0 0 22px rgba(119, 200, 255, 0.24);
+}
+
+.tabs-navigation {
+    margin: 16px;
+    border-radius: 18px;
+}
+
+.tab-content {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+}
+
+.preset-deck-card:hover,
+.deck-card-item:hover,
+.library-card:hover,
+.deck-image-card:hover,
+.look-top-card-button:hover:not(:disabled) {
+    border-color: rgba(132, 204, 255, 0.46);
+    box-shadow:
+        0 22px 36px rgba(0, 0, 0, 0.32),
+        0 0 22px rgba(119, 200, 255, 0.18);
+}
+
+.patch-note-entry,
+.patch-sub-entry,
+.queue-status,
+.room-panel,
+.deck-meta-item {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.patch-note-title,
+.room-label,
+.deck-meta-label,
+.menu-kicker {
+    color: #b9deff;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.queue-status,
+.deck-count,
+.room-label,
+.deck-id-badge,
+.life-count,
+.trash-count,
+.deck-count-badge {
+    background:
+        linear-gradient(135deg, rgba(12, 23, 60, 0.94), rgba(35, 15, 62, 0.9));
+    border: 1px solid rgba(176, 214, 255, 0.24);
+}
+
+.play-area {
+    border-radius: 28px;
+    padding: 12px;
+    border-color: rgba(176, 214, 255, 0.2);
+    background:
+        linear-gradient(145deg, rgba(10, 17, 38, 0.86), rgba(22, 12, 44, 0.82));
+}
+
+.area,
+.life-area,
+.character-area,
+.card-preview,
+.game-log,
+.battle-controls,
+.hand,
+.look-top-card-button,
+.deck-image-card {
+    background:
+        linear-gradient(160deg, rgba(17, 25, 55, 0.78), rgba(9, 14, 36, 0.7));
+    border-color: rgba(175, 215, 255, 0.18);
+}
+
+.area,
+.life-area,
+.character-area,
+.card-preview,
+.game-log,
+.deck-image-card,
+.look-top-card-button {
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+        0 12px 24px rgba(0, 0, 0, 0.26);
+}
+
+.life-area:hover,
+.life-area.open {
+    background:
+        linear-gradient(145deg, rgba(19, 29, 66, 0.94), rgba(37, 16, 68, 0.92));
+    border-color: rgba(183, 224, 255, 0.28);
+}
+
+.character-label {
+    color: rgba(226, 236, 255, 0.18);
+    text-shadow: 0 0 22px rgba(131, 178, 255, 0.18);
+}
+
+.game-log h3,
+.panel-header h2,
+.preset-decks-toolbar h2,
+.patch-note-entry h2,
+.patch-sub-entry h3 {
+    color: #f8fbff;
+}
+
+.attack-arrow-line {
+    stroke: #ff5d88;
+    filter: drop-shadow(0 0 8px rgba(255, 93, 136, 0.9));
+}
+
+.attack-arrow-head {
+    fill: #ff5d88;
+    filter: drop-shadow(0 0 8px rgba(255, 93, 136, 0.9));
+}
+
+.game-board::-webkit-scrollbar,
+.deck-display::-webkit-scrollbar,
+.card-library-grid::-webkit-scrollbar,
+.game-log-messages::-webkit-scrollbar,
+.look-top-card-grid::-webkit-scrollbar,
+.deck-modal-content::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.game-board::-webkit-scrollbar-track,
+.deck-display::-webkit-scrollbar-track,
+.card-library-grid::-webkit-scrollbar-track,
+.game-log-messages::-webkit-scrollbar-track,
+.look-top-card-grid::-webkit-scrollbar-track,
+.deck-modal-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 999px;
+}
+
+.game-board::-webkit-scrollbar-thumb,
+.deck-display::-webkit-scrollbar-thumb,
+.card-library-grid::-webkit-scrollbar-thumb,
+.game-log-messages::-webkit-scrollbar-thumb,
+.look-top-card-grid::-webkit-scrollbar-thumb,
+.deck-modal-content::-webkit-scrollbar-thumb {
+    background:
+        linear-gradient(180deg, rgba(104, 182, 255, 0.5), rgba(160, 108, 255, 0.52));
+    border-radius: 999px;
+}
+
+@keyframes galaxyFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .main-menu,
+    .play-page,
+    .queue-page,
+    .settings-container,
+    .preset-decks-page,
+    .patch-notes-page,
+    .deck-editor-page,
+    .singleplayer-page,
+    .multiplayer-page {
+        animation: none;
+    }
+}

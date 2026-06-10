@@ -4,9 +4,9 @@
 // Image Paths
 // =========================
 
-const cardBackImage = "../images/basic/card-back-normal.jpg";
-const donBackImage = "../images/basic/card-back-don.webp";
-const donImage = "../images/basic/card-front-don.webp";
+const cardBackImage = "../images/basic/card-back-normal.png";
+const donBackImage = "../images/basic/card-back-normal.png";
+const donImage = "../images/basic/card-front-don.png";
 
 // =========================
 // Selected Card State
