@@ -166,6 +166,49 @@ p,
     backdrop-filter: blur(18px);
 }
 
+.deck-editor-page .deck-panel,
+.deck-editor-page .library-panel,
+.deck-editor-page .filter-box,
+.deck-editor-page .deck-card-item,
+.deck-editor-page .library-card,
+.singleplayer-page .play-area,
+.singleplayer-page .area,
+.singleplayer-page .life-area,
+.singleplayer-page .character-area,
+.singleplayer-page .card-preview,
+.singleplayer-page .game-log,
+.singleplayer-page .hand,
+.multiplayer-page .play-area,
+.multiplayer-page .area,
+.multiplayer-page .life-area,
+.multiplayer-page .character-area,
+.multiplayer-page .card-preview,
+.multiplayer-page .game-log,
+.multiplayer-page .hand {
+    backdrop-filter: none;
+}
+
+.singleplayer-page .play-area,
+.singleplayer-page .area,
+.singleplayer-page .life-area,
+.singleplayer-page .character-area,
+.singleplayer-page .card-preview,
+.singleplayer-page .game-log,
+.singleplayer-page .hand,
+.multiplayer-page .play-area,
+.multiplayer-page .area,
+.multiplayer-page .life-area,
+.multiplayer-page .character-area,
+.multiplayer-page .card-preview,
+.multiplayer-page .game-log,
+.multiplayer-page .hand,
+.deck-editor-page .deck-card-item,
+.deck-editor-page .library-card {
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+        0 8px 18px rgba(0, 0, 0, 0.18);
+}
+
 .menu-panel,
 .play-panel,
 .queue-panel,

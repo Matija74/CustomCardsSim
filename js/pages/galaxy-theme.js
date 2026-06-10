@@ -1,6 +1,31 @@
 (function () {
+    function scheduleThemeInit(callback) {
+        function runWhenIdle() {
+            if (typeof window.requestIdleCallback === "function") {
+                window.requestIdleCallback(callback, { timeout: 1200 });
+            } else {
+                window.setTimeout(callback, 120);
+            }
+        }
+
+        if (document.readyState === "complete") {
+            runWhenIdle();
+            return;
+        }
+
+        window.addEventListener("load", runWhenIdle, { once: true });
+    }
+
     function initGalaxyTheme() {
         if (!document.body || document.getElementById("galaxyStars")) {
+            return;
+        }
+
+        const isDensePage = Boolean(
+            document.querySelector(".singleplayer-page, .multiplayer-page")
+        );
+
+        if (isDensePage) {
             return;
         }
 
@@ -23,7 +48,10 @@
         let viewportHeight = window.innerHeight;
 
         function createStars() {
-            const starCount = Math.max(100, Math.floor((viewportWidth * viewportHeight) / 9000));
+            const starCount = Math.min(
+                180,
+                Math.max(55, Math.floor((viewportWidth * viewportHeight) / 14000))
+            );
 
             stars = Array.from({ length: starCount }, function () {
                 return {
@@ -102,9 +130,5 @@
         restart();
     }
 
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", initGalaxyTheme, { once: true });
-    } else {
-        initGalaxyTheme();
-    }
+    scheduleThemeInit(initGalaxyTheme);
 })();
