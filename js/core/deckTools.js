@@ -285,7 +285,7 @@ function getDeckSummaryText(selection, fallbackLabel = "Choose Deck") {
     return deck?.name || fallbackLabel;
 }
 
-function createPasteDeckSelection({ deckName, leaderKey, deckText }) {
+function createPasteDeckSelection({ deckName, deckText, fallbackLeaderKey = "" }) {
     const parsedDeck = parseDeckListData(deckText);
 
     if (!parsedDeck.success) {
@@ -302,10 +302,10 @@ function createPasteDeckSelection({ deckName, leaderKey, deckText }) {
         throw new Error(validation.errors[0] || "Deck contains unknown cards.");
     }
 
-    const resolvedLeaderKey = parsedDeck.leaderKey || String(leaderKey || "").trim();
+    const resolvedLeaderKey = parsedDeck.leaderKey || String(fallbackLeaderKey || "").trim();
 
     if (!window.leaders?.[resolvedLeaderKey]) {
-        throw new Error("Choose a valid leader.");
+        throw new Error("Paste deck text that includes a valid leader line like 1xJK01-001.");
     }
 
     return {
@@ -377,16 +377,6 @@ function openDeckPickerPopup({
     pasteNameInput.placeholder = "Deck name";
     pasteNameInput.className = "deck-picker-input";
 
-    const pasteLeaderSelect = document.createElement("select");
-    pasteLeaderSelect.className = "deck-picker-select";
-    Object.values(window.leaders || {}).forEach(leader => {
-        const option = document.createElement("option");
-        option.value = leader.id;
-        option.textContent = `${leader.name} (${leader.id})`;
-        option.selected = leader.id === defaultLeaderKey;
-        pasteLeaderSelect.appendChild(option);
-    });
-
     const pasteTextarea = document.createElement("textarea");
     pasteTextarea.className = "deck-picker-textarea";
     pasteTextarea.placeholder = "1xLEADER-ID\n4xCARD-ID\n4xCARD-ID";
@@ -431,7 +421,6 @@ function openDeckPickerPopup({
     });
 
     panels.paste.appendChild(createDeckPickerField("Deck Name", pasteNameInput));
-    panels.paste.appendChild(createDeckPickerField("Leader", pasteLeaderSelect));
     panels.paste.appendChild(createDeckPickerField("Deck Text", pasteTextarea));
     panels.paste.appendChild(createDeckPickerHelp("If the pasted deck text includes a leader line like 1xJK01-001, that leader is used automatically."));
 
@@ -478,8 +467,8 @@ function openDeckPickerPopup({
             if (activeTab === "paste") {
                 selection = createPasteDeckSelection({
                     deckName: pasteNameInput.value.trim() || "Pasted Deck",
-                    leaderKey: pasteLeaderSelect.value,
-                    deckText: pasteTextarea.value
+                    deckText: pasteTextarea.value,
+                    fallbackLeaderKey: resolvedSelection?.leaderKey || defaultLeaderKey
                 });
             } else if (activeTab === "local") {
                 const localDeck = getLocalSavedDeckById(localSelect.value);
@@ -526,14 +515,6 @@ function openDeckPickerPopup({
     modal.appendChild(footer);
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
-
-    pasteTextarea.addEventListener("input", () => {
-        const parsedDeck = parseDeckListData(pasteTextarea.value);
-
-        if (parsedDeck?.leaderKey && window.leaders?.[parsedDeck.leaderKey]) {
-            pasteLeaderSelect.value = parsedDeck.leaderKey;
-        }
-    });
 
     function renderActiveTab() {
         [...tabs.children].forEach((button, index) => {
