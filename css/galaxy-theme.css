@@ -209,6 +209,24 @@ p,
         0 8px 18px rgba(0, 0, 0, 0.18);
 }
 
+.singleplayer-page .board-action-button-on-card,
+.singleplayer-page .card-action-button-on-card,
+.multiplayer-page .board-action-button-on-card,
+.multiplayer-page .card-action-button-on-card {
+    border: none;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+    filter: none;
+}
+
+.singleplayer-page .board-action-button-on-card:hover:not(:disabled),
+.singleplayer-page .card-action-button-on-card:hover:not(:disabled),
+.multiplayer-page .board-action-button-on-card:hover:not(:disabled),
+.multiplayer-page .card-action-button-on-card:hover:not(:disabled) {
+    transform: translateX(-50%) translateY(-2px);
+    filter: none;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.42);
+}
+
 .menu-panel,
 .play-panel,
 .queue-panel,
@@ -262,7 +280,6 @@ p,
 .card-action-button,
 .look-top-action-button,
 .game-over-button,
-.board-action-button-on-card,
 .quantity-button,
 .small-remove-button {
     border: 1px solid rgba(182, 220, 255, 0.24);
@@ -295,7 +312,6 @@ p,
 .deck-picker-tab,
 .deck-modal-close,
 .card-preview-close,
-.board-action-button-on-card,
 .quantity-button:first-child,
 .small-remove-button,
 .look-top-action-button.secondary,
@@ -318,7 +334,6 @@ p,
 .card-action-button:hover:not(:disabled),
 .look-top-action-button:hover:not(:disabled),
 .game-over-button:hover,
-.board-action-button-on-card:hover:not(:disabled),
 .quantity-button:hover,
 .small-remove-button:hover {
     transform: translateY(-2px);
