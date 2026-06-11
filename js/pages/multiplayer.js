@@ -2717,6 +2717,26 @@ function canUseActivateMainEffect(player, card, effect) {
             player.characters.some(card => card?.cardType === "character");
     }
 
+    if (effect.id === "OP16-098-activate-main-play-yamato") {
+        return player.trash.some(card => {
+            return card?.cardType === "character" &&
+                card.color === "black" &&
+                CardEffects.hasCardName(card, "Yamato") &&
+                getCardEffectiveCost(card) === 8;
+        });
+    }
+
+    if (effect.id === "PRB02-016-activate-main-power") {
+        return (card.state || "active") === "active" &&
+            typeof canCardBeRested === "function" &&
+            canCardBeRested(card) &&
+            (player.life?.length || 0) > 0;
+    }
+
+    if (effect.id === "ST28-004-activate-main-rush") {
+        return getTotalAttachedDonCount(player) >= 2;
+    }
+
     return true;
 }
 
@@ -2808,6 +2828,18 @@ function resolveBoardActionEffect(player, card, effect) {
 
     if (effect.id === "YAM1-004-activate-main-attach-don") {
         return resolveWanoCountryActivateMain(player, card, ui);
+    }
+
+    if (effect.id === "OP16-098-activate-main-play-yamato") {
+        return resolveBlackYamatoActivateMain(player, card, ui);
+    }
+
+    if (effect.id === "PRB02-016-activate-main-power") {
+        return resolveOtamaActivateMain(player, card, ui);
+    }
+
+    if (effect.id === "ST28-004-activate-main-rush") {
+        return resolveSt28MomonosukeActivateMain(player, card, ui);
     }
 
     if (effect.id === "POG1-006-activate-main") {
@@ -5402,6 +5434,8 @@ function getPowerModifier(card, player = null) {
 
     return getCopiedEffectPowerModifier(card, player) +
         getYourTurnPowerBonus(card, player) +
+        getSt28MomonosukeLeaderPowerModifier(card, player) +
+        getSt28YamatoPowerModifier(card, player) +
         getWanoCountryPowerModifier(card, player) +
         getTurboGrannyFormPowerModifier(card, player) +
         getSerpicoFarnesePowerModifier(card, player) +
@@ -5468,6 +5502,28 @@ function getWanoCountryPowerModifier(card, player) {
     return getCardAllEffects(player.stage)?.some(effect => effect.id === "YAM1-004-your-turn-power")
         ? 1000
         : 0;
+}
+
+function getSt28MomonosukeLeaderPowerModifier(card, player) {
+    if (!card || !player || card.cardType !== "leader" || gameState.currentPlayer !== player) {
+        return 0;
+    }
+
+    if ((player.life?.length || 0) > 2) {
+        return 0;
+    }
+
+    return player.characters
+        .filter(character => character?.cardNumber === "ST28-004" && !areCardEffectsNegated(character))
+        .length * 1000;
+}
+
+function getSt28YamatoPowerModifier(card, player) {
+    if (!card || !player || card.cardNumber !== "ST28-005" || gameState.currentPlayer !== player) {
+        return 0;
+    }
+
+    return Number(card.attachedDon || 0) >= 2 ? 3000 : 0;
 }
 
 function getTurboGrannyFormPowerModifier(card, player) {
