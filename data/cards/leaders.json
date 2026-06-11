@@ -147,5 +147,34 @@
         "text": "On Your Opponent's Attack Twice Per Turn: Activate an event card with a Counter from your trash. Then, draw 1 trash 1."
       }
     ]
+  },
+
+  "YAM1-001": {
+    "id": "YAM1-001",
+    "cardNumber": "YAM1-001",
+    "name": "Ace & Yamato",
+    "cardType": "leader",
+    "type": "Land of Wano/Spades Pirates",
+    "color": "black/yellow",
+    "attribute": "strike",
+    "power": 5000,
+    "life": 4,
+    "image": "../images/BY AceYamato by DarkSpectre/YAM1-001.png",
+    "aliases": [],
+    "keywords": [],
+    "effects": [
+      {
+        "id": "YAM1-001-on-character-play-draw",
+        "type": "onCharacterPlay",
+        "oncePerTurn": true,
+        "text": "Once Per Turn: When you play a character, if it wasn't played from your hand, draw 2 cards, then trash 1 card. Then, this Leader gains +1000 power until the end of your opponent's next End Phase."
+      },
+      {
+        "id": "YAM1-001-activate-main-life",
+        "type": "activateMain",
+        "oncePerTurn": true,
+        "text": "Activate: Main Once Per Turn: You may K.O. 2 of your {Land of Wano} type Characters: Add up to 1 card from your hand to the top of your Life cards."
+      }
+    ]
   }
 }

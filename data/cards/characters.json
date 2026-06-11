@@ -1288,5 +1288,69 @@
         "text": "On Play: Add life cards to your hand until your life area has 1 card. If you did, your leader gains +2000 power for the rest of the game."
       }
     ]
+  },
+
+  "YAM1-002": {
+    "id": "YAM1-002",
+    "cardNumber": "YAM1-002",
+    "name": "Kouzuki Oden",
+    "cardType": "character",
+    "type": "Land of Wano/Kouzuki Clan",
+    "color": "yellow",
+    "cost": 6,
+    "power": 6000,
+    "counter": 1000,
+    "attribute": "slash",
+    "image": "../images/BY AceYamato by DarkSpectre/YAM1-002.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "YAM1-002-don-double-attack",
+        "type": "continuous",
+        "text": "DON!! x1: This Character gains Double Attack."
+      },
+      {
+        "id": "YAM1-002-on-play-lock-rest",
+        "type": "onPlay",
+        "text": "On Play: Up to 1 of your opponent's Characters with a cost of 6 or less can't be rested until the end of your opponent's next End Phase."
+      },
+      {
+        "id": "YAM1-002-on-ko-lock-rest",
+        "type": "onKO",
+        "text": "On K.O.: Up to 1 of your opponent's Characters with a cost of 6 or less can't be rested until the end of your opponent's next End Phase."
+      },
+      {
+        "id": "YAM1-002-trigger-play",
+        "type": "trigger",
+        "text": "Trigger: You may trash 1 card from your hand: If your opponent has 3 or less Life cards, play this card."
+      }
+    ]
+  },
+
+  "YAM1-005": {
+    "id": "YAM1-005",
+    "cardNumber": "YAM1-005",
+    "name": "Kouzuki Momonosuke",
+    "cardType": "character",
+    "type": "Land of Wano/Kozuki Clan",
+    "color": "black",
+    "cost": 2,
+    "power": 0,
+    "counter": 1000,
+    "attribute": "ranged",
+    "image": "../images/BY AceYamato by DarkSpectre/YAM1-005.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "YAM1-005-on-play-draw",
+        "type": "onPlay",
+        "text": "On Play: Trash 1 {Land of Wano} type card from your hand: Draw 2 cards."
+      },
+      {
+        "id": "YAM1-005-trigger-play",
+        "type": "trigger",
+        "text": "Trigger: Play up to 1 {Land of Wano} Character with a cost of 4 or less from your trash."
+      }
+    ]
   }
 }

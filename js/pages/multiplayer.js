@@ -779,7 +779,10 @@ async function handleBlockerSelection(playerKey, slotIndex) {
 
     currentAttack.target = blockerData;
 
-    restBoardCard(blockerData);
+    if (!restBoardCard(blockerData)) {
+        addGameLog(`${blockerCard.name} cannot be rested and cannot block.`);
+        return;
+    }
 
     drawAttackArrow(currentAttack.attacker, currentAttack.target);
 
@@ -2524,6 +2527,9 @@ function showSelectedBoardActions() {
         } else if (selectedBoardCardData.cardType === "character" && isCharacterPlayedThisTurn(player, card) && !CardEffects.canAttackOnTurnPlayed(card) && !CardEffects.canAttackCharactersOnTurnPlayed(card)) {
             attackButton.textContent = "New";
             attackButton.title = `${card.name} cannot attack on the turn it was played.`;
+        } else if ((selectedBoardCardData.cardType === "leader" || selectedBoardCardData.cardType === "character") && typeof canCardBeRested === "function" && !canCardBeRested(card)) {
+            attackButton.textContent = "Locked";
+            attackButton.title = `${card.name} cannot be rested due to an effect.`;
         } else if (selectedBoardCardData.cardType === "character" && isCharacterAttackLocked(card, player)) {
             attackButton.textContent = "Locked";
             attackButton.title = `${card.name} cannot attack due to an effect.`;
@@ -2701,6 +2707,16 @@ function canUseActivateMainEffect(player, card, effect) {
         }
     }
 
+    if (effect.id === "YAM1-001-activate-main-life") {
+        return typeof getAceYamatoLeaderKOTargetChoices === "function" &&
+            getAceYamatoLeaderKOTargetChoices(player).length >= 2;
+    }
+
+    if (effect.id === "YAM1-004-activate-main-attach-don") {
+        return player.restedDon >= 1 &&
+            player.characters.some(card => card?.cardType === "character");
+    }
+
     return true;
 }
 
@@ -2786,6 +2802,14 @@ async function resolveActivateMainBoardEffect(player, card, effect) {
 }
 
 function resolveBoardActionEffect(player, card, effect) {
+    if (effect.id === "YAM1-001-activate-main-life") {
+        return resolveAceYamatoLeaderActivateMain(player, card, ui);
+    }
+
+    if (effect.id === "YAM1-004-activate-main-attach-don") {
+        return resolveWanoCountryActivateMain(player, card, ui);
+    }
+
     if (effect.id === "POG1-006-activate-main") {
         if (player.leader?.cardNumber !== "POG1-001") {
             return {
@@ -2827,7 +2851,12 @@ function resolveBoardActionEffect(player, card, effect) {
             };
         }
 
-        card.state = "rested";
+        if (!setCardRested(card)) {
+            return {
+                success: false,
+                message: `${card.name} cannot be rested due to an effect.`
+            };
+        }
 
         const milledCards = [];
 
@@ -2879,7 +2908,12 @@ function resolveBoardActionEffect(player, card, effect) {
             };
         }
 
-        card.state = "rested";
+        if (!setCardRested(card)) {
+            return {
+                success: false,
+                message: `${card.name} cannot be rested due to an effect.`
+            };
+        }
         renderCharacters();
 
         const message = chooseOwnBoardCard(player, card, {
@@ -3334,13 +3368,16 @@ function enterAttackTargetSelection(attackerData) {
 
     if (!opponent) return;
 
+    if (!restBoardCard(attackerData)) {
+        addGameLog(`${attackerCard.name} cannot be rested and cannot attack right now.`);
+        return;
+    }
+
     pendingAttack = {
         attacker: { ...attackerData },
         attackerPlayerKey: attackerData.playerKey,
         defenderPlayerKey: opponentKey
     };
-
-    restBoardCard(attackerData);
 
     clearAttackTargets();
     clearBoardSelection();
@@ -5243,6 +5280,14 @@ function canSelectedBoardCardAttack() {
         return false;
     }
 
+    if (
+        (selectedBoardCardData.cardType === "leader" || selectedBoardCardData.cardType === "character") &&
+        typeof canCardBeRested === "function" &&
+        !canCardBeRested(card)
+    ) {
+        return false;
+    }
+
     return true;
 }
 
@@ -5357,6 +5402,7 @@ function getPowerModifier(card, player = null) {
 
     return getCopiedEffectPowerModifier(card, player) +
         getYourTurnPowerBonus(card, player) +
+        getWanoCountryPowerModifier(card, player) +
         getTurboGrannyFormPowerModifier(card, player) +
         getSerpicoFarnesePowerModifier(card, player) +
         getGutsLeaderPowerModifier(card, player) +
@@ -5400,6 +5446,28 @@ function getYourTurnPowerBonus(card, player) {
     }
 
     return player.characters.filter(Boolean).length * 1000;
+}
+
+function getWanoCountryPowerModifier(card, player) {
+    if (!card || !player || gameState.currentPlayer !== player) {
+        return 0;
+    }
+
+    if (card.cardType !== "character" || !hasTypeText(card, "Land of Wano")) {
+        return 0;
+    }
+
+    if (!player.stage || player.stage.cardNumber !== "YAM1-004" || areCardEffectsNegated(player.stage)) {
+        return 0;
+    }
+
+    if (typeof hasAddedLifeCardThisTurn !== "function" || !hasAddedLifeCardThisTurn(player)) {
+        return 0;
+    }
+
+    return getCardAllEffects(player.stage)?.some(effect => effect.id === "YAM1-004-your-turn-power")
+        ? 1000
+        : 0;
 }
 
 function getTurboGrannyFormPowerModifier(card, player) {

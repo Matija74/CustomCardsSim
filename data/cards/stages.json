@@ -185,5 +185,34 @@
         "text": "On K.O.: Draw 1 trash 1."
       }
     ]
+  },
+
+  "YAM1-004": {
+    "id": "YAM1-004",
+    "cardNumber": "YAM1-004",
+    "name": "Wano Country",
+    "cardType": "stage",
+    "type": "Land of Wano",
+    "color": "yellow",
+    "cost": 3,
+    "image": "../images/BY AceYamato by DarkSpectre/YAM1-004.png",
+    "effects": [
+      {
+        "id": "YAM1-004-your-turn-power",
+        "type": "yourTurn",
+        "text": "Your Turn: If a card has been added to your Life cards, your {Land of Wano} Characters get +1000 power this turn."
+      },
+      {
+        "id": "YAM1-004-activate-main-attach-don",
+        "type": "activateMain",
+        "oncePerTurn": true,
+        "text": "Activate: Main Once Per Turn: Attach up to 1 rested DON!! to 1 of your Characters."
+      },
+      {
+        "id": "YAM1-004-trigger-play-trash",
+        "type": "trigger",
+        "text": "Trigger: Play up to 1 {Land of Wano} Character with a cost of 6 or less from your trash rested."
+      }
+    ]
   }
 }

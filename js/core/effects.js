@@ -93,6 +93,10 @@ window.CardEffects = {
             }
         }
 
+        if (card.cardNumber === "YAM1-002" && wantedKeyword === "doubleattack" && Number(card.attachedDon || 0) >= 1) {
+            return true;
+        }
+
         const allKeywords = [
             ...(Array.isArray(card.keywords) ? card.keywords : []),
             ...(Array.isArray(card.durationKeywords)
@@ -135,6 +139,10 @@ window.CardEffects = {
 
     canBlock(card) {
         if (!card) return false;
+
+        if (typeof canCardBeRested === "function" && !canCardBeRested(card)) {
+            return false;
+        }
 
         return this.hasKeyword(card, "blocker") &&
             (card.state || "active") === "active";

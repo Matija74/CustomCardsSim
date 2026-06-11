@@ -476,5 +476,29 @@
         "text": "Counter: If your opponent's attack is 12000 power or lower, you may negate it. If you did, you may rest 10 of your DON!! cards. If you have 2 or less life cards in your life area, your leader's base power becomes 9000, and gains Double Attack and Banish. Additionally, if your opponent's life hits 0 during this turn, you win the game."
       }
     ]
+  },
+
+  "YAM1-003": {
+    "id": "YAM1-003",
+    "cardNumber": "YAM1-003",
+    "name": "I Want To Live As Free As Oden Did!!!",
+    "cardType": "event",
+    "type": "Land of Wano",
+    "color": "yellow",
+    "cost": 1,
+    "image": "../images/BY AceYamato by DarkSpectre/YAM1-003.png",
+    "effects": [
+      {
+        "id": "YAM1-003-main",
+        "type": "main",
+        "text": "Main: Add 1 card from the top of your Life cards to your hand. Then, up to 1 of your {Land of Wano} Characters gets +2000 power and Rush until end of turn."
+      },
+      {
+        "id": "YAM1-003-counter",
+        "type": "counter",
+        "text": "Counter: You may turn 1 card from the top of your Life cards face-up: Up to 1 of your Characters or Leader gets +3000 power until end of turn.",
+        "powerModifier": 3000
+      }
+    ]
   }
 }

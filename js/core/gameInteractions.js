@@ -574,6 +574,7 @@ function playCardFromDeckWithoutCost(player, sourceCard, card, ui, sourceZoneLab
 
         card.state = "active";
         card.playedOnTurn = player.turns;
+        card.playedFromZone = sourceZoneLabel;
         card.uiAnimation = "played";
         player.characters[slotIndex] = card;
 
@@ -622,6 +623,34 @@ function playCardFromDeckWithoutCost(player, sourceCard, card, ui, sourceZoneLab
     }
 
     return `${sourceCard.name} found ${card.name}, but that card type cannot be played from the ${sourceZoneLabel}.`;
+}
+
+function playCharacterFromTrashWithoutCost(player, sourceCard, card, ui, options = {}) {
+    if (!player || !card) {
+        return `${sourceCard.name} could not play that character from the trash.`;
+    }
+
+    const slotIndex = getFirstOpenCharacterSlotIndex(player);
+
+    if (slotIndex === -1) {
+        return `${sourceCard.name} could not play ${card.name} from the trash because ${player.name}'s character area is full.`;
+    }
+
+    card.state = options.rested === true
+        ? "rested"
+        : "active";
+    card.playedOnTurn = player.turns;
+    card.playedFromZone = options.sourceZoneLabel || "trash";
+    card.uiAnimation = "played";
+    player.characters[slotIndex] = card;
+
+    const effectMessages = resolveOnPlayEffects(player, card, ui);
+
+    ui?.renderCharacters?.();
+
+    return effectMessages.length > 0
+        ? `${sourceCard.name} played ${card.name} from the trash${options.rested === true ? " rested" : ""}. ${effectMessages.join(" ")}`
+        : `${sourceCard.name} played ${card.name} from the trash${options.rested === true ? " rested" : ""}.`;
 }
 
 function resolveJeremicOnPlay(player, sourceCard, ui) {
@@ -1553,6 +1582,7 @@ function playCharacterCard(player, handIndex, ui, targetSlotIndex = null) {
 
     playedCard.state = "active";
     playedCard.playedOnTurn = player.turns;
+    playedCard.playedFromZone = "hand";
     playedCard.uiAnimation = "played";
 
     player.characters[slotIndex] = playedCard;
@@ -1743,6 +1773,116 @@ function getEffectPrompt(effect) {
         : `${label}: ${text}`;
 }
 
+function getCurrentTurnStatusKey() {
+    const currentPlayer = gameState?.currentPlayer;
+    const currentPlayerKey = currentPlayer
+        ? getPlayerKey(currentPlayer)
+        : null;
+
+    if (!currentPlayerKey) {
+        return null;
+    }
+
+    return `${Number(gameState?.turnNumber || 0)}:${currentPlayerKey}`;
+}
+
+function markLifeCardAdded(player) {
+    if (!player) {
+        return;
+    }
+
+    const turnStatusKey = getCurrentTurnStatusKey();
+
+    if (!turnStatusKey) {
+        return;
+    }
+
+    player.lastLifeCardAddedTurnKey = turnStatusKey;
+}
+
+function hasAddedLifeCardThisTurn(player) {
+    if (!player) {
+        return false;
+    }
+
+    const turnStatusKey = getCurrentTurnStatusKey();
+
+    return Boolean(turnStatusKey && player.lastLifeCardAddedTurnKey === turnStatusKey);
+}
+
+function addCardToLife(player, card, ui, options = {}) {
+    if (!player || !card) {
+        return false;
+    }
+
+    card.faceUp = Boolean(options.faceUp);
+
+    if (options.position === "bottom") {
+        player.life.push(card);
+    } else {
+        player.life.unshift(card);
+    }
+
+    markLifeCardAdded(player);
+
+    if (options.render !== false) {
+        ui?.renderLifeCards?.();
+    }
+
+    if (typeof queueMultiplayerStateSync === "function") {
+        queueMultiplayerStateSync();
+    }
+
+    return true;
+}
+
+function canCardBeRested(card) {
+    if (!card?.cannotBeRestedUntil) {
+        return true;
+    }
+
+    const owner = getPlayerForBoardCard(card);
+    const ownerKey = owner
+        ? getPlayerKey(owner)
+        : null;
+
+    if (!owner || !ownerKey) {
+        return true;
+    }
+
+    if (card.cannotBeRestedUntil.expiresAtPlayerKey !== ownerKey) {
+        return true;
+    }
+
+    return Number(owner.turns || 0) > Number(card.cannotBeRestedUntil.expiresAtEndOfTurns ?? 0);
+}
+
+function setCardRested(card) {
+    if (!card || !canCardBeRested(card)) {
+        return false;
+    }
+
+    card.uiAnimation = "rested";
+    card.state = "rested";
+
+    ui?.renderLeaders?.();
+    ui?.renderCharacters?.();
+    ui?.renderStages?.();
+
+    return true;
+}
+
+function applyCannotBeRestedUntil(card, expiresAtEndOfTurns, expiresAtPlayerKey) {
+    if (!card) {
+        return;
+    }
+
+    card.cannotBeRestedUntil = {
+        expiresAtEndOfTurns: Number(expiresAtEndOfTurns ?? 0),
+        expiresAtPlayerKey
+    };
+}
+
 function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
     if (shouldPromptEffectActivation(effect, options) && ui && typeof ui.chooseEffectActivation === "function") {
         ui.chooseEffectActivation({
@@ -1779,6 +1919,249 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
 
     if (sourceCard.cardType !== "event" && areCardEffectsNegated(sourceCard)) {
         return `${sourceCard.name}'s effects are negated.`;
+    }
+
+    if (
+        effect.id === "YAM1-002-on-play-lock-rest" ||
+        effect.id === "YAM1-002-on-ko-lock-rest"
+    ) {
+        const opponent = getOpponentOfPlayer(player);
+        const opponentKey = getPlayerKey(opponent);
+        const expiresAtEndOfTurns = gameState?.currentPlayer === opponent
+            ? Number(opponent?.turns || 0)
+            : Number(opponent?.turns || 0) + 1;
+
+        return chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing character with a cost of 6 or less that can't be rested until the end of your opponent's next End Phase.",
+            optional: true,
+            filter: card => getCardEffectiveCost(card) <= 6,
+            onSelect: ({ card, playerKey }) => {
+                const targetPlayer = playerKey
+                    ? gameState?.[playerKey]
+                    : getPlayerForBoardCard(card);
+                const targetPlayerKey = getPlayerKey(targetPlayer);
+
+                if (isProtectedFromOpponentEffects(card, targetPlayerKey, player)) {
+                    addGameLog(`${card.name} is protected from opponent effects.`);
+                    return;
+                }
+
+                applyCannotBeRestedUntil(card, expiresAtEndOfTurns, opponentKey);
+                ui?.renderCharacters?.();
+                addGameLog(`${sourceCard.name} made ${card.name} unable to be rested until the end of ${opponent?.name || "the opponent"}'s next End Phase.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} did not choose a character for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no opposing cost 6 or lower characters.`
+        });
+    }
+
+    if (effect.id === "YAM1-003-main") {
+        const addedCard = takeTopLifeToHand(player, ui);
+
+        if (!addedCard) {
+            return `${sourceCard.name}'s Main effect could not add a life card to hand.`;
+        }
+
+        const chooseMessage = chooseOwnBoardCard(player, sourceCard, {
+            prompt: "Choose up to 1 of your {Land of Wano} Characters to give +2000 power and Rush this turn.",
+            optional: true,
+            includeLeader: false,
+            filter: card => card.cardType === "character" && hasTypeText(card, "Land of Wano"),
+            onSelect: ({ card }) => {
+                addTemporaryPowerBonus(card, 2000);
+                addTemporaryKeyword(card, "rush");
+                ui?.renderCharacters?.();
+                addGameLog(`${sourceCard.name} gave ${card.name} +2000 power and Rush this turn.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} added a life card to hand with ${sourceCard.name} but did not choose a character.`,
+            emptyMessage: `${sourceCard.name} found no {Land of Wano} characters to power up.`
+        });
+
+        return chooseMessage
+            ? `${player.name} added ${addedCard.name} from life to hand with ${sourceCard.name}. ${chooseMessage}`
+            : `${player.name} added ${addedCard.name} from life to hand with ${sourceCard.name}.`;
+    }
+
+    if (effect.id === "YAM1-003-counter") {
+        const topLifeCard = player.life?.[0];
+
+        if (!topLifeCard) {
+            return `${sourceCard.name}'s Counter found no life card to turn face-up.`;
+        }
+
+        if (topLifeCard.faceUp) {
+            return `${sourceCard.name}'s Counter could not be paid because ${player.name}'s top life card is already face-up.`;
+        }
+
+        const chooseTarget = () => chooseOwnBoardCard(player, sourceCard, {
+            prompt: "Choose up to 1 of your leader or characters to give +3000 power during this battle.",
+            optional: true,
+            includeLeader: true,
+            filter: card => card.cardType === "leader" || card.cardType === "character",
+            onSelect: ({ card }) => {
+                addBattlePowerBonus(card, 3000);
+                ui?.renderLeaders?.();
+                ui?.renderCharacters?.();
+                addGameLog(`${sourceCard.name} gave ${card.name} +3000 power during this battle.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} turned a life card face-up for ${sourceCard.name} but did not choose a target.`,
+            emptyMessage: `${sourceCard.name} found no leader or character to empower.`
+        });
+
+        if (ui?.chooseEffectActivation) {
+            ui.chooseEffectActivation({
+                player,
+                sourceCard,
+                effect,
+                title: sourceCard.name,
+                prompt: `Turn the top life card face-up for ${sourceCard.name}?`,
+                activateText: "Turn Face-up",
+                skipText: "Skip",
+                onComplete: (shouldActivate) => {
+                    if (!shouldActivate) {
+                        addGameLog(`${player.name} did not turn a life card face-up for ${sourceCard.name}.`);
+                        return;
+                    }
+
+                    topLifeCard.faceUp = true;
+                    ui?.renderLifeCards?.();
+                    addGameLog(`${player.name} turned the top life card face-up for ${sourceCard.name}.`);
+
+                    const chooseMessage = chooseTarget();
+
+                    if (chooseMessage) {
+                        addGameLog(chooseMessage);
+                    }
+
+                    if (typeof queueMultiplayerStateSync === "function") {
+                        queueMultiplayerStateSync();
+                    }
+                }
+            });
+
+            return `${player.name} is choosing whether to turn the top life card face-up for ${sourceCard.name}.`;
+        }
+
+        topLifeCard.faceUp = true;
+        ui?.renderLifeCards?.();
+
+        const chooseMessage = chooseTarget();
+
+        return chooseMessage
+            ? `${player.name} turned the top life card face-up for ${sourceCard.name}. ${chooseMessage}`
+            : `${player.name} turned the top life card face-up for ${sourceCard.name}.`;
+    }
+
+    if (effect.id === "YAM1-004-trigger-play-trash") {
+        if (getFirstOpenCharacterSlotIndex(player) === -1) {
+            return `${sourceCard.name}'s Trigger could not play a character from trash because ${player.name}'s character area is full.`;
+        }
+
+        return chooseTrashCard(player, sourceCard, ui, {
+            prompt: "Choose up to 1 {Land of Wano} Character with a cost of 6 or less from your trash to play rested.",
+            optional: true,
+            filter: card => {
+                return card.cardType === "character" &&
+                    hasTypeText(card, "Land of Wano") &&
+                    getCardEffectiveCost(card) <= 6;
+            },
+            onSelect: ({ trashIndex }) => {
+                const playedCard = player.trash.splice(trashIndex, 1)[0];
+
+                if (!playedCard) {
+                    addGameLog(`${sourceCard.name} could not find that trash card anymore.`);
+                    return;
+                }
+
+                addGameLog(playCharacterFromTrashWithoutCost(player, sourceCard, playedCard, ui, {
+                    rested: true
+                }));
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} did not play a character from trash with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no {Land of Wano} characters with a cost of 6 or less in trash.`
+        });
+    }
+
+    if (effect.id === "YAM1-005-on-play-draw") {
+        return chooseHandCard(player, sourceCard, {
+            prompt: "Choose 1 {Land of Wano} type card from your hand to trash and draw 2 cards.",
+            optional: false,
+            filter: card => hasTypeText(card, "Land of Wano"),
+            onSelect: ({ handIndex, card }) => {
+                const trashedCard = player.hand.splice(handIndex, 1)[0];
+
+                if (!trashedCard) {
+                    addGameLog(`${sourceCard.name} could not find that hand card to trash.`);
+                    return;
+                }
+
+                moveCardToTrash(player, trashedCard, ui);
+                ui?.renderHands?.();
+                ui?.renderTrash?.();
+                addGameLog(`${player.name} trashed ${card.name} for ${sourceCard.name}.`);
+
+                const drawResult = drawCards(player, 2, ui);
+
+                addGameLog(
+                    drawResult?.deckOut
+                        ? `${sourceCard.name} tried to draw 2 cards, but ${player.name} lost by deck out.`
+                        : `${sourceCard.name} drew 2 cards.`
+                );
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            emptyMessage: `${sourceCard.name} found no {Land of Wano} type card in hand to trash.`
+        });
+    }
+
+    if (effect.id === "YAM1-005-trigger-play") {
+        if (getFirstOpenCharacterSlotIndex(player) === -1) {
+            return `${sourceCard.name}'s Trigger could not play a character from trash because ${player.name}'s character area is full.`;
+        }
+
+        return chooseTrashCard(player, sourceCard, ui, {
+            prompt: "Choose up to 1 {Land of Wano} Character with a cost of 4 or less from your trash to play.",
+            optional: true,
+            filter: card => {
+                return card.cardType === "character" &&
+                    hasTypeText(card, "Land of Wano") &&
+                    getCardEffectiveCost(card) <= 4;
+            },
+            onSelect: ({ trashIndex }) => {
+                const playedCard = player.trash.splice(trashIndex, 1)[0];
+
+                if (!playedCard) {
+                    addGameLog(`${sourceCard.name} could not find that trash card anymore.`);
+                    return;
+                }
+
+                addGameLog(playCharacterFromTrashWithoutCost(player, sourceCard, playedCard, ui));
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} did not play a character from trash with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no {Land of Wano} characters with a cost of 4 or less in trash.`
+        });
     }
 
     if (effect.actionId === "drawOneCard") {
@@ -2202,8 +2585,11 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
                     return;
                 }
 
-                card.state = "rested";
-                ui.renderCharacters();
+                if (!setCardRested(card)) {
+                    addGameLog(`${card.name} cannot be rested due to an effect.`);
+                    return;
+                }
+
                 addGameLog(`${sourceCard.name}'s On Play effect rested ${card.name}.`);
             },
             skipMessage: `${player.name} did not rest a character with ${sourceCard.name}.`,
@@ -2375,11 +2761,8 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
             return `${sourceCard.name} is already rested.`;
         }
 
-        sourceCard.state = "rested";
-        sourceCard.uiAnimation = "rested";
-
-        if (ui?.renderCharacters) {
-            ui.renderCharacters();
+        if (!setCardRested(sourceCard)) {
+            return `${sourceCard.name} cannot be rested due to an effect.`;
         }
 
         return chooseOpponentCharacter(player, sourceCard, {
@@ -3074,6 +3457,7 @@ function playEggmanCharactersFromTrashByCost(player, sourceCard, ui, maxCost, ma
 
                 playedCard.state = "active";
                 playedCard.playedOnTurn = player.turns;
+                playedCard.playedFromZone = "trash";
                 playedCard.uiAnimation = "played";
                 player.characters[slotIndex] = playedCard;
                 played.push(playedCard);
@@ -3516,7 +3900,10 @@ function playZangetsuStageFromDeck(player, sourceCard, ui, targetCost) {
     }
 
     if (stageLocation.zone.name === "life" && player.deck.length) {
-        player.life.push(assignCardInstance(player.deck.shift()));
+        addCardToLife(player, assignCardInstance(player.deck.shift()), ui, {
+            position: "bottom",
+            render: false
+        });
     }
 
     const replacementMessage = replaceStageOnFieldIfNeeded(player, stage, ui);
@@ -3700,7 +4087,7 @@ function resolveSotenKisshunMain(player, sourceCard, ui) {
             : `${sourceCard.name}'s Main effect found no card in deck.`;
     }
 
-    player.life.unshift(topDeckCard);
+    addCardToLife(player, topDeckCard, ui);
 
     if (ui?.renderDecks) {
         ui.renderDecks();
@@ -4606,6 +4993,33 @@ function resolveDrawTwoTrashTwo(player, sourceCard, ui, options = {}) {
     });
 
     return `${sourceCard.name}'s effect drew 2 cards and is choosing ${trashAmount} card${trashAmount === 1 ? "" : "s"} to trash.`;
+}
+
+function resolveDrawTwoTrashOne(player, sourceCard, ui, options = {}) {
+    const finish = () => {
+        if (typeof queueMultiplayerStateSync === "function") {
+            queueMultiplayerStateSync();
+        }
+
+        options.onComplete?.();
+    };
+
+    const drawResult = drawCards(player, 2, ui);
+
+    if (drawResult?.deckOut) {
+        return `${sourceCard.name}'s effect tried to draw 2 cards, but ${player.name} lost by deck out.`;
+    }
+
+    if (player.hand.length === 0) {
+        return `${sourceCard.name}'s effect drew 2 cards, but found no cards in hand to trash.`;
+    }
+
+    chooseCardsFromHandToTrash(player, sourceCard, ui, 1, () => {
+        addGameLog(`${sourceCard.name}'s effect drew 2 cards and trashed 1 card.`);
+        finish();
+    });
+
+    return `${sourceCard.name}'s effect drew 2 cards and is choosing 1 card to trash.`;
 }
 
 function resolveHajimeKashimoLifeTakenEffects(player, ui) {
@@ -5658,12 +6072,280 @@ function resolveCounterEffects(player, card, ui) {
     return messages;
 }
 
+function getAceYamatoLeader(player) {
+    const leader = player?.leader;
+
+    if (!leader || leader.cardNumber !== "YAM1-001" || areCardEffectsNegated(leader)) {
+        return null;
+    }
+
+    return leader;
+}
+
+function getAceYamatoLeaderKOTargetChoices(player) {
+    const playerKey = getPlayerKey(player);
+
+    if (!player || !playerKey) {
+        return [];
+    }
+
+    return player.characters
+        .map((card, slotIndex) => ({
+            playerKey,
+            cardType: "character",
+            slotIndex,
+            card
+        }))
+        .filter(choice => {
+            return choice.card?.cardType === "character" &&
+                hasTypeText(choice.card, "Land of Wano");
+        });
+}
+
+function resolveAceYamatoLeaderOnCharacterPlay(player, playedCard, ui) {
+    const leader = getAceYamatoLeader(player);
+
+    if (!leader || playedCard?.cardType !== "character") {
+        return "";
+    }
+
+    if (String(playedCard.playedFromZone || "hand").toLowerCase() === "hand") {
+        return "";
+    }
+
+    const effect = leader.effects?.find(cardEffect => cardEffect.id === "YAM1-001-on-character-play-draw");
+
+    if (!effect || CardEffects.hasUsedOncePerTurnEffect(leader, effect.id, player.turns)) {
+        return "";
+    }
+
+    CardEffects.markOncePerTurnEffectUsed(leader, effect.id, player.turns);
+
+    const opponent = getOpponentOfPlayer(player);
+    const opponentKey = getPlayerKey(opponent);
+    const completePowerGain = () => {
+        addDurationPowerBonus(
+            leader,
+            1000,
+            Number(opponent?.turns || 0) + 1,
+            opponentKey
+        );
+
+        ui?.renderLeaders?.();
+        addGameLog(`${leader.name} gained +1000 power until the end of ${opponent?.name || "the opponent"}'s next turn.`);
+
+        if (typeof queueMultiplayerStateSync === "function") {
+            queueMultiplayerStateSync();
+        }
+    };
+
+    const message = resolveDrawTwoTrashOne(player, leader, ui, {
+        onComplete: completePowerGain
+    });
+
+    if (message.includes("lost by deck out")) {
+        return `${leader.name}'s Once Per Turn effect tried to draw 2 cards, but ${player.name} lost by deck out.`;
+    }
+
+    if (message.includes("found no cards in hand to trash.")) {
+        completePowerGain();
+        return `${leader.name}'s Once Per Turn effect drew 2 cards and gained +1000 power until the end of ${opponent?.name || "the opponent"}'s next turn.`;
+    }
+
+    return `${leader.name}'s Once Per Turn effect activated after ${playedCard.name} was played from ${playedCard.playedFromZone}. ${message}`;
+}
+
+function resolveAceYamatoLeaderActivateMain(player, leader, ui) {
+    const activeLeader = getAceYamatoLeader(player);
+
+    if (!activeLeader || leader?.instanceId !== activeLeader.instanceId) {
+        return {
+            success: false,
+            message: "Ace & Yamato's effect could not be found."
+        };
+    }
+
+    if (getAceYamatoLeaderKOTargetChoices(player).length < 2) {
+        return {
+            success: false,
+            message: `${leader.name}'s effect requires 2 of your {Land of Wano} Characters to K.O.`
+        };
+    }
+
+    const chosenInstanceIds = new Set();
+
+    const chooseNextCharacter = () => {
+        if (chosenInstanceIds.size >= 2) {
+            const lifeMessage = chooseHandCard(player, leader, {
+                prompt: `Choose up to 1 card from hand to place on top of your Life cards for ${leader.name}.`,
+                optional: true,
+                onSelect: ({ handIndex, card }) => {
+                    const chosenCard = player.hand.splice(handIndex, 1)[0];
+
+                    if (!chosenCard) {
+                        addGameLog(`${leader.name} could not find that hand card.`);
+                        return;
+                    }
+
+                    addCardToLife(player, chosenCard, ui);
+                    ui?.renderHands?.();
+                    ui?.renderLifeCards?.();
+                    addGameLog(`${player.name} placed ${card.name} from hand on top of life with ${leader.name}.`);
+
+                    if (typeof queueMultiplayerStateSync === "function") {
+                        queueMultiplayerStateSync();
+                    }
+                },
+                skipMessage: `${player.name} K.O.'d 2 {Land of Wano} Characters for ${leader.name} but did not place a card from hand on life.`,
+                emptyMessage: `${leader.name} found no cards in hand to place on life.`
+            });
+
+            if (lifeMessage) {
+                addGameLog(lifeMessage);
+            }
+
+            return;
+        }
+
+        const chooseMessage = chooseOwnBoardCard(player, leader, {
+            prompt: `Choose {Land of Wano} Character ${chosenInstanceIds.size + 1} of 2 to K.O. for ${leader.name}.`,
+            optional: false,
+            filter: card => {
+                return card.cardType === "character" &&
+                    hasTypeText(card, "Land of Wano") &&
+                    !chosenInstanceIds.has(card.instanceId);
+            },
+            onSelect: ({ slotIndex, card }) => {
+                chosenInstanceIds.add(card.instanceId);
+
+                // Use the normal K.O. flow here so any On K.O. effects resolve as usual.
+                const koResult = KOCharacter(player, slotIndex, ui);
+                addGameLog(koResult.message);
+
+                if (!koResult.success) {
+                    return;
+                }
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+
+                chooseNextCharacter();
+            },
+            emptyMessage: `${leader.name} found no more {Land of Wano} Characters to K.O.`
+        });
+
+        if (chooseMessage) {
+            addGameLog(chooseMessage);
+        }
+    };
+
+    chooseNextCharacter();
+
+    return {
+        success: true,
+        message: `${player.name} is choosing 2 of their {Land of Wano} Characters to K.O. for ${leader.name}.`
+    };
+}
+
+function resolveKouzukiOdenTriggerPlay(player, card, ui) {
+    const opponent = getOpponentOfPlayer(player);
+
+    if ((opponent?.life?.length || 0) > 3) {
+        moveCardToTrash(player, card, ui);
+        ui?.renderTrash?.();
+        return `${card.name}'s Trigger did not play it because ${opponent?.name || "the opponent"} has more than 3 life cards. It was placed in trash.`;
+    }
+
+    const finishWithoutPlay = (message) => {
+        moveCardToTrash(player, card, ui);
+        ui?.renderTrash?.();
+        addGameLog(message);
+
+        if (typeof queueMultiplayerStateSync === "function") {
+            queueMultiplayerStateSync();
+        }
+    };
+
+    const chooseMessage = chooseHandCard(player, card, {
+        prompt: `Choose 1 card from your hand to trash to play ${card.name}.`,
+        optional: true,
+        onSelect: ({ handIndex, card: discardedCard }) => {
+            const trashedCard = player.hand.splice(handIndex, 1)[0];
+
+            if (!trashedCard) {
+                finishWithoutPlay(`${card.name}'s Trigger could not find that hand card to trash.`);
+                return;
+            }
+
+            moveCardToTrash(player, trashedCard, ui);
+            ui?.renderHands?.();
+            ui?.renderTrash?.();
+            addGameLog(`${player.name} trashed ${discardedCard.name} for ${card.name}'s Trigger.`);
+            addGameLog(playCardFromTrigger(player, card, ui));
+
+            if (typeof queueMultiplayerStateSync === "function") {
+                queueMultiplayerStateSync();
+            }
+        },
+        onSkip: () => finishWithoutPlay(`${player.name} did not trash a card to play ${card.name}. It was placed in trash.`),
+        onEmpty: () => finishWithoutPlay(`${card.name}'s Trigger found no cards in hand to trash, so it was placed in trash.`),
+        skipMessage: `${player.name} did not trash a card to play ${card.name}.`,
+        emptyMessage: `${card.name}'s Trigger found no cards in hand to trash.`
+    });
+
+    return chooseMessage || `${player.name} is choosing whether to trash a card to play ${card.name}.`;
+}
+
+function resolveWanoCountryActivateMain(player, stage, ui) {
+    if (player.restedDon < 1) {
+        return {
+            success: false,
+            message: `${stage.name} found no rested DON!! to attach.`
+        };
+    }
+
+    if (!player.characters.some(card => card?.cardType === "character")) {
+        return {
+            success: false,
+            message: `${stage.name} found no characters to receive DON!!.`
+        };
+    }
+
+    const message = chooseOwnBoardCard(player, stage, {
+        prompt: "Choose up to 1 of your characters to receive 1 rested DON!!.",
+        optional: true,
+        includeLeader: false,
+        filter: card => card.cardType === "character",
+        onSelect: ({ card }) => {
+            addGameLog(giveRestedDonToCard(player, stage, card, ui));
+
+            if (typeof queueMultiplayerStateSync === "function") {
+                queueMultiplayerStateSync();
+            }
+        },
+        skipMessage: `${player.name} did not give a DON!! card with ${stage.name}.`,
+        emptyMessage: `${stage.name} found no character to receive DON!!.`
+    });
+
+    return {
+        success: true,
+        message: message || `${stage.name}'s effect resolved.`
+    };
+}
+
 function resolveOnPlayEffects(player, card, ui) {
     if (!player || !card) {
         return [];
     }
 
     const messages = [];
+
+    const aceYamatoLeaderMessage = resolveAceYamatoLeaderOnCharacterPlay(player, card, ui);
+
+    if (aceYamatoLeaderMessage) {
+        messages.push(aceYamatoLeaderMessage);
+    }
 
     card.effects
         ?.filter(effect => effect.type === "onPlay")
@@ -6004,14 +6686,7 @@ function restBoardCard(boardCardData) {
 
     if (!card) return false;
 
-    card.uiAnimation = "rested";
-    card.state = "rested";
-
-    ui.renderLeaders();
-    ui.renderCharacters();
-    ui.renderStages();
-
-    return true;
+    return setCardRested(card);
 }
 
 function setBoardCardActive(boardCardData) {
@@ -6309,6 +6984,10 @@ function resolveTriggerEffects(player, card, triggerEffects, ui, options = {}) {
 }
 
 function resolveSingleTriggerEffect(player, card, effect, ui) {
+    if (effect.id === "YAM1-002-trigger-play") {
+        return resolveKouzukiOdenTriggerPlay(player, card, ui);
+    }
+
     if (effect.actionId === "playThisCardFromTrigger") {
         return playCardFromTrigger(player, card, ui);
     }
@@ -6390,6 +7069,7 @@ function playCardFromTrigger(player, card, ui) {
 
         card.state = "active";
         card.playedOnTurn = player.turns;
+        card.playedFromZone = "life";
         player.characters[slotIndex] = card;
 
         const effectMessages = resolveOnPlayEffects(player, card, ui);
@@ -6689,6 +7369,13 @@ function clearExpiredEndPhaseEffects(expiringPlayer) {
 
         cards.forEach(card => {
             if (
+                card.cannotBeRestedUntil?.expiresAtPlayerKey === expiringPlayerKey &&
+                Number(card.cannotBeRestedUntil.expiresAtEndOfTurns ?? 0) <= Number(expiringPlayer.turns || 0)
+            ) {
+                card.cannotBeRestedUntil = null;
+            }
+
+            if (
                 card.cannotAttackUntil?.expiresAtPlayerKey === expiringPlayerKey &&
                 Number(card.cannotAttackUntil.expiresAtEndOfTurns ?? 0) <= Number(expiringPlayer.turns || 0)
             ) {
@@ -6839,6 +7526,7 @@ function moveCardToTrash(player, card, ui) {
         addGameLog(`${returnedDon} attached DON!! returned to ${player.name}'s cost area rested.`);
     }
 
+    card.cannotBeRestedUntil = null;
     card.uiAnimation = card.uiAnimation || "trashed";
     destinationPlayer.trash.push(card);
 

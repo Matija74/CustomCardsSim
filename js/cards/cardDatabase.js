@@ -14,20 +14,33 @@ async function loadJson(path) {
 }
 
 async function loadCardDatabase() {
-    const [characters, stages, events, leaderCards] = await Promise.all([
+    const [characters, stages, events, leaderCards, onePieceCards] = await Promise.all([
         loadJson("../data/cards/characters.json"),
         loadJson("../data/cards/stages.json"),
         loadJson("../data/cards/events.json"),
-        loadJson("../data/cards/leaders.json")
+        loadJson("../data/cards/leaders.json"),
+        loadJson("../data/cards/onepiece.json")
     ]);
+
+    const onePieceEntries = Object.entries(onePieceCards || {});
+    const onePieceLeaders = Object.fromEntries(
+        onePieceEntries.filter(([, card]) => String(card?.cardType || "").toLowerCase() === "leader")
+    );
+    const onePieceMainDeckCards = Object.fromEntries(
+        onePieceEntries.filter(([, card]) => String(card?.cardType || "").toLowerCase() !== "leader")
+    );
 
     cardDatabase = {
         ...characters,
         ...stages,
-        ...events
+        ...events,
+        ...onePieceMainDeckCards
     };
 
-    leaders = leaderCards;
+    leaders = {
+        ...leaderCards,
+        ...onePieceLeaders
+    };
 
     window.cardDatabase = cardDatabase;
     window.leaders = leaders;

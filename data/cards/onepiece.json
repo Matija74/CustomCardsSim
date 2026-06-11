@@ -1,0 +1,318 @@
+{
+  "OP06-104": {
+    "id": "OP06-104",
+    "cardNumber": "OP06-104",
+    "name": "Kikunojo",
+    "cardType": "character",
+    "type": "Land of Wano/The Akazaya Nine",
+    "color": "yellow",
+    "cost": 4,
+    "power": 6000,
+    "counter": 0,
+    "attribute": "slash",
+    "image": "../images/One Piece cards/OP06-104.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "OP06-104-on-ko-add-life",
+        "type": "onKO",
+        "text": "On K.O.: If your opponent has 3 or less Life cards, add up to 1 card from the top of your deck to the top of your Life cards."
+      },
+      {
+        "id": "OP06-104-trigger-play",
+        "type": "trigger",
+        "text": "Trigger: If your opponent has 3 or less Life cards, play this card."
+      }
+    ]
+  },
+  "OP06-107": {
+    "id": "OP06-107",
+    "cardNumber": "OP06-107",
+    "name": "Kouzuki Momonosuke",
+    "cardType": "character",
+    "type": "Land of Wano/Kouzuki Clan",
+    "color": "yellow",
+    "cost": 5,
+    "power": 6000,
+    "counter": 0,
+    "attribute": "wisdom",
+    "image": "../images/One Piece cards/OP06-107.png",
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "OP06-107-on-play-life",
+        "type": "onPlay",
+        "text": "On Play: Add up to 1 of your {Land of Wano} type Characters other than [Kouzuki Momonosuke] to the top or bottom of the owner's Life cards face-up."
+      }
+    ]
+  },
+  "OP13-104": {
+    "id": "OP13-104",
+    "cardNumber": "OP13-104",
+    "name": "Kouzuki Hiyori",
+    "cardType": "character",
+    "type": "Land of Wano/Kouzuki Clan",
+    "color": "yellow",
+    "cost": 4,
+    "power": 0,
+    "counter": 1000,
+    "attribute": "wisdom",
+    "image": "../images/One Piece cards/OP13-104.png",
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "OP13-104-on-ko-add-life",
+        "type": "onKO",
+        "text": "On K.O.: You may trash 1 card from your hand: If your Leader is multicolored, add up to 1 card from the top of your deck to the top of your Life cards."
+      }
+    ]
+  },
+  "OP14-089": {
+    "id": "OP14-089",
+    "cardNumber": "OP14-089",
+    "name": "Ryuma",
+    "cardType": "character",
+    "type": "Land of Wano/Thriller Bark Pirates",
+    "color": "black",
+    "cost": 3,
+    "power": 5000,
+    "counter": 0,
+    "attribute": "slash",
+    "image": "../images/One Piece cards/OP14-089.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "OP14-089-on-ko-draw-trash",
+        "type": "onKO",
+        "text": "On K.O.: Draw 2 cards and trash 2 cards from your hand."
+      },
+      {
+        "id": "OP14-089-trigger-play",
+        "type": "trigger",
+        "text": "Trigger: Play up to 1 {Thriller Bark Pirates} type Character card with a cost of 4 or less from your trash rested."
+      }
+    ]
+  },
+  "OP16-082": {
+    "id": "OP16-082",
+    "cardNumber": "OP16-082",
+    "name": "Kin'emon",
+    "cardType": "character",
+    "type": "Land of Wano/The Akazaya Nine",
+    "color": "black",
+    "cost": 4,
+    "power": 6000,
+    "counter": 0,
+    "attribute": "slash",
+    "image": "../images/One Piece cards/OP16-082.webp",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "OP16-082-plus-cost",
+        "type": "continuous",
+        "text": "This Character gains +3 cost."
+      },
+      {
+        "id": "OP16-082-on-play-search",
+        "type": "onPlay",
+        "text": "On Play: If your Leader has the {Land of Wano} type, look at 5 cards from the top of your deck; reveal up to 1 {Land of Wano} type card and add it to your hand. Then, trash the rest."
+      }
+    ]
+  },
+  "OP16-085": {
+    "id": "OP16-085",
+    "cardNumber": "OP16-085",
+    "name": "Kouzuki Momonosuke",
+    "cardType": "character",
+    "type": "Land of Wano/Kouzuki Clan",
+    "color": "black",
+    "cost": 9,
+    "power": 6000,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/One Piece cards/OP16-085.jpg",
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "OP16-085-on-play-play-trash",
+        "type": "onPlay",
+        "text": "On Play: Play up to 1 {Land of Wano} type Character card with a cost of 6 or less other than [Kouzuki Momonosuke] from your trash."
+      }
+    ]
+  },
+  "OP16-096": {
+    "id": "OP16-096",
+    "cardNumber": "OP16-096",
+    "name": "Yamato",
+    "cardType": "character",
+    "type": "Land of Wano",
+    "color": "black",
+    "cost": 8,
+    "power": 8000,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/One Piece cards/OP16-096.jpg",
+    "keywords": ["unblockable"],
+    "effects": [
+      {
+        "id": "OP16-096-on-ko-play-yamato",
+        "type": "onKO",
+        "text": "On K.O.: Play up to 1 [Yamato] with a cost of 6 or less from your trash."
+      }
+    ]
+  },
+  "OP16-098": {
+    "id": "OP16-098",
+    "cardNumber": "OP16-098",
+    "name": "Yamato",
+    "cardType": "character",
+    "type": "Land of Wano",
+    "color": "black",
+    "cost": 6,
+    "power": 5000,
+    "counter": 1000,
+    "attribute": "strike",
+    "image": "../images/One Piece cards/OP16-098.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "OP16-098-on-play-draw-trash",
+        "type": "onPlay",
+        "text": "On Play: Draw 1 card and trash 1 card from your hand."
+      },
+      {
+        "id": "OP16-098-activate-main-play-yamato",
+        "type": "activateMain",
+        "text": "Activate: Main: You may trash this Character: Play up to 1 black [Yamato] with a cost of 8 from your trash."
+      }
+    ]
+  },
+  "PRB02-016": {
+    "id": "PRB02-016",
+    "cardNumber": "PRB02-016",
+    "name": "Otama",
+    "cardType": "character",
+    "type": "Land of Wano",
+    "color": "yellow",
+    "cost": 2,
+    "power": 0,
+    "counter": 2000,
+    "attribute": "special",
+    "image": "../images/One Piece cards/PRB02-016.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "PRB02-016-activate-main-power",
+        "type": "activateMain",
+        "text": "Activate: Main: You may rest this Character and add 1 card from the top or bottom of your Life cards to your hand: Up to 1 of your Leader or Character cards gains +3000 power during this turn."
+      },
+      {
+        "id": "PRB02-016-trigger-rest",
+        "type": "trigger",
+        "text": "Trigger: Rest up to 1 of your opponent's Characters with a cost of 4 or less."
+      }
+    ]
+  },
+  "ST28-004": {
+    "id": "ST28-004",
+    "cardNumber": "ST28-004",
+    "name": "Kouzuki Momonosuke",
+    "cardType": "character",
+    "type": "Land of Wano/Kouzuki Clan",
+    "color": "yellow",
+    "cost": 6,
+    "power": 7000,
+    "counter": 0,
+    "attribute": "slash",
+    "image": "../images/One Piece cards/ST28-004.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "ST28-004-your-turn-leader-power",
+        "type": "yourTurn",
+        "text": "Your Turn: If you have 2 or less Life cards, your Leader gains +1000 power."
+      },
+      {
+        "id": "ST28-004-activate-main-rush",
+        "type": "activateMain",
+        "oncePerTurn": true,
+        "text": "Activate: Main Once Per Turn: You may return 2 total of your currently given DON!! cards to your cost area rested: This Character gains Rush and +1000 power during this turn."
+      }
+    ]
+  },
+  "ST28-005": {
+    "id": "ST28-005",
+    "cardNumber": "ST28-005",
+    "name": "Yamato",
+    "cardType": "character",
+    "type": "Land of Wano",
+    "color": "yellow",
+    "cost": 1,
+    "power": 0,
+    "counter": 1000,
+    "attribute": "strike",
+    "image": "../images/One Piece cards/ST28-005.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "ST28-005-your-turn-power",
+        "type": "yourTurn",
+        "text": "DON!! x2 Your Turn: This Character gains +3000 power."
+      },
+      {
+        "id": "ST28-005-on-play-search",
+        "type": "onPlay",
+        "text": "On Play: Look at 5 cards from the top of your deck; reveal up to 1 {Land of Wano} type card with a cost of 2 or more and add it to your hand. Then, place the rest at the bottom of your deck in any order."
+      }
+    ]
+  },
+  "OP16-099": {
+    "id": "OP16-099",
+    "cardNumber": "OP16-099",
+    "name": "I've Come Here... To Cut Those Chains!!!",
+    "cardType": "event",
+    "type": "Land of Wano",
+    "color": "black",
+    "cost": 1,
+    "image": "../images/One Piece cards/OP16-099.webp",
+    "effects": [
+      {
+        "id": "OP16-099-main",
+        "type": "main",
+        "text": "Main: You may rest 6 of your DON!! cards: Trash 5 cards from the top of your deck. Then, play up to 1 {Land of Wano} type Character card with a cost of 6 or less from your trash."
+      },
+      {
+        "id": "OP16-099-counter",
+        "type": "counter",
+        "text": "Counter: Your Leader gains +3000 power during this battle.",
+        "powerModifier": 3000
+      }
+    ]
+  },
+  "EB03-057": {
+    "id": "EB03-057",
+    "cardNumber": "EB03-057",
+    "name": "Yamato",
+    "cardType": "character",
+    "type": "Land of Wano",
+    "color": "yellow",
+    "cost": 5,
+    "power": 6000,
+    "counter": 1000,
+    "attribute": "strike",
+    "image": "../images/One Piece cards/EB03-057.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "EB03-057-on-play-don",
+        "type": "onPlay",
+        "text": "On Play: Give up to 3 rested DON!! cards to your {Land of Wano} type Leader."
+      },
+      {
+        "id": "EB03-057-on-ko-trash-life",
+        "type": "onKO",
+        "text": "On K.O.: Trash up to 1 card from the top of your opponent's Life cards."
+      }
+    ]
+  }
+}
