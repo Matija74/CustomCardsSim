@@ -99,29 +99,6 @@
     ]
   },
 
-  "RIM1-001": {
-    "id": "RIM1-001",
-    "cardNumber": "RIM1-001",
-    "name": "Rimuru Tempest",
-    "cardType": "leader",
-    "type": "Jura-Tempest Federation",
-    "color": "purple/black",
-    "attribute": "malice",
-    "power": 5000,
-    "life": 4,
-    "image": "../images/PB Rimuru by Alex/RIM1-001.png",
-    "aliases": [],
-    "keywords": [],
-    "effects": [
-      {
-        "id": "RIM1-001-turn-start-search",
-        "type": "startOfTurn",
-        "text": "At the start of your turn, you may look at the top 5 cards of your deck. Add up to 1 {Twelve Guardian Lords} type character with a different name than a character previously added by this effect. Trash the rest. You do not draw for the turn you activate this effect.",
-        "actionId": "rimuruTurnStartSearch"
-      }
-    ]
-  },
-
   "POG1-001": {
     "id": "POG1-001",
     "cardNumber": "POG1-001",

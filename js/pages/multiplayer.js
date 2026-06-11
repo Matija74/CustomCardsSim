@@ -5363,7 +5363,6 @@ function getPowerModifier(card, player = null) {
         getHigurumaLeaderPowerModifier(card, player) +
         getJujutsuProtectionPowerModifier(card, player) +
         getKurosakiIchigoPowerModifier(card, player) +
-        getRimuruTempestPowerModifier(card, player) +
         getOpponentTurnPowerModifier(card, player) +
         getAttachedDonPowerModifier(card, player) +
         getPersistentPowerModifier(card) +
@@ -5526,18 +5525,6 @@ function getJujutsuProtectionPowerModifier(card, player) {
     return 0;
 }
 
-function getRimuruTempestPowerModifier(card, player) {
-    if (!card || !player || !player.leader || !CardEffects.hasCardName(player.leader, "Rimuru Tempest")) {
-        return 0;
-    }
-
-    if (card.cardNumber === "RIM1-004") {
-        return 1000;
-    }
-
-    return 0;
-}
-
 function getKurosakiIchigoPowerModifier(card, player) {
     if (!card || !player) {
         return 0;
@@ -5641,14 +5628,6 @@ function getCopiedEffectPowerModifier(card, player) {
                 })
                     ? total + 1000
                     : total;
-            }
-
-            if (
-                effect.id === "RIM1-004-rimuru-power" &&
-                player.leader &&
-                CardEffects.hasCardName(player.leader, "Rimuru Tempest")
-            ) {
-                return total + 1000;
             }
 
             if (

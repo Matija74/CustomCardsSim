@@ -72,19 +72,6 @@ const ryIchigoDeckText = `
 4xBL01-017
 `;
 
-const pbRimuruDeckText = `
-5xRIM1-002
-5xRIM1-003
-5xRIM1-004
-5xRIM1-005
-5xRIM1-006
-5xRIM1-007
-5xRIM1-008
-5xRIM1-009
-5xRIM1-010
-5xRIM1-011
-`;
-
 const uTaglavnovicDeckText = `
 4xPOG1-002
 3xPOG1-003
