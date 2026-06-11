@@ -500,5 +500,143 @@
         "powerModifier": 3000
       }
     ]
+  },
+
+  "JK02-002": {
+    "id": "JK02-002",
+    "cardNumber": "JK02-002",
+    "name": "Domain amplification",
+    "cardType": "event",
+    "type": "Curse technique",
+    "color": "green",
+    "cost": 1,
+    "image": "../images/GB Hanami/JK02-002.jpg",
+    "effects": [
+      {
+        "id": "JK02-002-on-play",
+        "type": "onPlay",
+        "text": "On Play: You may rest 2 of your DON!! cards: Set up to 1 [Hanami] card as active and give it +1000 power."
+      },
+      {
+        "id": "JK02-002-counter",
+        "type": "counter",
+        "text": "Counter: Give your Leader +3000 power for this battle.",
+        "powerModifier": 3000
+      }
+    ]
+  },
+
+  "JK02-003": {
+    "id": "JK02-003",
+    "cardNumber": "JK02-003",
+    "name": "Cursed energy absorption",
+    "cardType": "event",
+    "type": "Curse technique",
+    "color": "black",
+    "cost": 2,
+    "image": "../images/GB Hanami/JK02-003.jpg",
+    "effects": [
+      {
+        "id": "JK02-003-on-play",
+        "type": "onPlay",
+        "text": "On Play: Give up to 1 of your opponent's Characters -2000 power until the end of this turn. If it has a cost of 5 or less and has 0 or less power, K.O. it."
+      }
+    ]
+  },
+
+  "JK02-004": {
+    "id": "JK02-004",
+    "cardNumber": "JK02-004",
+    "name": "Wooden Ball",
+    "cardType": "event",
+    "type": "Curse technique",
+    "color": "black",
+    "cost": 3,
+    "image": "../images/GB Hanami/JK02-004.jpg",
+    "effects": [
+      {
+        "id": "JK02-004-main",
+        "type": "main",
+        "text": "Main: Choose one: K.O. up to 1 of your opponent's rested Characters with a cost of 5 or less; or up to 1 of your opponent's Characters with a cost of 7 or less cannot attack this turn."
+      }
+    ]
+  },
+
+  "JK02-005": {
+    "id": "JK02-005",
+    "cardNumber": "JK02-005",
+    "name": "Cursed Buds",
+    "cardType": "event",
+    "type": "Curse technique",
+    "color": "green",
+    "cost": 2,
+    "image": "../images/GB Hanami/JK02-005.jpg",
+    "effects": [
+      {
+        "id": "JK02-005-main",
+        "type": "main",
+        "text": "Main: If you have 2 or more rested Characters, set 1 of your Characters with a cost of 5 or less as active and give it Rush."
+      }
+    ]
+  },
+
+  "JK02-006": {
+    "id": "JK02-006",
+    "cardNumber": "JK02-006",
+    "name": "Domain Expansion!!",
+    "cardType": "event",
+    "type": "Curse technique",
+    "color": "green",
+    "cost": 6,
+    "image": "../images/GB Hanami/JK02-006.jpg",
+    "effects": [
+      {
+        "id": "JK02-006-main",
+        "type": "main",
+        "text": "Main: You may set up to 3 of your rested Characters as active and give all of them +2000 power."
+      }
+    ]
+  },
+
+  "JK02-007": {
+    "id": "JK02-007",
+    "cardNumber": "JK02-007",
+    "name": "Flower Field",
+    "cardType": "event",
+    "type": "Curse technique",
+    "color": "black",
+    "cost": 3,
+    "image": "../images/GB Hanami/JK02-007.jpg",
+    "effects": [
+      {
+        "id": "JK02-007-main",
+        "type": "main",
+        "text": "Main: If your Leader is {Hanami}, negate the effect of up to 1 of your opponent's Characters with a cost of 8 or less during this turn. Then, give 1 of your opponent's Characters -2 cost for this turn."
+      }
+    ]
+  },
+
+  "JK02-009": {
+    "id": "JK02-009",
+    "cardNumber": "JK02-009",
+    "name": "Cursed Roots",
+    "cardType": "event",
+    "type": "Curse technique",
+    "color": "black",
+    "cost": 2,
+    "image": "../images/GB Hanami/JK02-009.jpg",
+    "effects": [
+      {
+        "id": "JK02-009-main",
+        "type": "main",
+        "text": "Main: If you have 4 rested Characters, you may K.O. 2 of your opponent's Characters with a cost of 5 or less."
+      },
+      {
+        "id": "JK02-009-counter",
+        "type": "counter",
+        "text": "Counter: Give your Leader or 1 of your Characters +2000 power for this battle.",
+        "powerModifier": 2000
+      }
+    ]
   }
 }

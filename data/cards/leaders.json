@@ -176,5 +176,38 @@
         "text": "Activate: Main Once Per Turn: You may K.O. 2 of your {Land of Wano} type Characters: Add up to 1 card from your hand to the top of your Life cards."
       }
     ]
+  },
+
+  "JK02-001": {
+    "id": "JK02-001",
+    "cardNumber": "JK02-001",
+    "name": "Hanami",
+    "cardType": "leader",
+    "type": "Curse Spirit",
+    "color": "green/black",
+    "attribute": "ranged",
+    "power": 5000,
+    "life": 4,
+    "image": "../images/GB Hanami/JK02-001.jpg",
+    "aliases": [],
+    "keywords": [],
+    "effects": [
+      {
+        "id": "JK02-001-deck-rule",
+        "type": "continuous",
+        "text": "All characters you play are played as rested."
+      },
+      {
+        "id": "JK02-001-when-attacking",
+        "type": "whenAttacking",
+        "text": "When Attacking: You may rest 4 of your DON!! cards: Set up to 1 of your Characters with a cost of 6 or less as active."
+      },
+      {
+        "id": "JK02-001-activate-main",
+        "type": "activateMain",
+        "oncePerTurn": true,
+        "text": "Activate: Main Once Per Turn: Give 1 of your rested Characters Rush until the end of the turn."
+      }
+    ]
   }
 }

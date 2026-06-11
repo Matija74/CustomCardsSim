@@ -1352,5 +1352,339 @@
         "text": "Trigger: Play up to 1 {Land of Wano} Character with a cost of 4 or less from your trash."
       }
     ]
+  },
+
+  "JK02-008": {
+    "id": "JK02-008",
+    "cardNumber": "JK02-008",
+    "name": "Finger bearer",
+    "cardType": "character",
+    "type": "Curse Spirit",
+    "color": "black",
+    "cost": 4,
+    "power": 5000,
+    "counter": 2000,
+    "attribute": "special",
+    "image": "../images/GB Hanami/JK02-008.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "JK02-008-on-play",
+        "type": "onPlay",
+        "text": "On Play: If you have 2 or more rested Characters, K.O. 1 of your opponent's Characters with a cost of 4 or less."
+      }
+    ]
+  },
+
+  "JK02-010": {
+    "id": "JK02-010",
+    "cardNumber": "JK02-010",
+    "name": "Ropongi curse",
+    "cardType": "character",
+    "type": "Curse Spirit",
+    "color": "green",
+    "cost": 3,
+    "power": 5000,
+    "counter": 0,
+    "attribute": "special",
+    "image": "../images/GB Hanami/JK02-010.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "JK02-010-activate-main",
+        "type": "activateMain",
+        "oncePerTurn": true,
+        "text": "Activate: Main Once Per Turn: Rest 1 of your opponent's Characters with a cost of 4 or less."
+      }
+    ]
+  },
+
+  "JK02-011": {
+    "id": "JK02-011",
+    "cardNumber": "JK02-011",
+    "name": "Curse",
+    "cardType": "character",
+    "type": "Curse Spirit",
+    "color": "black",
+    "cost": 2,
+    "power": 3000,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/GB Hanami/JK02-011.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "JK02-011-on-play",
+        "type": "onPlay",
+        "text": "On Play: Give 1 of your opponent's Characters -4 cost until the end of this turn."
+      }
+    ]
+  },
+
+  "JK02-012": {
+    "id": "JK02-012",
+    "cardNumber": "JK02-012",
+    "name": "Stingray curse",
+    "cardType": "character",
+    "type": "Curse Spirit",
+    "color": "black",
+    "cost": 4,
+    "power": 5000,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/GB Hanami/JK02-012.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "JK02-012-on-play",
+        "type": "onPlay",
+        "text": "On Play: You may give 1 of your opponent's Characters -3 cost until the end of this turn."
+      },
+      {
+        "id": "JK02-012-activate-main",
+        "type": "activateMain",
+        "oncePerTurn": true,
+        "text": "Activate: Main Once Per Turn: You may K.O. 1 of your opponent's Characters with a cost of 0."
+      }
+    ]
+  },
+
+  "JK02-013": {
+    "id": "JK02-013",
+    "cardNumber": "JK02-013",
+    "name": "Zomba curse",
+    "cardType": "character",
+    "type": "Curse Spirit",
+    "color": "green",
+    "cost": 2,
+    "power": 2000,
+    "counter": 2000,
+    "attribute": "special",
+    "image": "../images/GB Hanami/JK02-013.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "JK02-013-on-play",
+        "type": "onPlay",
+        "text": "On Play: Set 1 of your rested Characters with a cost of 5 or less as active."
+      }
+    ]
+  },
+
+  "JK02-014": {
+    "id": "JK02-014",
+    "cardNumber": "JK02-014",
+    "name": "Smallpox curse",
+    "cardType": "character",
+    "type": "Curse Spirit",
+    "color": "green",
+    "cost": 5,
+    "power": 6000,
+    "counter": 1000,
+    "attribute": "ranged",
+    "image": "../images/GB Hanami/JK02-014.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "JK02-014-protection",
+        "type": "continuous",
+        "text": "If one of your Characters would be removed from the field, you may rest this Character instead."
+      },
+      {
+        "id": "JK02-014-on-play",
+        "type": "onPlay",
+        "text": "On Play: Set this Character as active. Then, if you have 3 or more rested Characters, you may K.O. 1 of your opponent's Characters with a cost of 5 or less. If you do, draw 1 card."
+      }
+    ]
+  },
+
+  "JK02-015": {
+    "id": "JK02-015",
+    "cardNumber": "JK02-015",
+    "name": "Mahito",
+    "cardType": "character",
+    "type": "Curse Spirit",
+    "color": "black",
+    "cost": 9,
+    "power": 10000,
+    "counter": 0,
+    "attribute": "ranged",
+    "image": "../images/GB Hanami/JK02-015.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "JK02-015-protection",
+        "type": "continuous",
+        "text": "This Character cannot be K.O.'d by effects."
+      },
+      {
+        "id": "JK02-015-on-play",
+        "type": "onPlay",
+        "text": "On Play: Give all of your opponent's Characters with a cost of 8 or less -5 cost until the end of this turn and K.O. 1 Character with a cost of 6 or less."
+      },
+      {
+        "id": "JK02-015-activate-main",
+        "type": "activateMain",
+        "text": "Activate: Main: You may trash 1 card: One of your \"Curse Spirit\" Characters with a cost of 3 or less gains Blocker."
+      }
+    ]
+  },
+
+  "JK02-016": {
+    "id": "JK02-016",
+    "cardNumber": "JK02-016",
+    "name": "Jogo",
+    "cardType": "character",
+    "type": "Curse Spirit",
+    "color": "green",
+    "cost": 8,
+    "power": 8000,
+    "counter": 0,
+    "attribute": "special",
+    "image": "../images/GB Hanami/JK02-016.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "JK02-016-activate-main",
+        "type": "activateMain",
+        "text": "Activate: Main: if this character was played this turn, you may set it as active. Then, give your Leader +2000 power the start of your next turn."
+      },
+      {
+        "id": "JK02-016-when-attacking",
+        "type": "whenAttacking",
+        "text": "When Attacking: Attach 2 rested DON!! cards to one of your active characters."
+      }
+    ]
+  },
+
+  "JK02-017": {
+    "id": "JK02-017",
+    "cardNumber": "JK02-017",
+    "name": "Dagon",
+    "cardType": "character",
+    "type": "Curse Spirit",
+    "color": "green",
+    "cost": 5,
+    "power": 6000,
+    "counter": 0,
+    "attribute": "ranged",
+    "image": "../images/GB Hanami/JK02-017.jpg",
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "JK02-017-on-play",
+        "type": "onPlay",
+        "text": "On Play: If you have 2 rested Characters, draw 2 cards and trash 1 card."
+      },
+      {
+        "id": "JK02-017-end-of-turn",
+        "type": "endOfTurn",
+        "text": "End of Your Turn: If you have 1 rested Character other than this Character, set this Character as active."
+      }
+    ]
+  },
+
+  "JK02-018": {
+    "id": "JK02-018",
+    "cardNumber": "JK02-018",
+    "name": "Grasshopper curse",
+    "cardType": "character",
+    "type": "Curse Spirit",
+    "color": "green",
+    "cost": 6,
+    "power": 6000,
+    "counter": 0,
+    "attribute": "strike",
+    "image": "../images/GB Hanami/JK02-018.jpg",
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "JK02-018-activate-main",
+        "type": "activateMain",
+        "oncePerTurn": true,
+        "text": "Activate: Main Once Per Turn: If you have 3 rested Characters, set 4 of your DON!! cards as active."
+      }
+    ]
+  },
+
+  "JK02-019": {
+    "id": "JK02-019",
+    "cardNumber": "JK02-019",
+    "name": "Kenjaku",
+    "cardType": "character",
+    "type": "Curse Spirit",
+    "color": "black",
+    "cost": 7,
+    "power": 8000,
+    "counter": 0,
+    "attribute": "special",
+    "image": "../images/GB Hanami/JK02-019.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "JK02-019-on-play",
+        "type": "onPlay",
+        "text": "On Play: Choose up to 1 Character card with a cost of 4 or less and up to 1 Character card with a cost of 2 or less from your trash and play them."
+      },
+      {
+        "id": "JK02-019-when-attacking",
+        "type": "whenAttacking",
+        "text": "When Attacking: You may discard 1 card: K.O. 1 Character with a cost of 4 or less."
+      }
+    ]
+  },
+
+  "JK02-020": {
+    "id": "JK02-020",
+    "cardNumber": "JK02-020",
+    "name": "kurourushi",
+    "cardType": "character",
+    "type": "Curse Spirit",
+    "color": "black",
+    "cost": 6,
+    "power": 7000,
+    "counter": 0,
+    "attribute": "strike",
+    "image": "../images/GB Hanami/JK02-020.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "JK02-020-cost-reduction",
+        "type": "continuous",
+        "text": "All of your opponent's Characters get -3 cost."
+      },
+      {
+        "id": "JK02-020-on-play",
+        "type": "onPlay",
+        "text": "On Play: K.O. 1 of your opponent's Characters with a cost of 1 or less."
+      },
+      {
+        "id": "JK02-020-activate-main",
+        "type": "activateMain",
+        "text": "Activate: Main: You may discard 2 cards and give -5 cost to 1 of your opponent's Characters for this turn."
+      }
+    ]
+  },
+
+  "JK02-021": {
+    "id": "JK02-021",
+    "cardNumber": "JK02-021",
+    "name": "Dagon small",
+    "cardType": "character",
+    "type": "Curse Spirit",
+    "color": "green",
+    "cost": 1,
+    "power": 2000,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/GB Hanami/JK02-021.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "JK02-021-on-play",
+        "type": "onPlay",
+        "text": "On Play: Look at 5 cards from the top of your deck; reveal up to 1 <Curse Spirit> type card or 1 Event card and add it to your hand. Then, place the rest at the bottom of your deck in any order."
+      }
+    ]
   }
 }
