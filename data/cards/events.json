@@ -624,7 +624,7 @@
     "type": "Curse technique",
     "color": "black",
     "cost": 2,
-    "image": "../images/GB Hanami/JK02-009.jpg",
+    "image": "../images/GB Hanami/JK02-008.jpg",
     "effects": [
       {
         "id": "JK02-009-main",
