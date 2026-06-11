@@ -590,6 +590,84 @@ window.CardEffects = {
         };
     },
 
+    resolveHanamiLeaderWhenAttacking(player, attackerData, ui) {
+        const leader = attackerData?.cardType === "leader"
+            ? player?.leader
+            : null;
+
+        if (!leader || leader.cardNumber !== "JK02-001") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const effectId = "JK02-001-when-attacking";
+
+        if (this.wasEffectSkippedForAttack(leader, effectId)) {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        if (Number(player?.don || 0) < 4) {
+            return {
+                activated: false,
+                message: `${leader.name}'s When Attacking effect could not activate because ${player.name} does not have 4 active DON!! cards.`
+            };
+        }
+
+        const validTargets = player.characters.filter(card => {
+            return card?.cardType === "character" &&
+                getCardEffectiveCost(card) <= 6 &&
+                (card.state || "active") !== "active";
+        });
+
+        if (validTargets.length === 0) {
+            return {
+                activated: false,
+                message: `${leader.name}'s When Attacking effect found no cost 6 or lower rested Characters to set active.`
+            };
+        }
+
+        if (!restDonForCost(player, 4, ui)) {
+            return {
+                activated: false,
+                message: `${leader.name}'s When Attacking effect could not rest 4 active DON!! cards.`
+            };
+        }
+
+        const chooseMessage = chooseOwnBoardCard(player, leader, {
+            prompt: `Choose up to 1 of your cost 6 or lower rested Characters to set as active with ${leader.name}.`,
+            optional: true,
+            includeLeader: false,
+            filter: card => {
+                return card.cardType === "character" &&
+                    getCardEffectiveCost(card) <= 6 &&
+                    (card.state || "active") !== "active";
+            },
+            onSelect: ({ card }) => {
+                card.state = "active";
+                ui?.renderCharacters?.();
+                addGameLog(`${leader.name} set ${card.name} as active.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} rested 4 DON!! for ${leader.name} but did not choose a Character to set active.`,
+            emptyMessage: `${leader.name} found no cost 6 or lower rested Characters to set active.`
+        });
+
+        return {
+            activated: true,
+            message: chooseMessage
+                ? `${leader.name}'s When Attacking effect rested 4 DON!!. ${chooseMessage}`
+                : `${leader.name}'s When Attacking effect rested 4 DON!! and resolved.`
+        };
+    },
+
     resolveKisukeWhenAttacking(player, attackerData, ui) {
         const character = attackerData?.cardType === "character"
             ? player?.characters?.[attackerData.slotIndex]
@@ -877,6 +955,7 @@ window.CardEffects = {
             this.resolveEvilEyeWhenAttacking(player, attackerData, ui),
             this.resolveAiraWhenAttacking(player, attackerData, ui),
             this.resolveEggmanLeaderWhenAttacking(player, attackerData, ui),
+            this.resolveHanamiLeaderWhenAttacking(player, attackerData, ui),
             this.resolveKisukeWhenAttacking(player, attackerData, ui),
             this.resolveYoruichiWhenAttacking(player, attackerData, ui),
             this.resolveUryuWhenAttacking(player, attackerData, ui),

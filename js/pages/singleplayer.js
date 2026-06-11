@@ -2191,6 +2191,13 @@ function canUseActivateMainEffect(player, card, effect) {
         return getTotalAttachedDonCount(player) >= 2;
     }
 
+    if (effect.id === "JK02-001-activate-main") {
+        return player.characters.some(card => {
+            return card?.cardType === "character" &&
+                (card.state || "active") === "rested";
+        });
+    }
+
     return true;
 }
 
@@ -2293,6 +2300,10 @@ function resolveBoardActionEffect(player, card, effect) {
 
     if (effect.id === "ST28-004-activate-main-rush") {
         return resolveSt28MomonosukeActivateMain(player, card, ui);
+    }
+
+    if (effect.id === "JK02-001-activate-main") {
+        return resolveHanamiLeaderActivateMain(player, card, ui);
     }
 
     if (effect.id === "POG1-006-activate-main") {

@@ -106,6 +106,26 @@ function canPlayerAffordCard(player, card) {
     return player.don >= cardCost;
 }
 
+function doesHanamiLeaderPlayCharactersRested(player) {
+    const leader = player?.leader;
+
+    return Boolean(
+        leader &&
+        leader.cardNumber === "JK02-001" &&
+        !areCardEffectsNegated(leader)
+    );
+}
+
+function getPlayedCharacterInitialState(player, preferredState = "active") {
+    if (preferredState === "rested") {
+        return "rested";
+    }
+
+    return doesHanamiLeaderPlayCharactersRested(player)
+        ? "rested"
+        : "active";
+}
+
 function getMainPhaseEventEffects(card) {
     return card?.effects?.filter(effect => effect.type === "main") ?? [];
 }
@@ -587,7 +607,7 @@ function playCardFromDeckWithoutCost(player, sourceCard, card, ui, sourceZoneLab
             return `${sourceCard.name} found ${card.name}, but ${player.name}'s character area is full.`;
         }
 
-        card.state = "active";
+        card.state = getPlayedCharacterInitialState(player);
         card.playedOnTurn = player.turns;
         card.playedFromZone = sourceZoneLabel;
         card.uiAnimation = "played";
@@ -597,8 +617,8 @@ function playCardFromDeckWithoutCost(player, sourceCard, card, ui, sourceZoneLab
 
         ui?.renderCharacters?.();
         return effectMessages.length > 0
-            ? `${sourceCard.name} played ${card.name} from the ${sourceZoneLabel}. ${effectMessages.join(" ")}`
-            : `${sourceCard.name} played ${card.name} from the ${sourceZoneLabel}.`;
+            ? `${sourceCard.name} played ${card.name} from the ${sourceZoneLabel}${card.state === "rested" ? " rested" : ""}. ${effectMessages.join(" ")}`
+            : `${sourceCard.name} played ${card.name} from the ${sourceZoneLabel}${card.state === "rested" ? " rested" : ""}.`;
     }
 
     if (card.cardType === "stage") {
@@ -608,7 +628,7 @@ function playCardFromDeckWithoutCost(player, sourceCard, card, ui, sourceZoneLab
 
         const replacementMessage = replaceStageOnFieldIfNeeded(player, card, ui);
 
-        card.state = "active";
+        card.state = getPlayedCharacterInitialState(player);
         card.uiAnimation = "played";
         player.stage = card;
 
@@ -651,9 +671,10 @@ function playCharacterFromTrashWithoutCost(player, sourceCard, card, ui, options
         return `${sourceCard.name} could not play ${card.name} from the trash because ${player.name}'s character area is full.`;
     }
 
-    card.state = options.rested === true
-        ? "rested"
-        : "active";
+    card.state = getPlayedCharacterInitialState(
+        player,
+        options.rested === true ? "rested" : "active"
+    );
     card.playedOnTurn = player.turns;
     card.playedFromZone = options.sourceZoneLabel || "trash";
     card.uiAnimation = "played";
@@ -664,8 +685,8 @@ function playCharacterFromTrashWithoutCost(player, sourceCard, card, ui, options
     ui?.renderCharacters?.();
 
     return effectMessages.length > 0
-        ? `${sourceCard.name} played ${card.name} from the trash${options.rested === true ? " rested" : ""}. ${effectMessages.join(" ")}`
-        : `${sourceCard.name} played ${card.name} from the trash${options.rested === true ? " rested" : ""}.`;
+        ? `${sourceCard.name} played ${card.name} from the trash${card.state === "rested" ? " rested" : ""}. ${effectMessages.join(" ")}`
+        : `${sourceCard.name} played ${card.name} from the trash${card.state === "rested" ? " rested" : ""}.`;
 }
 
 function resolveJeremicOnPlay(player, sourceCard, ui) {
@@ -1595,7 +1616,7 @@ function playCharacterCard(player, handIndex, ui, targetSlotIndex = null) {
 
     const playedCard = player.hand.splice(handIndex, 1)[0];
 
-    playedCard.state = "active";
+    playedCard.state = getPlayedCharacterInitialState(player);
     playedCard.playedOnTurn = player.turns;
     playedCard.playedFromZone = "hand";
     playedCard.uiAnimation = "played";
@@ -1629,7 +1650,7 @@ function playCharacterCard(player, handIndex, ui, targetSlotIndex = null) {
         success: true,
         message: replacedCard
             ? `${player.name} replaced ${replacedCard.name} with ${playedCard.name}.${effectText}`
-            : `${player.name} played ${playedCard.name} in character slot ${slotIndex + 1}.${effectText}`
+            : `${player.name} played ${playedCard.name} in character slot ${slotIndex + 1}${playedCard.state === "rested" ? " rested" : ""}.${effectText}`
     };
 }
 
@@ -3857,7 +3878,7 @@ function playEggmanCharactersFromTrashByCost(player, sourceCard, ui, maxCost, ma
 
                 const playedCard = player.trash.splice(trashIndex, 1)[0];
 
-                playedCard.state = "active";
+                playedCard.state = getPlayedCharacterInitialState(player);
                 playedCard.playedOnTurn = player.turns;
                 playedCard.playedFromZone = "trash";
                 playedCard.uiAnimation = "played";
@@ -6849,6 +6870,63 @@ function resolveKouzukiOdenTriggerPlay(player, card, ui) {
     return chooseMessage || `${player.name} is choosing whether to trash a card to play ${card.name}.`;
 }
 
+function getHanamiLeader(player) {
+    const leader = player?.leader;
+
+    if (!leader || leader.cardNumber !== "JK02-001" || areCardEffectsNegated(leader)) {
+        return null;
+    }
+
+    return leader;
+}
+
+function resolveHanamiLeaderActivateMain(player, leader, ui) {
+    const activeLeader = getHanamiLeader(player);
+
+    if (!activeLeader || leader?.instanceId !== activeLeader.instanceId) {
+        return {
+            success: false,
+            message: "Hanami's effect could not be found."
+        };
+    }
+
+    if (!player.characters.some(card => {
+        return card?.cardType === "character" &&
+            (card.state || "active") === "rested";
+    })) {
+        return {
+            success: false,
+            message: `${leader.name} found no rested Characters to give Rush.`
+        };
+    }
+
+    const chooseMessage = chooseOwnBoardCard(player, leader, {
+        prompt: `Choose up to 1 of your rested Characters to give Rush with ${leader.name}.`,
+        optional: true,
+        includeLeader: false,
+        filter: card => {
+            return card.cardType === "character" &&
+                (card.state || "active") === "rested";
+        },
+        onSelect: ({ card }) => {
+            addTemporaryKeyword(card, "rush");
+            ui?.renderCharacters?.();
+            addGameLog(`${leader.name} gave ${card.name} Rush until the end of the turn.`);
+
+            if (typeof queueMultiplayerStateSync === "function") {
+                queueMultiplayerStateSync();
+            }
+        },
+        skipMessage: `${player.name} did not choose a rested Character for ${leader.name}.`,
+        emptyMessage: `${leader.name} found no rested Characters to give Rush.`
+    });
+
+    return {
+        success: true,
+        message: chooseMessage || `${leader.name}'s effect resolved.`
+    };
+}
+
 function resolveWanoCountryActivateMain(player, stage, ui) {
     if (player.restedDon < 1) {
         return {
@@ -7871,8 +7949,8 @@ function playCardFromTrigger(player, card, ui) {
         ui.renderCharacters();
 
         return effectMessages.length > 0
-            ? `${card.name}'s Trigger played it in character slot ${slotIndex + 1}. ${effectMessages.join(" ")}`
-            : `${card.name}'s Trigger played it in character slot ${slotIndex + 1}.`;
+            ? `${card.name}'s Trigger played it in character slot ${slotIndex + 1}${card.state === "rested" ? " rested" : ""}. ${effectMessages.join(" ")}`
+            : `${card.name}'s Trigger played it in character slot ${slotIndex + 1}${card.state === "rested" ? " rested" : ""}.`;
     }
 
     if (card.cardType === "stage") {
