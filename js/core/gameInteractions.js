@@ -79,21 +79,31 @@ function getCardEffectiveCost(card) {
     }
 
     const printedCost = Number(card.cost ?? card.playCost ?? 0);
+    const owner = typeof getPlayerForBoardCard === "function"
+        ? getPlayerForBoardCard(card)
+        : null;
+    const isOnBoard = Boolean(owner && (
+        owner.leader === card ||
+        owner.stage === card ||
+        owner.characters?.includes(card)
+    ));
     let modifier = card.costModifiers
         ?.reduce((total, entry) => total + Number(entry.amount ?? 0), 0) ?? 0;
 
     if (card.cardNumber === "OP16-082" && !areCardEffectsNegated(card)) {
-        const owner = typeof getPlayerForBoardCard === "function"
-            ? getPlayerForBoardCard(card)
-            : null;
-        const isOnBoard = Boolean(owner && (
-            owner.leader === card ||
-            owner.stage === card ||
-            owner.characters?.includes(card)
-        ));
-
         if (isOnBoard) {
             modifier += 3;
+        }
+    }
+
+    if (card.cardType === "character" && isOnBoard && owner) {
+        const opponent = getOpponentOfPlayer(owner);
+        const kurourushiCount = opponent?.characters?.filter(boardCard => {
+            return boardCard?.cardNumber === "JK02-020" && !areCardEffectsNegated(boardCard);
+        }).length ?? 0;
+
+        if (kurourushiCount > 0) {
+            modifier -= 3 * kurourushiCount;
         }
     }
 
@@ -127,7 +137,10 @@ function getPlayedCharacterInitialState(player, preferredState = "active") {
 }
 
 function getMainPhaseEventEffects(card) {
-    return card?.effects?.filter(effect => effect.type === "main") ?? [];
+    return card?.effects?.filter(effect => {
+        return effect.type === "main" ||
+            (card.cardType === "event" && effect.type === "onPlay");
+    }) ?? [];
 }
 
 function canPlayEventInMainPhase(card) {
@@ -1405,6 +1418,15 @@ function canUseCounterEffect(card, player, effect) {
         return true;
     }
 
+    if (effect.id === "JK02-002-counter") {
+        if (typeof currentAttack === "undefined" || !currentAttack) {
+            return false;
+        }
+
+        return currentAttack.target?.cardType === "leader" &&
+            currentAttack.target?.playerKey === getPlayerKey(player);
+    }
+
     return Boolean(effect.actionId) ||
         Number(effect.powerModifier ?? 0) > 0 ||
         /during\s+this\s+battle/i.test(String(effect.text || ""));
@@ -1820,6 +1842,14 @@ function getCurrentTurnStatusKey() {
     }
 
     return `${Number(gameState?.turnNumber || 0)}:${currentPlayerKey}`;
+}
+
+function markCardCannotAttackThisTurn(card) {
+    if (!card) {
+        return;
+    }
+
+    card.cannotAttackThisTurnKey = getCurrentTurnStatusKey();
 }
 
 function markLifeCardAdded(player) {
@@ -3305,6 +3335,507 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
         const koMessage = chooseOpponentCharacterToKO(player, sourceCard, ui, 3, false);
 
         return `${donMessage} ${koMessage}`;
+    }
+
+    if (effect.id === "JK02-002-on-play") {
+        if (!restDonForCost(player, 2, ui)) {
+            return `${player.name} could not rest 2 active DON!! for ${sourceCard.name}.`;
+        }
+
+        return chooseOwnBoardCard(player, sourceCard, {
+            prompt: "Choose up to 1 [Hanami] card to set active and give +1000 power this turn.",
+            optional: true,
+            includeLeader: true,
+            filter: card => CardEffects.hasCardName(card, "Hanami"),
+            onSelect: ({ card }) => {
+                card.uiAnimation = "readied";
+                card.state = "active";
+                addTemporaryPowerBonus(card, 1000);
+                ui?.renderLeaders?.();
+                ui?.renderCharacters?.();
+                addGameLog(`${sourceCard.name} set ${card.name} as active and gave it +1000 power this turn.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} rested 2 DON!! for ${sourceCard.name} but did not choose a [Hanami] card.`,
+            emptyMessage: `${sourceCard.name} found no [Hanami] cards to affect.`
+        });
+    }
+
+    if (effect.id === "JK02-003-on-play") {
+        return chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing character to give -2000 power this turn. If it has cost 5 or less and 0 or less power, K.O. it.",
+            optional: true,
+            onSelect: ({ card, playerKey, slotIndex }) => {
+                const targetPlayer = playerKey ? gameState?.[playerKey] : getPlayerForBoardCard(card);
+                const targetPlayerKey = getPlayerKey(targetPlayer);
+
+                if (isProtectedFromOpponentEffects(card, targetPlayerKey, player)) {
+                    addGameLog(`${card.name} is protected from opponent effects.`);
+                    return;
+                }
+
+                addTemporaryPowerBonus(card, -2000);
+                ui?.renderCharacters?.();
+                addGameLog(`${sourceCard.name} gave ${card.name} -2000 power this turn.`);
+
+                if (getCardEffectiveCost(card) <= 5 && getCardBattlePower(card, targetPlayer) <= 0) {
+                    addGameLog(removeCharacterByOpponentEffect(player, targetPlayer, slotIndex, sourceCard, ui));
+                }
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} did not choose a character for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no opposing characters.`
+        });
+    }
+
+    if (effect.id === "JK02-004-main") {
+        const chooseKoMode = () => chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing rested character with a cost of 5 or less to K.O.",
+            optional: true,
+            filter: card => getCardEffectiveCost(card) <= 5 && (card.state || "active") === "rested",
+            onSelect: ({ playerKey, slotIndex }) => {
+                addGameLog(removeCharacterByOpponentEffect(player, gameState[playerKey], slotIndex, sourceCard, ui));
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} did not K.O. a character with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no rested cost 5 or lower characters.`
+        });
+
+        const chooseLockMode = () => chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing character with a cost of 7 or less that cannot attack this turn.",
+            optional: true,
+            filter: card => getCardEffectiveCost(card) <= 7,
+            onSelect: ({ card, playerKey }) => {
+                const targetPlayer = playerKey ? gameState?.[playerKey] : getPlayerForBoardCard(card);
+                const targetPlayerKey = getPlayerKey(targetPlayer);
+
+                if (isProtectedFromOpponentEffects(card, targetPlayerKey, player)) {
+                    addGameLog(`${card.name} is protected from opponent effects.`);
+                    return;
+                }
+
+                markCardCannotAttackThisTurn(card);
+                ui?.renderCharacters?.();
+                addGameLog(`${sourceCard.name} made ${card.name} unable to attack this turn.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} did not choose a character to lock with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no cost 7 or lower characters.`
+        });
+
+        if (ui?.chooseEffectOption) {
+            ui.chooseEffectOption({
+                player,
+                sourceCard,
+                title: sourceCard.name,
+                prompt: "Choose one effect for Wooden Ball.",
+                options: [
+                    {
+                        label: "K.O. rested",
+                        value: "ko"
+                    },
+                    {
+                        label: "Lock attack",
+                        value: "lock"
+                    }
+                ],
+                onComplete: (choice) => {
+                    const message = choice === "lock"
+                        ? chooseLockMode()
+                        : chooseKoMode();
+
+                    if (message) {
+                        addGameLog(message);
+                    }
+                }
+            });
+
+            return `${player.name} is choosing ${sourceCard.name}'s mode.`;
+        }
+
+        return chooseKoMode();
+    }
+
+    if (effect.id === "JK02-005-main") {
+        const restedCharacters = player.characters.filter(card => {
+            return card?.cardType === "character" &&
+                (card.state || "active") === "rested";
+        });
+
+        if (restedCharacters.length < 2) {
+            return `${sourceCard.name}'s Main effect requires 2 or more rested Characters.`;
+        }
+
+        return chooseOwnBoardCard(player, sourceCard, {
+            prompt: "Choose up to 1 of your cost 5 or lower Characters to set active and give Rush this turn.",
+            optional: true,
+            includeLeader: false,
+            filter: card => card.cardType === "character" && getCardEffectiveCost(card) <= 5,
+            onSelect: ({ card }) => {
+                card.uiAnimation = "readied";
+                card.state = "active";
+                addTemporaryKeyword(card, "rush");
+                ui?.renderCharacters?.();
+                addGameLog(`${sourceCard.name} set ${card.name} as active and gave it Rush this turn.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} did not choose a character for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no cost 5 or lower characters.`
+        });
+    }
+
+    if (effect.id === "JK02-006-main") {
+        const chosenInstanceIds = new Set();
+
+        const chooseNextCharacter = () => {
+            const availableChoices = getOwnBoardChoices(player, {
+                includeLeader: false,
+                filter: card => {
+                    return card.cardType === "character" &&
+                        (card.state || "active") === "rested" &&
+                        !chosenInstanceIds.has(card.instanceId);
+                }
+            });
+
+            if (availableChoices.length === 0 || chosenInstanceIds.size >= 3) {
+                return;
+            }
+
+            const chooseMessage = chooseOwnBoardCard(player, sourceCard, {
+                prompt: `Choose up to 1 rested Character ${chosenInstanceIds.size + 1} of 3 to set active and give +2000 power.`,
+                optional: true,
+                includeLeader: false,
+                filter: card => {
+                    return card.cardType === "character" &&
+                        (card.state || "active") === "rested" &&
+                        !chosenInstanceIds.has(card.instanceId);
+                },
+                onSelect: ({ card }) => {
+                    chosenInstanceIds.add(card.instanceId);
+                    card.uiAnimation = "readied";
+                    card.state = "active";
+                    addTemporaryPowerBonus(card, 2000);
+                    ui?.renderCharacters?.();
+                    addGameLog(`${sourceCard.name} set ${card.name} as active and gave it +2000 power this turn.`);
+
+                    if (typeof queueMultiplayerStateSync === "function") {
+                        queueMultiplayerStateSync();
+                    }
+
+                    chooseNextCharacter();
+                },
+                skipMessage: `${player.name} stopped choosing Characters for ${sourceCard.name}.`,
+                emptyMessage: `${sourceCard.name} found no rested Characters.`
+            });
+
+            if (chooseMessage) {
+                addGameLog(chooseMessage);
+            }
+        };
+
+        chooseNextCharacter();
+        return `${player.name} is choosing up to 3 rested Characters for ${sourceCard.name}.`;
+    }
+
+    if (effect.id === "JK02-007-main") {
+        if (!CardEffects.hasCardName(player.leader, "Hanami")) {
+            return `${sourceCard.name}'s Main effect did not resolve because ${player.name}'s leader is not Hanami.`;
+        }
+
+        const expiringPlayerKey = getPlayerKey(player);
+        const expiresAtEndOfTurns = Number(player.turns || 0);
+        const finishCostReduction = () => chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing character to give -2 cost this turn.",
+            optional: true,
+            onSelect: ({ card }) => {
+                addCostModifier(card, -2);
+                addGameLog(`${sourceCard.name} gave ${card.name} -2 cost this turn.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} did not reduce a character's cost with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no opposing characters for cost reduction.`
+        });
+
+        const negateMessage = chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing character with a cost of 8 or less to negate this turn.",
+            optional: true,
+            filter: card => getCardEffectiveCost(card) <= 8,
+            onSelect: ({ card, playerKey }) => {
+                const targetPlayer = playerKey ? gameState?.[playerKey] : getPlayerForBoardCard(card);
+                const targetPlayerKey = getPlayerKey(targetPlayer);
+
+                if (isProtectedFromOpponentEffects(card, targetPlayerKey, player)) {
+                    addGameLog(`${card.name} is protected from opponent effects.`);
+                    return;
+                }
+
+                addTemporaryEffectNegation(card, expiringPlayerKey, expiresAtEndOfTurns);
+                ui?.renderCharacters?.();
+                addGameLog(`${sourceCard.name} negated ${card.name}'s effects for this turn.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+
+                const message = finishCostReduction();
+
+                if (message) {
+                    addGameLog(message);
+                }
+            },
+            onSkip: () => {
+                const message = finishCostReduction();
+
+                if (message) {
+                    addGameLog(message);
+                }
+            },
+            onEmpty: () => {
+                const message = finishCostReduction();
+
+                if (message) {
+                    addGameLog(message);
+                }
+            },
+            skipMessage: `${player.name} did not negate a character with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no cost 8 or lower characters to negate.`
+        });
+
+        return `${negateMessage} Then ${player.name} will choose a character to give -2 cost.`;
+    }
+
+    if (effect.id === "JK02-009-main") {
+        const restedCharacters = player.characters.filter(card => {
+            return card?.cardType === "character" &&
+                (card.state || "active") === "rested";
+        });
+
+        if (restedCharacters.length < 4) {
+            return `${sourceCard.name}'s Main effect requires 4 rested Characters.`;
+        }
+
+        const chosenInstanceIds = new Set();
+
+        const chooseNextKOTarget = () => {
+            if (chosenInstanceIds.size >= 2) {
+                return;
+            }
+
+            const chooseMessage = chooseOpponentCharacter(player, sourceCard, {
+                prompt: `Choose opposing Character ${chosenInstanceIds.size + 1} of 2 with cost 5 or less to K.O.`,
+                optional: true,
+                filter: card => {
+                    return getCardEffectiveCost(card) <= 5 &&
+                        !chosenInstanceIds.has(card.instanceId);
+                },
+                onSelect: ({ card, playerKey, slotIndex }) => {
+                    chosenInstanceIds.add(card.instanceId);
+                    addGameLog(removeCharacterByOpponentEffect(player, gameState[playerKey], slotIndex, sourceCard, ui));
+
+                    if (typeof queueMultiplayerStateSync === "function") {
+                        queueMultiplayerStateSync();
+                    }
+
+                    chooseNextKOTarget();
+                },
+                skipMessage: `${player.name} stopped choosing K.O. targets for ${sourceCard.name}.`,
+                emptyMessage: `${sourceCard.name} found no cost 5 or lower characters to K.O.`
+            });
+
+            if (chooseMessage) {
+                addGameLog(chooseMessage);
+            }
+        };
+
+        chooseNextKOTarget();
+        return `${player.name} is choosing up to 2 characters to K.O. with ${sourceCard.name}.`;
+    }
+
+    if (effect.id === "JK02-013-on-play") {
+        return chooseOwnBoardCard(player, sourceCard, {
+            prompt: "Choose up to 1 of your rested Characters with a cost of 5 or less to set as active.",
+            optional: true,
+            includeLeader: false,
+            filter: card => {
+                return card.cardType === "character" &&
+                    getCardEffectiveCost(card) <= 5 &&
+                    (card.state || "active") === "rested";
+            },
+            onSelect: ({ card }) => {
+                card.uiAnimation = "readied";
+                card.state = "active";
+                ui?.renderCharacters?.();
+                addGameLog(`${sourceCard.name} set ${card.name} as active.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} did not choose a Character for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no rested cost 5 or lower Characters.`
+        });
+    }
+
+    if (effect.id === "JK02-014-on-play") {
+        sourceCard.uiAnimation = "readied";
+        sourceCard.state = "active";
+        ui?.renderCharacters?.();
+
+        const restedCharacters = player.characters.filter(card => {
+            return card?.cardType === "character" &&
+                (card.state || "active") === "rested";
+        });
+
+        if (restedCharacters.length < 3) {
+            return `${sourceCard.name} set itself as active but found fewer than 3 rested Characters.`;
+        }
+
+        return chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing Character with a cost of 5 or less to K.O. If you do, draw 1 card.",
+            optional: true,
+            filter: card => getCardEffectiveCost(card) <= 5,
+            onSelect: ({ playerKey, slotIndex }) => {
+                const message = removeCharacterByOpponentEffect(player, gameState[playerKey], slotIndex, sourceCard, ui);
+
+                addGameLog(message);
+
+                if (!message.includes("K.O.'d")) {
+                    return;
+                }
+
+                const drawResult = drawCard(player, ui);
+
+                addGameLog(
+                    drawResult?.deckOut
+                        ? `${sourceCard.name} tried to draw 1 card after the K.O., but ${player.name} lost by deck out.`
+                        : `${sourceCard.name} drew 1 card after the K.O.`
+                );
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} did not K.O. a Character with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no opposing cost 5 or lower Characters.`
+        });
+    }
+
+    if (effect.id === "JK02-017-on-play") {
+        const restedCharacters = player.characters.filter(card => {
+            return card?.cardType === "character" &&
+                (card.state || "active") === "rested";
+        });
+
+        if (restedCharacters.length < 2) {
+            return `${sourceCard.name}'s On Play effect found fewer than 2 rested Characters.`;
+        }
+
+        return resolveDrawTwoTrashOne(player, sourceCard, ui);
+    }
+
+    if (effect.id === "JK02-021-on-play") {
+        return lookTopCardsForType(player, sourceCard, 5, "", ui, {
+            isSelectable: card => {
+                return hasTypeText(card, "Curse Spirit") ||
+                    card.cardType === "event";
+            }
+        });
+    }
+
+    if (effect.id === "JK02-008-on-play") {
+        const restedCharacters = player.characters.filter(card => {
+            return card?.cardType === "character" &&
+                (card.state || "active") === "rested";
+        });
+
+        if (restedCharacters.length < 2) {
+            return `${sourceCard.name}'s On Play effect requires 2 or more rested Characters.`;
+        }
+
+        return chooseOpponentCharacterToKO(player, sourceCard, ui, 4, false);
+    }
+
+    if (effect.id === "JK02-011-on-play") {
+        return chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose 1 opposing Character to give -4 cost this turn.",
+            optional: false,
+            onSelect: ({ card }) => {
+                addCostModifier(card, -4);
+                addGameLog(`${sourceCard.name} gave ${card.name} -4 cost this turn.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            emptyMessage: `${sourceCard.name} found no opposing Characters.`
+        });
+    }
+
+    if (effect.id === "JK02-012-on-play") {
+        return chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing Character to give -3 cost this turn.",
+            optional: true,
+            onSelect: ({ card }) => {
+                addCostModifier(card, -3);
+                addGameLog(`${sourceCard.name} gave ${card.name} -3 cost this turn.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} did not choose a Character for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no opposing Characters.`
+        });
+    }
+
+    if (effect.id === "JK02-015-on-play") {
+        const opponent = getOpponentOfPlayer(player);
+        let reducedCount = 0;
+
+        opponent?.characters?.forEach(card => {
+            if (!card || getCardEffectiveCost(card) > 8) {
+                return;
+            }
+
+            if (isProtectedFromOpponentEffects(card, getPlayerKey(opponent), player)) {
+                return;
+            }
+
+            addCostModifier(card, -5);
+            reducedCount += 1;
+        });
+
+        ui?.renderCharacters?.();
+
+        const chooseMessage = chooseOpponentCharacterToKO(player, sourceCard, ui, 6, false);
+
+        return `${sourceCard.name} gave -5 cost to ${reducedCount} opposing Character${reducedCount === 1 ? "" : "s"} this turn. ${chooseMessage}`;
+    }
+
+    if (effect.id === "JK02-019-on-play") {
+        return resolveKenjakuOnPlay(player, sourceCard, ui);
+    }
+
+    if (effect.id === "JK02-020-on-play") {
+        return chooseOpponentCharacterToKO(player, sourceCard, ui, 1, false);
     }
 
     return "";
@@ -4957,6 +5488,45 @@ function removeCharacterByOpponentEffect(actingPlayer, targetPlayer, slotIndex, 
         return `${card.name} is protected from opponent effects.`;
     }
 
+    const smallpoxReplacement = getAvailableSmallpoxRemovalReplacement(targetPlayer, actingPlayer);
+
+    if (smallpoxReplacement) {
+        const useReplacement = () => {
+            smallpoxReplacement.uiAnimation = "rested";
+            smallpoxReplacement.state = "rested";
+            ui?.renderCharacters?.();
+
+            if (typeof queueMultiplayerStateSync === "function") {
+                queueMultiplayerStateSync();
+            }
+
+            return `${smallpoxReplacement.name} rested instead, so ${card.name} stayed on the field.`;
+        };
+
+        if (ui?.chooseEffectActivation) {
+            ui.chooseEffectActivation({
+                player: targetPlayer,
+                sourceCard: smallpoxReplacement,
+                effect: smallpoxReplacement.effects?.find(cardEffect => cardEffect.id === "JK02-014-protection") || {
+                    id: "JK02-014-protection",
+                    type: "continuous",
+                    text: "Rest this Character instead?"
+                },
+                title: smallpoxReplacement.name,
+                prompt: `${card.name} would be removed by ${sourceCard.name}. Rest ${smallpoxReplacement.name} instead?`,
+                activateText: "Rest Instead",
+                skipText: "Let Remove",
+                onComplete: (shouldActivate) => {
+                    addGameLog(shouldActivate ? useReplacement() : finishCharacterRemovalByOpponentEffect(actingPlayer, targetPlayer, slotIndex, sourceCard, ui));
+                }
+            });
+
+            return `${targetPlayer.name} is choosing whether to use ${smallpoxReplacement.name}'s replacement effect.`;
+        }
+
+        return useReplacement();
+    }
+
     const uryu = getAvailableUryuLifeFlipReplacement(targetPlayer, actingPlayer);
 
     if (uryu) {
@@ -5029,6 +5599,23 @@ function removeCharacterByOpponentEffect(actingPlayer, targetPlayer, slotIndex, 
     return finishCharacterRemovalByOpponentEffect(actingPlayer, targetPlayer, slotIndex, sourceCard, ui);
 }
 
+function getAvailableSmallpoxRemovalReplacement(targetPlayer, actingPlayer) {
+    if (!targetPlayer || !actingPlayer || targetPlayer === actingPlayer) {
+        return null;
+    }
+
+    if (areOpponentReplacementEffectsNegated(targetPlayer, actingPlayer)) {
+        return null;
+    }
+
+    return targetPlayer.characters.find(card => {
+        return card?.cardNumber === "JK02-014" &&
+            !areCardEffectsNegated(card) &&
+            (card.state || "active") === "active" &&
+            canCardBeRested(card);
+    }) || null;
+}
+
 function getAvailableUryuLifeFlipReplacement(targetPlayer, actingPlayer) {
     if (!targetPlayer || !actingPlayer || targetPlayer === actingPlayer) {
         return null;
@@ -5092,6 +5679,10 @@ function finishCharacterRemovalByOpponentEffect(actingPlayer, targetPlayer, slot
         actingPlayer,
         sourceCard
     });
+
+    if (!result.success) {
+        return result.message;
+    }
 
     return `${sourceCard.name} K.O.'d ${card.name}. ${result.message}`;
 }
@@ -6927,6 +7518,288 @@ function resolveHanamiLeaderActivateMain(player, leader, ui) {
     };
 }
 
+function resolveRopongiCurseActivateMain(player, sourceCard, ui) {
+    const validTargets = getOpponentCharacterChoices(player, card => {
+        return getCardEffectiveCost(card) <= 4 &&
+            (card.state || "active") === "active";
+    });
+
+    if (validTargets.length === 0) {
+        return {
+            success: false,
+            message: `${sourceCard.name} found no active opposing Characters with a cost of 4 or less to rest.`
+        };
+    }
+
+    const message = chooseOpponentCharacter(player, sourceCard, {
+        prompt: "Choose up to 1 opposing active Character with a cost of 4 or less to rest.",
+        optional: true,
+        filter: card => getCardEffectiveCost(card) <= 4 && (card.state || "active") === "active",
+        onSelect: ({ card, playerKey }) => {
+            const targetPlayer = playerKey ? gameState?.[playerKey] : getPlayerForBoardCard(card);
+            const targetPlayerKey = getPlayerKey(targetPlayer);
+
+            if (isProtectedFromOpponentEffects(card, targetPlayerKey, player)) {
+                addGameLog(`${card.name} is protected from opponent effects.`);
+                return;
+            }
+
+            if (!setCardRested(card)) {
+                addGameLog(`${card.name} cannot be rested due to an effect.`);
+                return;
+            }
+
+            addGameLog(`${sourceCard.name} rested ${card.name}.`);
+
+            if (typeof queueMultiplayerStateSync === "function") {
+                queueMultiplayerStateSync();
+            }
+        },
+        skipMessage: `${player.name} did not choose a Character for ${sourceCard.name}.`,
+        emptyMessage: `${sourceCard.name} found no active opposing Characters with a cost of 4 or less.`
+    });
+
+    return {
+        success: true,
+        message: message || `${sourceCard.name}'s effect resolved.`
+    };
+}
+
+function resolveJogoActivateMain(player, sourceCard, ui) {
+    if (Number(sourceCard?.playedOnTurn ?? -1) !== Number(player?.turns ?? -2)) {
+        return {
+            success: false,
+            message: `${sourceCard.name} can only use this effect on the turn it was played.`
+        };
+    }
+
+    sourceCard.uiAnimation = "readied";
+    sourceCard.state = "active";
+
+    const opponent = getOpponentOfPlayer(player);
+    const opponentKey = getPlayerKey(opponent);
+
+    addDurationPowerBonus(
+        player.leader,
+        2000,
+        Number(opponent?.turns || 0) + 1,
+        opponentKey
+    );
+
+    ui?.renderLeaders?.();
+    ui?.renderCharacters?.();
+
+    if (typeof queueMultiplayerStateSync === "function") {
+        queueMultiplayerStateSync();
+    }
+
+    return {
+        success: true,
+        message: `${sourceCard.name} set itself as active and gave ${player.leader?.name || "your leader"} +2000 power until the end of ${opponent?.name || "the opponent"}'s next turn.`
+    };
+}
+
+function resolveGrasshopperCurseActivateMain(player, sourceCard, ui) {
+    const restedCharacters = player.characters.filter(card => {
+        return card?.cardType === "character" &&
+            (card.state || "active") === "rested";
+    });
+
+    if (restedCharacters.length < 3) {
+        return {
+            success: false,
+            message: `${sourceCard.name} requires 3 rested Characters.`
+        };
+    }
+
+    const refreshedDon = setRestedDonActive(player, 4, ui);
+
+    return {
+        success: true,
+        message: refreshedDon > 0
+            ? `${sourceCard.name} set ${refreshedDon} DON!! card${refreshedDon === 1 ? "" : "s"} as active.`
+            : `${sourceCard.name} found no rested DON!! cards to set active.`
+    };
+}
+
+function resolveMahitoActivateMain(player, sourceCard, ui) {
+    if (player.hand.length < 1) {
+        return {
+            success: false,
+            message: `${sourceCard.name} requires 1 card in hand to trash.`
+        };
+    }
+
+    const validTargets = player.characters.filter(card => {
+        return card?.cardType === "character" &&
+            hasTypeText(card, "Curse Spirit") &&
+            getCardEffectiveCost(card) <= 3;
+    });
+
+    if (validTargets.length === 0) {
+        return {
+            success: false,
+            message: `${sourceCard.name} found no {Curse Spirit} Characters with a cost of 3 or less.`
+        };
+    }
+
+    const chooseTrashMessage = chooseHandCard(player, sourceCard, {
+        prompt: `Choose 1 card from your hand to trash for ${sourceCard.name}.`,
+        optional: false,
+        onSelect: ({ card }) => {
+            const handIndex = player.hand.indexOf(card);
+
+            if (handIndex === -1) {
+                addGameLog(`${sourceCard.name} could not find that hand card to trash.`);
+                return;
+            }
+
+            const trashedCard = player.hand.splice(handIndex, 1)[0];
+            moveCardToTrash(player, trashedCard, ui);
+            ui?.renderHands?.();
+            ui?.renderTrash?.();
+            addGameLog(`${player.name} trashed ${trashedCard.name} for ${sourceCard.name}.`);
+
+            const chooseTargetMessage = chooseOwnBoardCard(player, sourceCard, {
+                prompt: "Choose up to 1 of your {Curse Spirit} Characters with a cost of 3 or less to gain Blocker.",
+                optional: true,
+                includeLeader: false,
+                filter: boardCard => {
+                    return boardCard.cardType === "character" &&
+                        hasTypeText(boardCard, "Curse Spirit") &&
+                        getCardEffectiveCost(boardCard) <= 3;
+                },
+                onSelect: ({ card: targetCard }) => {
+                    targetCard.keywords = Array.isArray(targetCard.keywords) ? targetCard.keywords : [];
+
+                    if (!targetCard.keywords.includes("blocker")) {
+                        targetCard.keywords.push("blocker");
+                    }
+
+                    ui?.renderCharacters?.();
+                    addGameLog(`${sourceCard.name} gave ${targetCard.name} Blocker.`);
+
+                    if (typeof queueMultiplayerStateSync === "function") {
+                        queueMultiplayerStateSync();
+                    }
+                },
+                skipMessage: `${player.name} trashed a card for ${sourceCard.name} but did not choose a Character.`,
+                emptyMessage: `${sourceCard.name} found no {Curse Spirit} Characters with a cost of 3 or less.`
+            });
+
+            if (chooseTargetMessage) {
+                addGameLog(chooseTargetMessage);
+            }
+
+            if (typeof queueMultiplayerStateSync === "function") {
+                queueMultiplayerStateSync();
+            }
+        },
+        emptyMessage: `${sourceCard.name} found no cards in hand to trash.`
+    });
+
+    return {
+        success: true,
+        message: chooseTrashMessage || `${sourceCard.name}'s effect resolved.`
+    };
+}
+
+function resolveKurourushiActivateMain(player, sourceCard, ui) {
+    if (player.hand.length < 2) {
+        return {
+            success: false,
+            message: `${sourceCard.name} requires 2 cards in hand to trash.`
+        };
+    }
+
+    if (getOpponentCharacterChoices(player, () => true).length === 0) {
+        return {
+            success: false,
+            message: `${sourceCard.name} found no opposing Characters to reduce.`
+        };
+    }
+
+    chooseCardsFromHandToTrash(player, sourceCard, ui, 2, () => {
+        const chooseMessage = chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing Character to give -5 cost this turn.",
+            optional: true,
+            onSelect: ({ card }) => {
+                addCostModifier(card, -5);
+                addGameLog(`${sourceCard.name} gave ${card.name} -5 cost this turn.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} trashed 2 cards for ${sourceCard.name} but did not choose a target.`,
+            emptyMessage: `${sourceCard.name} found no opposing Characters.`
+        });
+
+        if (chooseMessage) {
+            addGameLog(chooseMessage);
+        }
+    });
+
+    return {
+        success: true,
+        message: `${player.name} is trashing 2 cards for ${sourceCard.name}.`
+    };
+}
+
+function resolveKenjakuOnPlay(player, sourceCard, ui) {
+    const chosenInstanceIds = new Set();
+
+    const playChoiceFromTrash = (maxCost, onComplete) => {
+        if (getFirstOpenCharacterSlotIndex(player) === -1) {
+            addGameLog(`${sourceCard.name} stopped because ${player.name}'s character area is full.`);
+            onComplete?.();
+            return;
+        }
+
+        const chooseMessage = chooseTrashCard(player, sourceCard, ui, {
+            prompt: `Choose up to 1 Character card with a cost of ${maxCost} or less from your trash to play.`,
+            optional: true,
+            filter: card => {
+                return card.cardType === "character" &&
+                    getCardEffectiveCost(card) <= maxCost &&
+                    !chosenInstanceIds.has(card.instanceId);
+            },
+            onSelect: ({ trashIndex, card }) => {
+                const playedCard = player.trash.splice(trashIndex, 1)[0];
+
+                if (!playedCard) {
+                    addGameLog(`${sourceCard.name} could not find that trash card anymore.`);
+                    onComplete?.();
+                    return;
+                }
+
+                chosenInstanceIds.add(card.instanceId);
+                addGameLog(playCharacterFromTrashWithoutCost(player, sourceCard, playedCard, ui));
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+
+                onComplete?.();
+            },
+            onSkip: onComplete,
+            onEmpty: onComplete,
+            skipMessage: `${player.name} did not play a Character with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no Character cards with a cost of ${maxCost} or less in trash.`
+        });
+
+        if (chooseMessage) {
+            addGameLog(chooseMessage);
+        }
+    };
+
+    playChoiceFromTrash(4, () => {
+        playChoiceFromTrash(2);
+    });
+
+    return `${player.name} is choosing Characters from trash for ${sourceCard.name}.`;
+}
+
 function resolveWanoCountryActivateMain(player, stage, ui) {
     if (player.restedDon < 1) {
         return {
@@ -7612,6 +8485,13 @@ function KOCharacter(player, slotIndex, ui, options = {}) {
         };
     }
 
+    if (options.byEffect && character.cardNumber === "JK02-015" && !areCardEffectsNegated(character)) {
+        return {
+            success: false,
+            message: `${character.name} cannot be K.O.'d by effects.`
+        };
+    }
+
     const trashResult = trashCharacterFromField(player, slotIndex, ui, {
         render: false
     });
@@ -8180,12 +9060,33 @@ function resolveEndOfTurnEffects(player, ui) {
         }
 
         getCardAllEffects(character)
-            ?.filter(effect => effect.type === "endOfYourTurn")
+            ?.filter(effect => effect.type === "endOfYourTurn" || effect.type === "endOfTurn")
             .forEach(effect => {
                 if (effect.id === "POG1-012-end-of-your-turn") {
                     results.push({
                         activated: true,
                         message: resolveBrankoEndOfTurn(player, character, ui)
+                    });
+                    return;
+                }
+
+                if (effect.id === "JK02-017-end-of-turn") {
+                    const otherRestedCharacter = player.characters.some(card => {
+                        return card &&
+                            card.instanceId !== character.instanceId &&
+                            card.cardType === "character" &&
+                            (card.state || "active") === "rested";
+                    });
+
+                    if (!otherRestedCharacter) {
+                        return;
+                    }
+
+                    character.uiAnimation = "readied";
+                    character.state = "active";
+                    results.push({
+                        activated: true,
+                        message: `${character.name}'s End of Turn effect set it as active.`
                     });
                     return;
                 }

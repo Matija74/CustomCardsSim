@@ -2744,6 +2744,44 @@ function canUseActivateMainEffect(player, card, effect) {
         });
     }
 
+    if (effect.id === "JK02-010-activate-main") {
+        return getOpponentCharacterChoices(player, card => {
+            return getCardEffectiveCost(card) <= 4 &&
+                (card.state || "active") === "active";
+        }).length > 0;
+    }
+
+    if (effect.id === "JK02-016-activate-main") {
+        return Number(card?.playedOnTurn ?? -1) === Number(player?.turns ?? -2);
+    }
+
+    if (effect.id === "JK02-018-activate-main") {
+        const restedCharacters = player.characters.filter(card => {
+            return card?.cardType === "character" &&
+                (card.state || "active") === "rested";
+        });
+
+        return restedCharacters.length >= 3 && Number(player.restedDon || 0) > 0;
+    }
+
+    if (effect.id === "JK02-012-activate-main") {
+        return getOpponentCharacterChoices(player, card => getCardEffectiveCost(card) <= 0).length > 0;
+    }
+
+    if (effect.id === "JK02-015-activate-main") {
+        return player.hand.length > 0 &&
+            player.characters.some(card => {
+                return card?.cardType === "character" &&
+                    hasTypeText(card, "Curse Spirit") &&
+                    getCardEffectiveCost(card) <= 3;
+            });
+    }
+
+    if (effect.id === "JK02-020-activate-main") {
+        return player.hand.length >= 2 &&
+            getOpponentCharacterChoices(player, () => true).length > 0;
+    }
+
     return true;
 }
 
@@ -2851,6 +2889,42 @@ function resolveBoardActionEffect(player, card, effect) {
 
     if (effect.id === "JK02-001-activate-main") {
         return resolveHanamiLeaderActivateMain(player, card, ui);
+    }
+
+    if (effect.id === "JK02-010-activate-main") {
+        return resolveRopongiCurseActivateMain(player, card, ui);
+    }
+
+    if (effect.id === "JK02-016-activate-main") {
+        return resolveJogoActivateMain(player, card, ui);
+    }
+
+    if (effect.id === "JK02-018-activate-main") {
+        return resolveGrasshopperCurseActivateMain(player, card, ui);
+    }
+
+    if (effect.id === "JK02-012-activate-main") {
+        return {
+            success: true,
+            message: chooseOpponentCharacter(player, card, {
+                prompt: "Choose up to 1 opposing Character with a cost of 0 to K.O.",
+                optional: true,
+                filter: targetCard => getCardEffectiveCost(targetCard) <= 0,
+                onSelect: ({ playerKey, slotIndex }) => {
+                    addGameLog(removeCharacterByOpponentEffect(player, gameState[playerKey], slotIndex, card, ui));
+                },
+                skipMessage: `${player.name} did not K.O. a Character with ${card.name}.`,
+                emptyMessage: `${card.name} found no opposing Characters with a cost of 0.`
+            }) || `${card.name}'s effect resolved.`
+        };
+    }
+
+    if (effect.id === "JK02-015-activate-main") {
+        return resolveMahitoActivateMain(player, card, ui);
+    }
+
+    if (effect.id === "JK02-020-activate-main") {
+        return resolveKurourushiActivateMain(player, card, ui);
     }
 
     if (effect.id === "POG1-006-activate-main") {
@@ -5335,6 +5409,18 @@ function canSelectedBoardCardAttack() {
 }
 
 function isCharacterAttackLocked(card, player) {
+    const currentPlayer = gameState?.currentPlayer;
+    const currentPlayerKey = currentPlayer
+        ? getPlayerKey(currentPlayer)
+        : null;
+    const currentTurnStatusKey = currentPlayerKey
+        ? `${Number(gameState?.turnNumber || 0)}:${currentPlayerKey}`
+        : null;
+
+    if (card?.cannotAttackThisTurnKey && currentTurnStatusKey && card.cannotAttackThisTurnKey === currentTurnStatusKey) {
+        return true;
+    }
+
     if (!card?.cannotAttackUntil || !player) {
         return false;
     }

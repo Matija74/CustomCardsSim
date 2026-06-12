@@ -668,6 +668,132 @@ window.CardEffects = {
         };
     },
 
+    resolveJogoWhenAttacking(player, attackerData, ui) {
+        const character = attackerData?.cardType === "character"
+            ? player?.characters?.[attackerData.slotIndex]
+            : null;
+
+        if (!character || character.cardNumber !== "JK02-016") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        if (Number(player?.restedDon || 0) < 2) {
+            return {
+                activated: false,
+                message: `${character.name}'s When Attacking effect found fewer than 2 rested DON!! cards.`
+            };
+        }
+
+        const validTargets = player.characters.filter(card => {
+            return card?.cardType === "character" &&
+                (card.state || "active") === "active";
+        });
+
+        if (validTargets.length === 0) {
+            return {
+                activated: false,
+                message: `${character.name}'s When Attacking effect found no active Characters to receive DON!! cards.`
+            };
+        }
+
+        const message = chooseOwnBoardCard(player, character, {
+            prompt: "Choose up to 1 of your active Characters to receive 2 rested DON!! cards.",
+            optional: true,
+            includeLeader: false,
+            filter: card => card.cardType === "character" && (card.state || "active") === "active",
+            onSelect: ({ card }) => {
+                const firstMessage = giveRestedDonToCard(player, character, card, ui);
+                const secondMessage = giveRestedDonToCard(player, character, card, ui);
+
+                if (firstMessage) {
+                    addGameLog(firstMessage);
+                }
+
+                if (secondMessage) {
+                    addGameLog(secondMessage);
+                }
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} did not choose a Character for ${character.name}.`,
+            emptyMessage: `${character.name} found no active Characters to receive DON!! cards.`
+        });
+
+        return {
+            activated: true,
+            message: message || `${character.name}'s When Attacking effect resolved.`
+        };
+    },
+
+    resolveKenjakuWhenAttacking(player, attackerData, ui) {
+        const character = attackerData?.cardType === "character"
+            ? player?.characters?.[attackerData.slotIndex]
+            : null;
+
+        if (!character || character.cardNumber !== "JK02-019") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const effectId = "JK02-019-when-attacking";
+
+        if (this.wasEffectSkippedForAttack(character, effectId)) {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        if (player.hand.length < 1) {
+            return {
+                activated: false,
+                message: `${character.name}'s When Attacking effect requires 1 card in hand to discard.`
+            };
+        }
+
+        const chooseMessage = chooseHandCard(player, character, {
+            prompt: `Choose 1 card from your hand to trash for ${character.name}.`,
+            optional: false,
+            onSelect: ({ card }) => {
+                const handIndex = player.hand.indexOf(card);
+
+                if (handIndex === -1) {
+                    addGameLog(`${character.name} could not find that hand card to trash.`);
+                    return;
+                }
+
+                const trashedCard = player.hand.splice(handIndex, 1)[0];
+                moveCardToTrash(player, trashedCard, ui);
+                ui?.renderHands?.();
+                ui?.renderTrash?.();
+                addGameLog(`${player.name} trashed ${trashedCard.name} for ${character.name}.`);
+
+                const koMessage = chooseOpponentCharacterToKO(player, character, ui, 4, false);
+
+                if (koMessage) {
+                    addGameLog(koMessage);
+                }
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            emptyMessage: `${character.name} found no card in hand to trash.`
+        });
+
+        return {
+            activated: true,
+            message: chooseMessage || `${character.name}'s When Attacking effect resolved.`
+        };
+    },
+
     resolveKisukeWhenAttacking(player, attackerData, ui) {
         const character = attackerData?.cardType === "character"
             ? player?.characters?.[attackerData.slotIndex]
@@ -956,6 +1082,8 @@ window.CardEffects = {
             this.resolveAiraWhenAttacking(player, attackerData, ui),
             this.resolveEggmanLeaderWhenAttacking(player, attackerData, ui),
             this.resolveHanamiLeaderWhenAttacking(player, attackerData, ui),
+            this.resolveJogoWhenAttacking(player, attackerData, ui),
+            this.resolveKenjakuWhenAttacking(player, attackerData, ui),
             this.resolveKisukeWhenAttacking(player, attackerData, ui),
             this.resolveYoruichiWhenAttacking(player, attackerData, ui),
             this.resolveUryuWhenAttacking(player, attackerData, ui),
