@@ -214,5 +214,23 @@
         "text": "Trigger: Play up to 1 {Land of Wano} Character with a cost of 6 or less from your trash rested."
       }
     ]
+  },
+
+  "SUB1-008": {
+    "id": "SUB1-008",
+    "cardNumber": "SUB1-008",
+    "name": "Return by death",
+    "cardType": "stage",
+    "type": "RE:ZERO",
+    "color": "yellow",
+    "cost": 1,
+    "image": "../images/Y Subaru by Porentov/SUB1-008.jpg",
+    "effects": [
+      {
+        "id": "SUB1-008-on-play-checkpoint",
+        "type": "onPlay",
+        "text": "On Play: Flip any card from your and your Opponent's Life area: Set the game state as a Checkpoint."
+      }
+    ]
   }
 }

@@ -638,5 +638,29 @@
         "powerModifier": 2000
       }
     ]
+  },
+
+  "SUB1-011": {
+    "id": "SUB1-011",
+    "cardNumber": "SUB1-011",
+    "name": "I will definitely save you",
+    "cardType": "event",
+    "type": "RE:ZERO",
+    "color": "yellow",
+    "cost": 0,
+    "image": "../images/Y Subaru by Porentov/SUB1-011.jpg",
+    "effects": [
+      {
+        "id": "SUB1-011-counter",
+        "type": "counter",
+        "text": "Counter: You may trash 1 card from your hand: Up to 1 of your Leader or Character cards gains +3000 power during this battle.",
+        "powerModifier": 3000
+      },
+      {
+        "id": "SUB1-011-trigger",
+        "type": "trigger",
+        "text": "Trigger: If you have 0 Life cards, you may add up to 1 card from the top of your deck to the top of your Life cards. Then, trash 1 card from your hand."
+      }
+    ]
   }
 }

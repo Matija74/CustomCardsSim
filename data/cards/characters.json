@@ -1686,5 +1686,212 @@
         "text": "On Play: Look at 5 cards from the top of your deck; reveal up to 1 <Curse Spirit> type card or 1 Event card and add it to your hand. Then, place the rest at the bottom of your deck in any order."
       }
     ]
+  },
+
+  "SUB1-002": {
+    "id": "SUB1-002",
+    "cardNumber": "SUB1-002",
+    "name": "Emilia",
+    "cardType": "character",
+    "type": "RE:ZERO",
+    "color": "yellow",
+    "cost": 5,
+    "power": 6000,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/Y Subaru by Porentov/SUB1-002.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "SUB1-002-on-play-life",
+        "type": "onPlay",
+        "text": "On Play: If you have 2 Life cards or less, put 1 card from your deck to the top of your Life area."
+      }
+    ]
+  },
+
+  "SUB1-003": {
+    "id": "SUB1-003",
+    "cardNumber": "SUB1-003",
+    "name": "Ram",
+    "cardType": "character",
+    "type": "RE:ZERO",
+    "color": "yellow",
+    "cost": 2,
+    "power": 2000,
+    "counter": 2000,
+    "attribute": "special",
+    "image": "../images/Y Subaru by Porentov/SUB1-003.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "SUB1-003-continuous-rem-buff",
+        "type": "continuous",
+        "text": "All Rem Characters gain +1000 power and cannot be removed from the field by effects."
+      }
+    ]
+  },
+
+  "SUB1-004": {
+    "id": "SUB1-004",
+    "cardNumber": "SUB1-004",
+    "name": "Elsa",
+    "cardType": "character",
+    "type": "RE:ZERO",
+    "color": "yellow",
+    "cost": 5,
+    "power": 7000,
+    "counter": 0,
+    "attribute": "slash",
+    "image": "../images/Y Subaru by Porentov/SUB1-004.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "SUB1-004-on-play-rush",
+        "type": "onPlay",
+        "text": "On Play: Trash 1 card from your hand and flip the top card of your Life area; this Character gains Rush."
+      }
+    ]
+  },
+
+  "SUB1-005": {
+    "id": "SUB1-005",
+    "cardNumber": "SUB1-005",
+    "name": "Reinhard van Astrea",
+    "cardType": "character",
+    "type": "RE:ZERO",
+    "color": "yellow",
+    "cost": 9,
+    "power": 10000,
+    "counter": 0,
+    "attribute": "slash",
+    "image": "../images/Y Subaru by Porentov/SUB1-005.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "SUB1-005-on-play-life-rush",
+        "type": "onPlay",
+        "text": "On Play: Add 1 card from the top of your deck to the top of your Life. Then this card gains Character Rush."
+      },
+      {
+        "id": "SUB1-005-trigger-draw-trash",
+        "type": "trigger",
+        "text": "Trigger: Draw 2 and trash 1."
+      }
+    ]
+  },
+
+  "SUB1-006": {
+    "id": "SUB1-006",
+    "cardNumber": "SUB1-006",
+    "name": "Subaru Natsuki",
+    "cardType": "character",
+    "type": "RE:ZERO",
+    "color": "yellow",
+    "cost": 1,
+    "power": 2000,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/Y Subaru by Porentov/SUB1-006.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "SUB1-006-on-play-search",
+        "type": "onPlay",
+        "text": "On Play: Look at top 5 cards from the top of your deck and reveal up to 1 RE:ZERO type card and add it to your hand. Then place the rest at the bottom of your deck in any order."
+      }
+    ]
+  },
+
+  "SUB1-007": {
+    "id": "SUB1-007",
+    "cardNumber": "SUB1-007",
+    "name": "Echidna",
+    "cardType": "character",
+    "type": "RE:ZERO",
+    "color": "yellow",
+    "cost": 3,
+    "power": 5000,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/Y Subaru by Porentov/SUB1-007.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "SUB1-007-on-play-stage-copy",
+        "type": "onPlay",
+        "text": "On Play: Flip the top card in your Life area; activate effect of the Stage on your field. Then this Character gains +1000 power."
+      },
+      {
+        "id": "SUB1-007-activate-main-stage-copy",
+        "type": "activateMain",
+        "text": "Activate: Main: Flip the top card in your Life area; activate effect of the Stage on your field. Then this Character gains +1000 power."
+      }
+    ]
+  },
+
+  "SUB1-009": {
+    "id": "SUB1-009",
+    "cardNumber": "SUB1-009",
+    "name": "Elsa",
+    "cardType": "character",
+    "type": "RE:ZERO",
+    "color": "yellow",
+    "cost": 2,
+    "power": 2000,
+    "counter": 1000,
+    "attribute": "strike",
+    "image": "../images/Y Subaru by Porentov/SUB1-009.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "SUB1-009-when-attacking-life-power",
+        "type": "whenAttacking",
+        "text": "DON!! x1 When Attacking: Flip any card from your Life area; this card gains half of the revealed card's power."
+      },
+      {
+        "id": "SUB1-009-trigger-play",
+        "type": "trigger",
+        "text": "Trigger: Play this card."
+      }
+    ]
+  },
+
+  "SUB1-010": {
+    "id": "SUB1-010",
+    "cardNumber": "SUB1-010",
+    "name": "Otto",
+    "cardType": "character",
+    "type": "RE:ZERO",
+    "color": "yellow",
+    "cost": 2,
+    "power": 2000,
+    "counter": 2000,
+    "attribute": "special",
+    "image": "../images/Y Subaru by Porentov/SUB1-010.jpg",
+    "keywords": [],
+    "effects": []
+  },
+
+  "SUB1-012": {
+    "id": "SUB1-012",
+    "cardNumber": "SUB1-012",
+    "name": "Puck",
+    "cardType": "character",
+    "type": "RE:ZERO",
+    "color": "yellow",
+    "cost": 7,
+    "power": 6000,
+    "counter": 0,
+    "attribute": "special",
+    "image": "../images/Y Subaru by Porentov/SUB1-012.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "SUB1-012-on-play-search-emilia",
+        "type": "onPlay",
+        "text": "On Play: You may trash a card from the top of your Life area; look at top 6 cards from your deck and reveal 1 RE:ZERO type card and add it to your hand. Then, play up to 1 Emilia from your hand."
+      }
+    ]
   }
 }
