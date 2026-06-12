@@ -1365,7 +1365,7 @@
     "power": 5000,
     "counter": 2000,
     "attribute": "special",
-    "image": "../images/GB Hanami/JK02-008.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-008.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1387,7 +1387,7 @@
     "power": 5000,
     "counter": 0,
     "attribute": "special",
-    "image": "../images/GB Hanami/JK02-010.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-010.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1410,7 +1410,7 @@
     "power": 3000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/GB Hanami/JK02-011.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-011.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1432,7 +1432,7 @@
     "power": 5000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/GB Hanami/JK02-012.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-012.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1460,7 +1460,7 @@
     "power": 2000,
     "counter": 2000,
     "attribute": "special",
-    "image": "../images/GB Hanami/JK02-013.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-013.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1482,7 +1482,7 @@
     "power": 6000,
     "counter": 1000,
     "attribute": "ranged",
-    "image": "../images/GB Hanami/JK02-014.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-014.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1509,7 +1509,7 @@
     "power": 10000,
     "counter": 0,
     "attribute": "ranged",
-    "image": "../images/GB Hanami/JK02-015.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-015.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1541,7 +1541,7 @@
     "power": 8000,
     "counter": 0,
     "attribute": "special",
-    "image": "../images/GB Hanami/JK02-016.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-016.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1568,7 +1568,7 @@
     "power": 6000,
     "counter": 0,
     "attribute": "ranged",
-    "image": "../images/GB Hanami/JK02-017.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-017.jpg",
     "keywords": ["blocker"],
     "effects": [
       {
@@ -1595,7 +1595,7 @@
     "power": 6000,
     "counter": 0,
     "attribute": "strike",
-    "image": "../images/GB Hanami/JK02-018.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-018.jpg",
     "keywords": ["blocker"],
     "effects": [
       {
@@ -1618,7 +1618,7 @@
     "power": 8000,
     "counter": 0,
     "attribute": "special",
-    "image": "../images/GB Hanami/JK02-019.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-019.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1645,7 +1645,7 @@
     "power": 7000,
     "counter": 0,
     "attribute": "strike",
-    "image": "../images/GB Hanami/JK02-020.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-020.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1677,7 +1677,7 @@
     "power": 2000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/GB Hanami/JK02-021.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-021.jpg",
     "keywords": [],
     "effects": [
       {

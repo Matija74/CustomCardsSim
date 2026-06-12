@@ -510,7 +510,7 @@
     "type": "Curse technique",
     "color": "green",
     "cost": 1,
-    "image": "../images/GB Hanami/JK02-002.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-002.jpg",
     "effects": [
       {
         "id": "JK02-002-on-play",
@@ -534,7 +534,7 @@
     "type": "Curse technique",
     "color": "black",
     "cost": 2,
-    "image": "../images/GB Hanami/JK02-003.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-003.jpg",
     "effects": [
       {
         "id": "JK02-003-on-play",
@@ -552,7 +552,7 @@
     "type": "Curse technique",
     "color": "black",
     "cost": 3,
-    "image": "../images/GB Hanami/JK02-004.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-004.jpg",
     "effects": [
       {
         "id": "JK02-004-main",
@@ -570,7 +570,7 @@
     "type": "Curse technique",
     "color": "green",
     "cost": 2,
-    "image": "../images/GB Hanami/JK02-005.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-005.jpg",
     "effects": [
       {
         "id": "JK02-005-main",
@@ -588,7 +588,7 @@
     "type": "Curse technique",
     "color": "green",
     "cost": 6,
-    "image": "../images/GB Hanami/JK02-006.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-006.jpg",
     "effects": [
       {
         "id": "JK02-006-main",
@@ -606,7 +606,7 @@
     "type": "Curse technique",
     "color": "black",
     "cost": 3,
-    "image": "../images/GB Hanami/JK02-007.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-007.jpg",
     "effects": [
       {
         "id": "JK02-007-main",
@@ -624,7 +624,7 @@
     "type": "Curse technique",
     "color": "black",
     "cost": 2,
-    "image": "../images/GB Hanami/JK02-008.jpg",
+    "image": "../images/GB Hanami by Yue-chan/JK02-008.jpg",
     "effects": [
       {
         "id": "JK02-009-main",
