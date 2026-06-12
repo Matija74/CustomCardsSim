@@ -97,12 +97,7 @@ function createCompactDeckCard(deck) {
     const title = document.createElement("h3");
     title.textContent = deck.name;
 
-    const badge = document.createElement("span");
-    badge.className = "deck-id-badge";
-    badge.textContent = deck.id;
-
     header.appendChild(title);
-    header.appendChild(badge);
 
     const coverRow = document.createElement("div");
     coverRow.className = "deck-cover-row";
@@ -158,12 +153,7 @@ function createDeckCard(deck) {
     const title = document.createElement("h3");
     title.textContent = deck.name;
 
-    const badge = document.createElement("span");
-    badge.className = "deck-id-badge";
-    badge.textContent = deck.id;
-
     header.appendChild(title);
-    header.appendChild(badge);
 
     const coverRow = document.createElement("div");
     coverRow.className = "deck-cover-row";
