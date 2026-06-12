@@ -101,6 +101,47 @@ const ubHigurumaDeckText = `
 4xJK01-012
 `;
 
+const byAceYamatoDeckText = `
+3xYAM1-004
+4xYAM1-003
+4xEB03-057
+4xST28-005
+4xOP16-099
+4xOP16-098
+2xOP16-096
+4xOP16-085
+2xYAM1-002
+2xST28-004
+2xOP16-082
+2xYAM1-005
+4xPRB02-016
+4xOP13-104
+4xOP06-104
+2xOP06-107
+`;
+
+const gbHanamiDeckText = `
+4xJK02-021
+4xJK02-013
+4xJK02-011
+4xJK02-010
+4xJK02-008
+4xJK02-012
+3xJK02-014
+3xJK02-017
+3xJK02-018
+3xJK02-020
+2xJK02-019
+2xJK02-016
+2xJK02-015
+2xJK02-002
+2xJK02-003
+1xJK02-005
+1xJK02-006
+1xJK02-007
+1xJK02-009
+`;
+
 const availableDecks = [
     {
         id: "okarun-deck",
@@ -137,6 +178,18 @@ const availableDecks = [
         name: "UB Higuruma",
         leaderKey: "JK01-001",
         deckText: ubHigurumaDeckText
+    },
+    {
+        id: "by-ace-yamato-deck",
+        name: "BY Ace & Yamato",
+        leaderKey: "YAM1-001",
+        deckText: byAceYamatoDeckText
+    },
+    {
+        id: "gb-hanami-deck",
+        name: "GB Hanami",
+        leaderKey: "JK02-001",
+        deckText: gbHanamiDeckText
     }
 ];
 
