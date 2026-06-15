@@ -39,7 +39,7 @@ let restoringPresence = false;
 let immediateDisconnectRequest = null;
 let didSendImmediateDisconnect = false;
 
-const OPPONENT_DISCONNECT_GRACE_MS = 1500;
+const OPPONENT_DISCONNECT_GRACE_MS = 6000;
 
 window.__multiplayerRuntime = {
     getLocalSlot: () => localSlot,
@@ -110,6 +110,8 @@ function scheduleOpponentDisconnectCheck(match) {
     const opponentSlot = getOpponentSlot(localSlot);
     const ownPlayer = match?.players?.[localSlot];
     const opponentPlayer = match?.players?.[opponentSlot];
+    const scheduledDisconnectAt = Number(opponentPlayer?.disconnectedAt || 0);
+    const scheduledSharedRevision = String(match?.public?.sharedState?.revision || "");
     const shouldWatchDisconnect = Boolean(
         match?.status === "started" &&
         ownPlayer?.connected &&
@@ -133,6 +135,8 @@ function scheduleOpponentDisconnectCheck(match) {
             const latestMatch = await getMatch(roomCode);
             const latestOwnPlayer = latestMatch?.players?.[localSlot];
             const latestOpponentPlayer = latestMatch?.players?.[opponentSlot];
+            const latestDisconnectAt = Number(latestOpponentPlayer?.disconnectedAt || 0);
+            const latestSharedState = latestMatch?.public?.sharedState;
 
             if (
                 didHandleOpponentDisconnect ||
@@ -140,6 +144,29 @@ function scheduleOpponentDisconnectCheck(match) {
                 !latestOwnPlayer?.connected ||
                 !latestOpponentPlayer ||
                 latestOpponentPlayer.connected !== false
+            ) {
+                return;
+            }
+
+            if (
+                scheduledDisconnectAt > 0 &&
+                latestDisconnectAt > 0 &&
+                latestDisconnectAt !== scheduledDisconnectAt
+            ) {
+                return;
+            }
+
+            if (
+                latestDisconnectAt > 0 &&
+                Date.now() - latestDisconnectAt < OPPONENT_DISCONNECT_GRACE_MS
+            ) {
+                return;
+            }
+
+            if (
+                latestOpponentPlayer.uid &&
+                latestSharedState?.updatedBy === latestOpponentPlayer.uid &&
+                String(latestSharedState?.revision || "") !== scheduledSharedRevision
             ) {
                 return;
             }

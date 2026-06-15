@@ -272,8 +272,20 @@ window.CardEffects = {
         return this.hasCardName(player?.stage, "Turbo Granny Form");
     },
 
+    getOncePerTurnUsageKey(turnNumber) {
+        if (typeof getCurrentTurnStatusKey === "function") {
+            const currentTurnKey = getCurrentTurnStatusKey();
+
+            if (currentTurnKey) {
+                return currentTurnKey;
+            }
+        }
+
+        return turnNumber;
+    },
+
     hasUsedOncePerTurnEffect(card, effectId, turnNumber) {
-        return card?.oncePerTurnEffectsUsed?.[effectId] === turnNumber;
+        return card?.oncePerTurnEffectsUsed?.[effectId] === this.getOncePerTurnUsageKey(turnNumber);
     },
 
     markOncePerTurnEffectUsed(card, effectId, turnNumber) {
@@ -285,7 +297,7 @@ window.CardEffects = {
             card.oncePerTurnEffectsUsed = {};
         }
 
-        card.oncePerTurnEffectsUsed[effectId] = turnNumber;
+        card.oncePerTurnEffectsUsed[effectId] = this.getOncePerTurnUsageKey(turnNumber);
     },
 
     getPerTurnEffectUseCount(card, effectId, turnNumber) {

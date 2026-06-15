@@ -2127,6 +2127,16 @@ function getActivateMainEffect(card) {
     return card?.effects?.find(effect => effect.type === "activateMain") || null;
 }
 
+function isWanoCountryAttachDonEffect(card, effect) {
+    const effectText = String(effect?.text || "");
+
+    return effect?.id === "YAM1-004-activate-main-attach-don" || (
+        effect?.type === "activateMain" &&
+        String(card?.name || "").trim().toLowerCase() === "wano country" &&
+        effectText.includes("Attach up to 1 rested DON!! to 1 of your Characters.")
+    );
+}
+
 function canUseActivateMainEffect(player, card, effect) {
     if (!player || !card || !effect) {
         return false;
@@ -2166,7 +2176,7 @@ function canUseActivateMainEffect(player, card, effect) {
             getAceYamatoLeaderKOTargetChoices(player).length >= 2;
     }
 
-    if (effect.id === "YAM1-004-activate-main-attach-don") {
+    if (isWanoCountryAttachDonEffect(card, effect)) {
         return player.restedDon >= 1 &&
             player.characters.some(card => card?.cardType === "character");
     }
@@ -2324,7 +2334,7 @@ function resolveBoardActionEffect(player, card, effect) {
         return resolveAceYamatoLeaderActivateMain(player, card, ui);
     }
 
-    if (effect.id === "YAM1-004-activate-main-attach-don") {
+    if (isWanoCountryAttachDonEffect(card, effect)) {
         return resolveWanoCountryActivateMain(player, card, ui);
     }
 
@@ -4413,6 +4423,7 @@ function chooseNumberValue({
     min = 0,
     max = 10,
     initialValue = 0,
+    valueLabel = "cost",
     onComplete
 }) {
     removeEffectChoiceOverlay();
@@ -4453,7 +4464,7 @@ function chooseNumberValue({
     let value = Math.min(max, Math.max(min, Number(initialValue || 0)));
 
     const updateValue = () => {
-        currentValue.textContent = `${value} cost`;
+        currentValue.textContent = `${value} ${valueLabel}`;
         minusButton.disabled = value <= min;
         plusButton.disabled = value >= max;
     };

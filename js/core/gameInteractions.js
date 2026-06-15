@@ -2593,6 +2593,7 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
                 min: 0,
                 max: maxAttach,
                 initialValue: maxAttach,
+                valueLabel: "DON!!",
                 onComplete: attachCount
             });
 
@@ -7287,16 +7288,22 @@ function resolveAceYamatoLeaderOnCharacterPlay(player, playedCard, ui) {
 
     const opponent = getOpponentOfPlayer(player);
     const opponentKey = getPlayerKey(opponent);
+    const expiresAtEndOfTurns = gameState?.currentPlayer === opponent
+        ? Number(opponent?.turns || 0)
+        : Number(opponent?.turns || 0) + 1;
+    const durationText = gameState?.currentPlayer === opponent
+        ? `${opponent?.name || "the opponent"}'s current turn`
+        : `${opponent?.name || "the opponent"}'s next turn`;
     const completePowerGain = () => {
         addDurationPowerBonus(
             leader,
             1000,
-            Number(opponent?.turns || 0) + 1,
+            expiresAtEndOfTurns,
             opponentKey
         );
 
         ui?.renderLeaders?.();
-        addGameLog(`${leader.name} gained +1000 power until the end of ${opponent?.name || "the opponent"}'s next turn.`);
+        addGameLog(`${leader.name} gained +1000 power until the end of ${durationText}.`);
 
         if (typeof queueMultiplayerStateSync === "function") {
             queueMultiplayerStateSync();
@@ -7313,7 +7320,7 @@ function resolveAceYamatoLeaderOnCharacterPlay(player, playedCard, ui) {
 
     if (message.includes("found no cards in hand to trash.")) {
         completePowerGain();
-        return `${leader.name}'s Once Per Turn effect drew 2 cards and gained +1000 power until the end of ${opponent?.name || "the opponent"}'s next turn.`;
+        return `${leader.name}'s Once Per Turn effect drew 2 cards and gained +1000 power until the end of ${durationText}.`;
     }
 
     return `${leader.name}'s Once Per Turn effect activated after ${playedCard.name} was played from ${playedCard.playedFromZone}. ${message}`;
@@ -7582,7 +7589,7 @@ function resolveJogoActivateMain(player, sourceCard, ui) {
     addDurationPowerBonus(
         player.leader,
         2000,
-        Number(opponent?.turns || 0) + 1,
+        Number(opponent?.turns || 0),
         opponentKey
     );
 
@@ -7595,7 +7602,7 @@ function resolveJogoActivateMain(player, sourceCard, ui) {
 
     return {
         success: true,
-        message: `${sourceCard.name} set itself as active and gave ${player.leader?.name || "your leader"} +2000 power until the end of ${opponent?.name || "the opponent"}'s next turn.`
+        message: `${sourceCard.name} set itself as active and gave ${player.leader?.name || "your leader"} +2000 power until the start of ${player.name}'s next turn.`
     };
 }
 
