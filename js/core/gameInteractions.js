@@ -8522,11 +8522,11 @@ function saveSubaruCheckpointState(player, sourceCard, ui) {
     const opponentTopLife = opponent?.life?.[0];
 
     if (ownTopLife) {
-        ownTopLife.faceUp = true;
+        ownTopLife.faceUp = !ownTopLife.faceUp;
     }
 
     if (opponentTopLife) {
-        opponentTopLife.faceUp = true;
+        opponentTopLife.faceUp = !opponentTopLife.faceUp;
     }
 
     ui?.renderLifeCards?.();
