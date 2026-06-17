@@ -9,7 +9,7 @@
     "attribute": "strike",
     "power": 5000,
     "life": 4,
-    "image": "../images/GP Okarun by Matija/DD01-001.png",
+    "image": "../images/GP Okarun/DD01-001.png",
     "aliases": ["Okarun"],
     "keywords": [],
     "effects": [
@@ -37,7 +37,7 @@
     "attribute": "wisdom",
     "power": 5000,
     "life": 5,
-    "image": "../images/R Eggman by MrJeremic/EGG1-001.png",
+    "image": "../images/R Eggman/EGG1-001.png",
     "aliases": ["Eggman"],
     "keywords": [],
     "effects": [
@@ -59,7 +59,7 @@
     "attribute": "slash",
     "power": 5000,
     "life": 4,
-    "image": "../images/RB Guts by Mrki/BK01-001.jpg",
+    "image": "../images/RB Guts/BK01-001.jpg",
     "aliases": [],
     "keywords": [],
     "effects": [
@@ -81,7 +81,7 @@
     "attribute": "slash/special",
     "power": 5000,
     "life": 5,
-    "image": "../images/RY Ichigo by Mrki/BL01-001.png",
+    "image": "../images/RY Ichigo/BL01-001.png",
     "aliases": [],
     "keywords": [],
     "effects": [
@@ -102,14 +102,14 @@
   "POG1-001": {
     "id": "POG1-001",
     "cardNumber": "POG1-001",
-    "name": "David Taglavnovič",
+    "name": "David TaglavnoviÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚Â",
     "cardType": "leader",
     "type": "Film",
     "color": "blue",
     "attribute": "wisdom",
     "power": 5000,
     "life": 5,
-    "image": "../images/U Taglavnovič by Porentov/POG1-001.png",
+    "image": "../images/U Taglavnovič/POG1-001.png",
     "aliases": [],
     "keywords": [],
     "effects": [
@@ -159,7 +159,7 @@
     "attribute": "strike",
     "power": 5000,
     "life": 4,
-    "image": "../images/BY AceYamato by DarkSpectre/YAM1-001.png",
+    "image": "../images/BY AceYamato/YAM1-001.png",
     "aliases": [],
     "keywords": [],
     "effects": [
@@ -188,7 +188,7 @@
     "attribute": "ranged",
     "power": 5000,
     "life": 4,
-    "image": "../images/GB Hanami by Yue-chan/JK02-001.jpg",
+    "image": "../images/GB Hanami/JK02-001.jpg",
     "aliases": [],
     "keywords": [],
     "effects": [
@@ -221,7 +221,7 @@
     "attribute": "special",
     "power": 5000,
     "life": 5,
-    "image": "../images/Y Subaru by Porentov/SUB1-001.jpg",
+    "image": "../images/Y Subaru/SUB1-001.jpg",
     "aliases": [],
     "keywords": [],
     "effects": [
@@ -235,6 +235,84 @@
         "id": "SUB1-001-when-attacking-power",
         "type": "whenAttacking",
         "text": "When Attacking: You may place one of your life cards at the top of your Life area: this Leader gains +1000 power during this turn."
+      }
+    ]
+  }
+,
+  "DD02-001": {
+    "id": "DD02-001",
+    "cardNumber": "DD02-001",
+    "name": "Count Saint-Germain",
+    "cardType": "leader",
+    "type": "Dandadan/?",
+    "color": "black/purple",
+    "attribute": "slash/special",
+    "power": 6000,
+    "life": 3,
+    "image": "../images/PB Saint-Germain/DD02-001.png",
+    "aliases": [],
+    "keywords": [],
+    "effects": [
+      {
+        "id": "DD02-001-when-attacking",
+        "type": "whenAttacking",
+        "text": "When Attacking: DON!!-1: You may activate up to 1 effect of any card with the type [Curse] or [The Cursed] from your trash."
+      },
+      {
+        "id": "DD02-001-activate-main",
+        "type": "activateMain",
+        "oncePerTurn": true,
+        "text": "Activate: Main Once Per Turn: You may rest your [Ashura]: You may add 1 of your [Curse] or [The Cursed] type card from your trash to your hand."
+      }
+    ]
+  },
+
+  "KIL1-001": {
+    "id": "KIL1-001",
+    "cardNumber": "KIL1-001",
+    "name": "Killer",
+    "cardType": "leader",
+    "type": "Kid Pirates/Supernovas",
+    "color": "red/black",
+    "attribute": "slash",
+    "power": 5000,
+    "life": 4,
+    "image": "../images/RB Killer/KIL1-001.png",
+    "aliases": [],
+    "keywords": [],
+    "effects": [
+      {
+        "id": "KIL1-001-custom",
+        "type": "custom",
+        "oncePerTurn": true,
+        "text": "DON!! x2 Activate: Main / When Opponent Attacks Once Per Turn: You and your opponent each trash the top 2 cards of your deck: Choose one: Your Turn: Give up to 2 rested DON!! cards to 1 of your Characters. Opponent's Turn: Give up to 1 of your opponent's Leaders or Character cards -2000 power during this battle."
+      }
+    ]
+  },
+
+  "IMU1-001": {
+    "id": "IMU1-001",
+    "cardNumber": "IMU1-001",
+    "name": "Nerona Imu",
+    "cardType": "leader",
+    "type": "Celestial Dragon",
+    "color": "red/black",
+    "attribute": "strike",
+    "power": 6000,
+    "life": 3,
+    "image": "../images/RB Nerona Imu/IMU1-001.png",
+    "aliases": ["Imu"],
+    "keywords": [],
+    "effects": [
+      {
+        "id": "IMU1-001-deck-rule",
+        "type": "continuous",
+        "text": "Under the rules of this game, your deck consists of 40 cards and you cannot return cards from your trash to your deck by effects."
+      },
+      {
+        "id": "IMU1-001-when-attacking",
+        "type": "whenAttacking",
+        "text": "When Attacking: You may trash 1 card from the top of your deck: Up to 1 of your {Holy Knight} type Characters gains Rush and +1000 power until the end of your opponent's next End Phase."
       }
     ]
   }

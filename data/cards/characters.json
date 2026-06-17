@@ -10,7 +10,7 @@
     "power": 2000,
     "counter": 1000,
     "attribute": "wisdom",
-    "image": "../images/GP Okarun by Matija/DD01-003.png",
+    "image": "../images/GP Okarun/DD01-003.png",
     "keywords": [],
     "effects": [
       {
@@ -33,7 +33,7 @@
     "power": 7000,
     "counter": 1000,
     "attribute": "strike",
-    "image": "../images/GP Okarun by Matija/DD01-006.png",
+    "image": "../images/GP Okarun/DD01-006.png",
     "keywords": ["rush"],
     "effects": [
       {
@@ -61,7 +61,7 @@
     "power": 8000,
     "counter": 0,
     "attribute": "strike",
-    "image": "../images/GP Okarun by Matija/DD01-007.png",
+    "image": "../images/GP Okarun/DD01-007.png",
     "keywords": ["doubleAttack"],
     "effects": [
       {
@@ -83,7 +83,7 @@
     "power": 5000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/GP Okarun by Matija/DD01-008.png",
+    "image": "../images/GP Okarun/DD01-008.png",
     "keywords": [],
     "effects": [
       {
@@ -111,7 +111,7 @@
     "power": 3000,
     "counter": 2000,
     "attribute": "strike",
-    "image": "../images/GP Okarun by Matija/DD01-009.png",
+    "image": "../images/GP Okarun/DD01-009.png",
     "keywords": [],
     "effects": [
       {
@@ -133,7 +133,7 @@
     "power": 10000,
     "counter": 0,
     "attribute": "strike",
-    "image": "../images/GP Okarun by Matija/DD01-010.png",
+    "image": "../images/GP Okarun/DD01-010.png",
     "keywords": ["rush"],
     "effects": [
       {
@@ -155,7 +155,7 @@
     "power": 6000,
     "counter": 1000,
     "attribute": "strike",
-    "image": "../images/GP Okarun by Matija/DD01-012.png",
+    "image": "../images/GP Okarun/DD01-012.png",
     "keywords": [],
     "effects": [
       {
@@ -182,7 +182,7 @@
     "power": 2000,
     "counter": 2000,
     "attribute": "ranged",
-    "image": "../images/GP Okarun by Matija/DD01-0014.png",
+    "image": "../images/GP Okarun/DD01-014.png",
     "keywords": [],
     "effects": []
   },
@@ -198,7 +198,7 @@
     "power": 0,
     "counter": 2000,
     "attribute": "unknown",
-    "image": "../images/GP Okarun by Matija/DD01-015.png",
+    "image": "../images/GP Okarun/DD01-015.png",
     "keywords": [],
     "effects": [
       {
@@ -222,7 +222,7 @@
     "power": 7000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/GP Okarun by Matija/DD01-016.png",
+    "image": "../images/GP Okarun/DD01-016.png",
     "keywords": [],
     "effects": [
       {
@@ -251,7 +251,7 @@
     "power": 7000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/GP Okarun by Matija/DD01-017.png",
+    "image": "../images/GP Okarun/DD01-017.png",
     "keywords": [],
     "effects": [
       {
@@ -274,7 +274,7 @@
     "power": 10000,
     "counter": 0,
     "attribute": "unknown",
-    "image": "../images/R Eggman by MrJeremic/EGG1-002.png",
+    "image": "../images/R Eggman/EGG1-002.png",
     "keywords": ["rush"],
     "effects": [
       {
@@ -297,7 +297,7 @@
     "power": 2000,
     "counter": 1000,
     "attribute": "strike",
-    "image": "../images/R Eggman by MrJeremic/EGG1-003.png",
+    "image": "../images/R Eggman/EGG1-003.png",
     "keywords": [],
     "effects": [
       {
@@ -320,7 +320,7 @@
     "power": 2000,
     "counter": 2000,
     "attribute": "strike",
-    "image": "../images/R Eggman by MrJeremic/EGG1-004.png",
+    "image": "../images/R Eggman/EGG1-004.png",
     "keywords": [],
     "effects": []
   },
@@ -336,7 +336,7 @@
     "power": 4000,
     "counter": 1000,
     "attribute": "wisdom",
-    "image": "../images/R Eggman by MrJeremic/EGG1-005.png",
+    "image": "../images/R Eggman/EGG1-005.png",
     "aliases": ["Eggman"],
     "keywords": [],
     "effects": [
@@ -359,7 +359,7 @@
     "power": 7000,
     "counter": 0,
     "attribute": "special",
-    "image": "../images/R Eggman by MrJeremic/EGG1-006.png",
+    "image": "../images/R Eggman/EGG1-006.png",
     "keywords": [],
     "effects": [
       {
@@ -382,7 +382,7 @@
     "power": 5000,
     "counter": 1000,
     "attribute": "strike",
-    "image": "../images/R Eggman by MrJeremic/EGG1-008.png",
+    "image": "../images/R Eggman/EGG1-008.png",
     "keywords": ["rush"],
     "effects": [
       {
@@ -405,7 +405,7 @@
     "power": 2000,
     "counter": 2000,
     "attribute": "ranged",
-    "image": "../images/R Eggman by MrJeremic/EGG1-010.png",
+    "image": "../images/R Eggman/EGG1-010.png",
     "keywords": ["blocker"],
     "effects": []
   },
@@ -421,7 +421,7 @@
     "power": 2000,
     "counter": 2000,
     "attribute": "ranged",
-    "image": "../images/R Eggman by MrJeremic/EGG1-011.png",
+    "image": "../images/R Eggman/EGG1-011.png",
     "keywords": [],
     "effects": [
       {
@@ -444,7 +444,7 @@
     "power": 0,
     "counter": 2000,
     "attribute": "special",
-    "image": "../images/R Eggman by MrJeremic/EGG1-013.png",
+    "image": "../images/R Eggman/EGG1-013.png",
     "keywords": [],
     "effects": [
       {
@@ -467,7 +467,7 @@
     "power": 9000,
     "counter": 1000,
     "attribute": "strike/ranged",
-    "image": "../images/R Eggman by MrJeremic/EGG1-014.png",
+    "image": "../images/R Eggman/EGG1-014.png",
     "keywords": [],
     "effects": [
       {
@@ -489,7 +489,7 @@
     "power": 0,
     "counter": 1000,
     "attribute": "wisdom",
-    "image": "../images/RB Guts by Mrki/BK01-003.jpg",
+    "image": "../images/RB Guts/BK01-003.jpg",
     "keywords": [],
     "effects": [
       {
@@ -518,7 +518,7 @@
     "power": 1000,
     "counter": 2000,
     "attribute": "special",
-    "image": "../images/RB Guts by Mrki/BK01-004.jpg",
+    "image": "../images/RB Guts/BK01-004.jpg",
     "keywords": ["blocker"],
     "effects": [
       {
@@ -540,7 +540,7 @@
     "power": 1000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/RB Guts by Mrki/BK01-005.jpg",
+    "image": "../images/RB Guts/BK01-005.jpg",
     "keywords": [],
     "effects": [
       {
@@ -563,7 +563,7 @@
     "power": 2000,
     "counter": 1000,
     "attribute": "wisdom",
-    "image": "../images/RB Guts by Mrki/BK01-006.jpg",
+    "image": "../images/RB Guts/BK01-006.jpg",
     "keywords": ["blocker"],
     "effects": [
       {
@@ -585,7 +585,7 @@
     "power": 4000,
     "counter": 1000,
     "attribute": "slash",
-    "image": "../images/RB Guts by Mrki/BK01-007.jpg",
+    "image": "../images/RB Guts/BK01-007.jpg",
     "keywords": [],
     "effects": [
       {
@@ -613,7 +613,7 @@
     "power": 5000,
     "counter": 1000,
     "attribute": "slash",
-    "image": "../images/RB Guts by Mrki/BK01-008.jpg",
+    "image": "../images/RB Guts/BK01-008.jpg",
     "keywords": [],
     "effects": [
       {
@@ -635,7 +635,7 @@
     "power": 7000,
     "counter": 0,
     "attribute": "slash",
-    "image": "../images/RB Guts by Mrki/BK01-009.jpg",
+    "image": "../images/RB Guts/BK01-009.jpg",
     "keywords": [],
     "effects": [
       {
@@ -657,7 +657,7 @@
     "power": 5000,
     "counter": 1000,
     "attribute": "slash",
-    "image": "../images/RB Guts by Mrki/BK01-010.jpg",
+    "image": "../images/RB Guts/BK01-010.jpg",
     "keywords": [],
     "effects": [
       {
@@ -685,7 +685,7 @@
     "power": 4000,
     "counter": 2000,
     "attribute": "wisdom",
-    "image": "../images/RB Guts by Mrki/BK01-012.jpg",
+    "image": "../images/RB Guts/BK01-012.jpg",
     "aliases": ["Farnese"],
     "keywords": ["blocker"],
     "effects": [
@@ -708,7 +708,7 @@
     "power": 8000,
     "counter": 0,
     "attribute": "slash",
-    "image": "../images/RB Guts by Mrki/BK01-013.jpg",
+    "image": "../images/RB Guts/BK01-013.jpg",
     "keywords": [],
     "effects": [
       {
@@ -735,7 +735,7 @@
     "power": 12000,
     "counter": 0,
     "attribute": "slash",
-    "image": "../images/RB Guts by Mrki/BK01-014.jpg",
+    "image": "../images/RB Guts/BK01-014.jpg",
     "keywords": [],
     "effects": [
       {
@@ -757,7 +757,7 @@
     "power": 12000,
     "counter": 0,
     "attribute": "slash",
-    "image": "../images/RB Guts by Mrki/BK01-016.jpg",
+    "image": "../images/RB Guts/BK01-016.jpg",
     "keywords": [],
     "effects": [
       {
@@ -785,7 +785,7 @@
     "power": 2000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/RY Ichigo by Mrki/BL01-007.png",
+    "image": "../images/RY Ichigo/BL01-007.png",
     "keywords": [],
     "effects": [
       {
@@ -808,7 +808,7 @@
     "power": 5000,
     "counter": 0,
     "attribute": "ranged/special",
-    "image": "../images/RY Ichigo by Mrki/BL01-008.png",
+    "image": "../images/RY Ichigo/BL01-008.png",
     "keywords": [],
     "effects": [
       {
@@ -831,7 +831,7 @@
     "power": 5000,
     "counter": 1000,
     "attribute": "slash/special",
-    "image": "../images/RY Ichigo by Mrki/BL01-009.png",
+    "image": "../images/RY Ichigo/BL01-009.png",
     "keywords": [],
     "effects": [
       {
@@ -858,7 +858,7 @@
     "power": 1000,
     "counter": 2000,
     "attribute": "strike",
-    "image": "../images/RY Ichigo by Mrki/BL01-010.png",
+    "image": "../images/RY Ichigo/BL01-010.png",
     "keywords": ["blocker"],
     "effects": [
       {
@@ -881,7 +881,7 @@
     "power": 4000,
     "counter": 0,
     "attribute": "strike",
-    "image": "../images/RY Ichigo by Mrki/BL01-011.png",
+    "image": "../images/RY Ichigo/BL01-011.png",
     "keywords": ["rush"],
     "effects": [
       {
@@ -903,7 +903,7 @@
     "power": 8000,
     "counter": 0,
     "attribute": "slash/special",
-    "image": "../images/RY Ichigo by Mrki/BL01-012.png",
+    "image": "../images/RY Ichigo/BL01-012.png",
     "keywords": ["rush"],
     "effects": [
       {
@@ -925,7 +925,7 @@
     "power": 5000,
     "counter": 1000,
     "attribute": "strike",
-    "image": "../images/RY Ichigo by Mrki/BL01-013.png",
+    "image": "../images/RY Ichigo/BL01-013.png",
     "keywords": ["blocker"],
     "effects": [
       {
@@ -947,7 +947,7 @@
     "power": 7000,
     "counter": 1000,
     "attribute": "strike",
-    "image": "../images/RY Ichigo by Mrki/BL01-014.png",
+    "image": "../images/RY Ichigo/BL01-014.png",
     "keywords": [],
     "effects": [
       {
@@ -974,7 +974,7 @@
     "power": 1000,
     "counter": 2000,
     "attribute": "strike",
-    "image": "../images/RY Ichigo by Mrki/BL01-015.png",
+    "image": "../images/RY Ichigo/BL01-015.png",
     "keywords": ["blocker"],
     "effects": [
       {
@@ -995,7 +995,7 @@
   "POG1-003": {
     "id": "POG1-003",
     "cardNumber": "POG1-003",
-    "name": "Mr. Jeremić",
+    "name": "Mr. JeremiÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡",
     "cardType": "character",
     "type": "Director",
     "color": "blue",
@@ -1003,7 +1003,7 @@
     "power": 10000,
     "counter": 0,
     "attribute": "unknown",
-    "image": "../images/U Taglavnovič by Porentov/POG1-003.jpg",
+    "image": "../images/U Taglavnovič/POG1-003.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1025,18 +1025,18 @@
     "power": 5000,
     "counter": 1000,
     "attribute": "strike",
-    "image": "../images/U Taglavnovič by Porentov/POG1-005.jpg",
+    "image": "../images/U Taglavnovič/POG1-005.jpg",
     "keywords": [],
     "effects": [
       {
         "id": "POG1-005-when-attacking",
         "type": "whenAttacking",
-        "text": "When Attacking: Reveal 1 card from your deck. If that card is [Manifestirana žoga] or [Klobuk] up to 1 of your Leader or Characters gains +2000 power until the end of this turn. Then trash the revealed card."
+        "text": "When Attacking: Reveal 1 card from your deck. If that card is [Manifestirana ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¾oga] or [Klobuk] up to 1 of your Leader or Characters gains +2000 power until the end of this turn. Then trash the revealed card."
       },
       {
         "id": "POG1-005-on-opponent-attack",
         "type": "onOpponentAttack",
-        "text": "When Opponent Attacks: Reveal 1 card from your deck. If that card is [Manifestirana žoga] or [Klobuk] up to 1 of your Leader or Characters gain +2000 power until the end of this turn. Then trash the revealed card."
+        "text": "When Opponent Attacks: Reveal 1 card from your deck. If that card is [Manifestirana ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¾oga] or [Klobuk] up to 1 of your Leader or Characters gain +2000 power until the end of this turn. Then trash the revealed card."
       }
     ]
   },
@@ -1044,7 +1044,7 @@
   "POG1-006": {
     "id": "POG1-006",
     "cardNumber": "POG1-006",
-    "name": "David Taglavnovič",
+    "name": "David TaglavnoviÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚Â",
     "cardType": "character",
     "type": "Film",
     "color": "blue",
@@ -1052,13 +1052,13 @@
     "power": 3000,
     "counter": 1000,
     "attribute": "wisdom",
-    "image": "../images/U Taglavnovič by Porentov/POG1-006.jpg",
+    "image": "../images/U Taglavnovič/POG1-006.jpg",
     "keywords": [],
     "effects": [
       {
         "id": "POG1-006-activate-main",
         "type": "activateMain",
-        "text": "Activate: Main: You may trash this Character: If your Leader is [David Taglavnovič], play up to 1 [B.R.A.N.K.O.] from your hand or Trash with a cost thats is equal or less than the number of DON!! cards on your opponent's field."
+        "text": "Activate: Main: You may trash this Character: If your Leader is [David TaglavnoviÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚Â], play up to 1 [B.R.A.N.K.O.] from your hand or Trash with a cost thats is equal or less than the number of DON!! cards on your opponent's field."
       }
     ]
   },
@@ -1066,7 +1066,7 @@
   "POG1-007": {
     "id": "POG1-007",
     "cardNumber": "POG1-007",
-    "name": "Johan Johanović",
+    "name": "Johan JohanoviÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡",
     "cardType": "character",
     "type": "Film",
     "color": "blue",
@@ -1074,7 +1074,7 @@
     "power": 6000,
     "counter": 1000,
     "attribute": "slash",
-    "image": "../images/U Taglavnovič by Porentov/POG1-007.jpg",
+    "image": "../images/U Taglavnovič/POG1-007.jpg",
     "keywords": ["blocker"],
     "effects": [
       {
@@ -1096,7 +1096,7 @@
     "power": 8000,
     "counter": 1000,
     "attribute": "unknown",
-    "image": "../images/U Taglavnovič by Porentov/POG1-012.jpg",
+    "image": "../images/U Taglavnovič/POG1-012.jpg",
     "keywords": ["blocker"],
     "effects": [
       {
@@ -1123,7 +1123,7 @@
     "power": 4000,
     "counter": 1000,
     "attribute": "wisdom",
-    "image": "../images/U Taglavnovič by Porentov/POG1-013.jpg",
+    "image": "../images/U Taglavnovič/POG1-013.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1301,7 +1301,7 @@
     "power": 6000,
     "counter": 1000,
     "attribute": "slash",
-    "image": "../images/BY AceYamato by DarkSpectre/YAM1-002.png",
+    "image": "../images/BY AceYamato/YAM1-002.png",
     "keywords": [],
     "effects": [
       {
@@ -1338,7 +1338,7 @@
     "power": 0,
     "counter": 1000,
     "attribute": "ranged",
-    "image": "../images/BY AceYamato by DarkSpectre/YAM1-005.png",
+    "image": "../images/BY AceYamato/YAM1-005.png",
     "keywords": [],
     "effects": [
       {
@@ -1365,7 +1365,7 @@
     "power": 5000,
     "counter": 2000,
     "attribute": "special",
-    "image": "../images/GB Hanami by Yue-chan/JK02-008.jpg",
+    "image": "../images/GB Hanami/JK02-008.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1387,7 +1387,7 @@
     "power": 5000,
     "counter": 0,
     "attribute": "special",
-    "image": "../images/GB Hanami by Yue-chan/JK02-010.jpg",
+    "image": "../images/GB Hanami/JK02-010.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1410,7 +1410,7 @@
     "power": 3000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/GB Hanami by Yue-chan/JK02-011.jpg",
+    "image": "../images/GB Hanami/JK02-011.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1432,7 +1432,7 @@
     "power": 5000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/GB Hanami by Yue-chan/JK02-012.jpg",
+    "image": "../images/GB Hanami/JK02-012.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1460,7 +1460,7 @@
     "power": 2000,
     "counter": 2000,
     "attribute": "special",
-    "image": "../images/GB Hanami by Yue-chan/JK02-013.jpg",
+    "image": "../images/GB Hanami/JK02-013.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1482,7 +1482,7 @@
     "power": 6000,
     "counter": 1000,
     "attribute": "ranged",
-    "image": "../images/GB Hanami by Yue-chan/JK02-014.jpg",
+    "image": "../images/GB Hanami/JK02-014.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1509,7 +1509,7 @@
     "power": 10000,
     "counter": 0,
     "attribute": "ranged",
-    "image": "../images/GB Hanami by Yue-chan/JK02-015.jpg",
+    "image": "../images/GB Hanami/JK02-015.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1541,7 +1541,7 @@
     "power": 8000,
     "counter": 0,
     "attribute": "special",
-    "image": "../images/GB Hanami by Yue-chan/JK02-016.jpg",
+    "image": "../images/GB Hanami/JK02-016.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1568,7 +1568,7 @@
     "power": 6000,
     "counter": 0,
     "attribute": "ranged",
-    "image": "../images/GB Hanami by Yue-chan/JK02-017.jpg",
+    "image": "../images/GB Hanami/JK02-017.jpg",
     "keywords": ["blocker"],
     "effects": [
       {
@@ -1595,7 +1595,7 @@
     "power": 6000,
     "counter": 0,
     "attribute": "strike",
-    "image": "../images/GB Hanami by Yue-chan/JK02-018.jpg",
+    "image": "../images/GB Hanami/JK02-018.jpg",
     "keywords": ["blocker"],
     "effects": [
       {
@@ -1618,7 +1618,7 @@
     "power": 8000,
     "counter": 0,
     "attribute": "special",
-    "image": "../images/GB Hanami by Yue-chan/JK02-019.jpg",
+    "image": "../images/GB Hanami/JK02-019.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1645,7 +1645,7 @@
     "power": 7000,
     "counter": 0,
     "attribute": "strike",
-    "image": "../images/GB Hanami by Yue-chan/JK02-020.jpg",
+    "image": "../images/GB Hanami/JK02-020.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1677,7 +1677,7 @@
     "power": 2000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/GB Hanami by Yue-chan/JK02-021.jpg",
+    "image": "../images/GB Hanami/JK02-021.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1699,7 +1699,7 @@
     "power": 6000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/Y Subaru by Porentov/SUB1-002.jpg",
+    "image": "../images/Y Subaru/SUB1-002.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1721,7 +1721,7 @@
     "power": 2000,
     "counter": 2000,
     "attribute": "special",
-    "image": "../images/Y Subaru by Porentov/SUB1-003.jpg",
+    "image": "../images/Y Subaru/SUB1-003.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1743,7 +1743,7 @@
     "power": 7000,
     "counter": 0,
     "attribute": "slash",
-    "image": "../images/Y Subaru by Porentov/SUB1-004.jpg",
+    "image": "../images/Y Subaru/SUB1-004.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1765,7 +1765,7 @@
     "power": 10000,
     "counter": 0,
     "attribute": "slash",
-    "image": "../images/Y Subaru by Porentov/SUB1-005.jpg",
+    "image": "../images/Y Subaru/SUB1-005.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1792,7 +1792,7 @@
     "power": 2000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/Y Subaru by Porentov/SUB1-006.jpg",
+    "image": "../images/Y Subaru/SUB1-006.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1814,7 +1814,7 @@
     "power": 5000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/Y Subaru by Porentov/SUB1-007.jpg",
+    "image": "../images/Y Subaru/SUB1-007.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1841,7 +1841,7 @@
     "power": 2000,
     "counter": 1000,
     "attribute": "strike",
-    "image": "../images/Y Subaru by Porentov/SUB1-009.jpg",
+    "image": "../images/Y Subaru/SUB1-009.jpg",
     "keywords": [],
     "effects": [
       {
@@ -1868,7 +1868,7 @@
     "power": 2000,
     "counter": 2000,
     "attribute": "special",
-    "image": "../images/Y Subaru by Porentov/SUB1-010.jpg",
+    "image": "../images/Y Subaru/SUB1-010.jpg",
     "keywords": [],
     "effects": []
   },
@@ -1884,13 +1884,640 @@
     "power": 6000,
     "counter": 0,
     "attribute": "special",
-    "image": "../images/Y Subaru by Porentov/SUB1-012.jpg",
+    "image": "../images/Y Subaru/SUB1-012.jpg",
     "keywords": [],
     "effects": [
       {
         "id": "SUB1-012-on-play-search-emilia",
         "type": "onPlay",
         "text": "On Play: You may trash a card from the top of your Life area; look at top 6 cards from your deck and reveal 1 RE:ZERO type card and add it to your hand. Then, play up to 1 Emilia from your hand."
+      }
+    ]
+  }
+,
+  "DD02-004": {
+    "id": "DD02-004",
+    "cardNumber": "DD02-004",
+    "name": "Vlad",
+    "cardType": "character",
+    "type": "Dandadan/The Cursed",
+    "color": "black",
+    "cost": 1,
+    "power": 0,
+    "counter": 1000,
+    "attribute": "unknown",
+    "image": "../images/PB Saint-Germain/DD02-004.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "DD02-004-on-play-search",
+        "type": "onPlay",
+        "text": "On Play: Look at 4 cards from the top of your deck; reveal up to 1 [Curse] or [The Cursed] type card or up to 1 [Ashura] and add it to your hand. Then, place the rest at the bottom of your deck in any order."
+      }
+    ]
+  },
+
+  "DD02-006": {
+    "id": "DD02-006",
+    "cardNumber": "DD02-006",
+    "name": "Red Baron",
+    "cardType": "character",
+    "type": "Dandadan/Black Paladin/The Cursed",
+    "color": "black",
+    "cost": 5,
+    "power": 6000,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/PB Saint-Germain/DD02-006.png",
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "DD02-006-battle-protection",
+        "type": "continuous",
+        "text": "This character cannot be K.O.-d when battling <Strike> attribute characters."
+      }
+    ]
+  },
+
+  "DD02-007": {
+    "id": "DD02-007",
+    "cardNumber": "DD02-007",
+    "name": "Jack Wisp",
+    "cardType": "character",
+    "type": "Dandadan/Black Paladin/The Cursed",
+    "color": "black",
+    "cost": 5,
+    "power": 7000,
+    "counter": 0,
+    "attribute": "special",
+    "image": "../images/PB Saint-Germain/DD02-007.png",
+    "keywords": ["rush"],
+    "effects": [
+      {
+        "id": "DD02-007-active-character-attack",
+        "type": "continuous",
+        "text": "This character can also attack your opponent's active characters."
+      }
+    ]
+  },
+
+  "DD02-008": {
+    "id": "DD02-008",
+    "cardNumber": "DD02-008",
+    "name": "Vakappa",
+    "cardType": "character",
+    "type": "Dandadan/Black Paladin/The Cursed",
+    "color": "black",
+    "cost": 5,
+    "power": 5000,
+    "counter": 2000,
+    "attribute": "special",
+    "image": "../images/PB Saint-Germain/DD02-008.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "DD02-008-team-power",
+        "type": "continuous",
+        "text": "All your {Black Paladin} type Characters gain +1000 power."
+      }
+    ]
+  },
+
+  "DD02-011": {
+    "id": "DD02-011",
+    "cardNumber": "DD02-011",
+    "name": "Reiko Kashima",
+    "cardType": "character",
+    "type": "Dandadan/Curse",
+    "color": "black",
+    "cost": 10,
+    "power": 12000,
+    "counter": 0,
+    "attribute": "strike",
+    "image": "../images/PB Saint-Germain/DD02-011.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "DD02-011-on-play-search-play",
+        "type": "onPlay",
+        "text": "On Play: Look at 7 cards from the top of your deck; reveal up to 1 [I'll Kill Every Last One of You] and add it to your hand. Then, place the rest at the bottom of your deck in any order, and play up to 1 [I'll Kill Every Last One of You]."
+      }
+    ]
+  },
+
+  "KIL1-002": {
+    "id": "KIL1-002",
+    "cardNumber": "KIL1-002",
+    "name": "Dive",
+    "cardType": "character",
+    "type": "Kid Pirates",
+    "color": "black",
+    "cost": 1,
+    "power": 0,
+    "counter": 2000,
+    "attribute": "special",
+    "image": "../images/RB Killer/KIL1-002.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "KIL1-002-on-play-search",
+        "type": "onPlay",
+        "text": "On Play: Look at the top 3 cards of your deck, reveal up to 1 {Kid Pirates} type card other than [Dive]. Then, trash the rest."
+      },
+      {
+        "id": "KIL1-002-when-trashed-from-deck",
+        "type": "whenTrashedFromDeck",
+        "text": "You may activate this effect when this card is placed in the trash from your deck. Play this card."
+      }
+    ]
+  },
+
+  "KIL1-003": {
+    "id": "KIL1-003",
+    "cardNumber": "KIL1-003",
+    "name": "Reck",
+    "cardType": "character",
+    "type": "Kid Pirates",
+    "color": "black",
+    "cost": 2,
+    "power": 1000,
+    "counter": 1000,
+    "attribute": "ranged",
+    "image": "../images/RB Killer/KIL1-003.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "KIL1-003-activate-main",
+        "type": "activateMain",
+        "text": "Activate: Main: Put 1 card from your opponent's trash on the bottom of their deck: Return up to 1 card with the same cost from your trash to your hand."
+      },
+      {
+        "id": "KIL1-003-trigger",
+        "type": "trigger",
+        "text": "Trigger: Return up to 1 Character card from your trash to your hand."
+      }
+    ]
+  },
+
+  "KIL1-004": {
+    "id": "KIL1-004",
+    "cardNumber": "KIL1-004",
+    "name": "Pomp",
+    "cardType": "character",
+    "type": "Kid Pirates",
+    "color": "black",
+    "cost": 2,
+    "power": 0,
+    "counter": 2000,
+    "attribute": "strike",
+    "image": "../images/RB Killer/KIL1-004.png",
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "KIL1-004-activate-main",
+        "type": "activateMain",
+        "text": "Activate: Main: You may rest this Character: Place any number of cards from your trash to the bottom of your deck in any order, then your opponent places cards from their trash onto the bottom of their deck in a random order for each card you placed this way. Up to 1 of your Characters gains +1000 power this turn for every 6 cards placed at the bottom of each deck."
+      }
+    ]
+  },
+
+  "KIL1-005": {
+    "id": "KIL1-005",
+    "cardNumber": "KIL1-005",
+    "name": "Boogie",
+    "cardType": "character",
+    "type": "Kid Pirates",
+    "color": "black",
+    "cost": 3,
+    "power": 4000,
+    "counter": 1000,
+    "attribute": "strike",
+    "image": "../images/RB Killer/KIL1-005.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "KIL1-005-activate-main",
+        "type": "activateMain",
+        "text": "Activate: Main: Trash this card: Draw a card. Then you and your opponent trash the top 3 cards of your decks."
+      }
+    ]
+  },
+
+  "KIL1-006": {
+    "id": "KIL1-006",
+    "cardNumber": "KIL1-006",
+    "name": "UK",
+    "cardType": "character",
+    "type": "Kid Pirates",
+    "color": "black",
+    "cost": 3,
+    "power": 3000,
+    "counter": 1000,
+    "attribute": "strike",
+    "image": "../images/RB Killer/KIL1-006.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "KIL1-006-on-play",
+        "type": "onPlay",
+        "text": "On Play: Place any number of cards from your trash to the bottom of your deck in any order, then your opponent places cards from their trash onto the bottom of their deck in a random order for each card you placed this way. Draw then trash a card for every 4 cards returned this way."
+      },
+      {
+        "id": "KIL1-006-trigger",
+        "type": "trigger",
+        "text": "Trigger: You and your opponent each trash the top 2 cards of your deck."
+      }
+    ]
+  },
+
+  "KIL1-007": {
+    "id": "KIL1-007",
+    "cardNumber": "KIL1-007",
+    "name": "Bubblegum",
+    "cardType": "character",
+    "type": "Kid Pirates",
+    "color": "black",
+    "cost": 4,
+    "power": 5000,
+    "counter": 1000,
+    "attribute": "slash",
+    "image": "../images/RB Killer/KIL1-007.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "KIL1-007-custom",
+        "type": "custom",
+        "text": "DON!! x2 When Attacking / On K.O.: Place up to 1 card from your trash to the bottom of your deck, then your opponent places cards from their trash onto the bottom of their deck in a random order for each card you placed this way: You and your opponent each trash the top 3 cards of your deck."
+      },
+      {
+        "id": "KIL1-007-trigger",
+        "type": "trigger",
+        "text": "Trigger: If your Leader has the {Kid Pirates} type, play this card."
+      }
+    ]
+  },
+
+  "KIL1-008": {
+    "id": "KIL1-008",
+    "cardNumber": "KIL1-008",
+    "name": "Gig",
+    "cardType": "character",
+    "type": "Kid Pirates",
+    "color": "black",
+    "cost": 5,
+    "power": 5000,
+    "counter": 0,
+    "attribute": "strike",
+    "image": "../images/RB Killer/KIL1-008.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "KIL1-008-don-two",
+        "type": "continuous",
+        "text": "DON!! x2 This Character gains Rush and +2000 power."
+      },
+      {
+        "id": "KIL1-008-trigger",
+        "type": "trigger",
+        "text": "Trigger: You and your opponent each trash the top 1 card of your decks."
+      }
+    ]
+  },
+
+  "KIL1-009": {
+    "id": "KIL1-009",
+    "cardNumber": "KIL1-009",
+    "name": "Heat",
+    "cardType": "character",
+    "type": "Kid Pirates",
+    "color": "black",
+    "cost": 5,
+    "power": 4000,
+    "counter": 2000,
+    "attribute": "special",
+    "image": "../images/RB Killer/KIL1-009.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "KIL1-009-activate-main",
+        "type": "activateMain",
+        "text": "Activate: Main: Place any number of cards from your trash to the bottom of your deck in any order, then your opponent places cards from their trash onto the bottom of their deck in a random order for each card you placed this way. For every 8 cards returned this way, negate the effects of that many of your opponent's Characters until the end of the turn."
+      }
+    ]
+  },
+
+  "KIL1-010": {
+    "id": "KIL1-010",
+    "cardNumber": "KIL1-010",
+    "name": "Wire",
+    "cardType": "character",
+    "type": "Kid Pirates",
+    "color": "red",
+    "cost": 6,
+    "power": 6000,
+    "counter": 0,
+    "attribute": "slash",
+    "image": "../images/RB Killer/KIL1-010.png",
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "KIL1-010-on-play",
+        "type": "onPlay",
+        "text": "On Play: K.O. up to 1 of your opponent's Characters with 6000 power or less."
+      },
+      {
+        "id": "KIL1-010-on-ko",
+        "type": "onKO",
+        "text": "DON!! x2 On K.O.: Activate this card's On Play effect."
+      }
+    ]
+  },
+
+  "KIL1-011": {
+    "id": "KIL1-011",
+    "cardNumber": "KIL1-011",
+    "name": "Eustass \\\"Captain\\\" Kid",
+    "cardType": "character",
+    "type": "Kid Pirates/Supernovas",
+    "color": "red",
+    "cost": 10,
+    "power": 10000,
+    "counter": 0,
+    "attribute": "special",
+    "image": "../images/RB Killer/KIL1-011.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "KIL1-011-on-play",
+        "type": "onPlay",
+        "text": "On Play: If your Leader has the {Supernovas} type, this Character gains Rush. Your opponent's Characters with 6000 power or less cannot activate Blocker this turn. Then, add the top card of your Life cards to your hand."
+      }
+    ]
+  },
+
+  "KIL1-012": {
+    "id": "KIL1-012",
+    "cardNumber": "KIL1-012",
+    "name": "Killer",
+    "cardType": "character",
+    "type": "Kid Pirates/Supernovas",
+    "color": "black",
+    "cost": 8,
+    "power": 9000,
+    "counter": 0,
+    "attribute": "slash",
+    "image": "../images/RB Killer/KIL1-012.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "KIL1-012-blocker-grant",
+        "type": "continuous",
+        "text": "If your Leader has the {Kid Pirates} type, this Character gains Blocker."
+      },
+      {
+        "id": "KIL1-012-when-attacked",
+        "type": "whenAttacked",
+        "oncePerTurn": true,
+        "text": "When Attacked Once Per Turn: Place any number of cards from your trash to the bottom of your deck in any order, then your opponent places cards from their trash onto the bottom of their deck in a random order for each card you placed this way. For every 5 cards put back this way, your Leader gains +1000 power until the end of your opponent's next turn."
+      }
+    ]
+  },
+
+  "IMU1-002": {
+    "id": "IMU1-002",
+    "cardNumber": "IMU1-002",
+    "name": "St. Sheperd Sommers",
+    "cardType": "character",
+    "type": "Holy Knight/Celestial Dragon",
+    "color": "black",
+    "cost": 4,
+    "power": 5000,
+    "counter": 1000,
+    "attribute": "slash",
+    "image": "../images/RB Nerona Imu/IMU1-002.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "IMU1-002-on-ko-in-combat",
+        "type": "onKO",
+        "text": "If this Character is K.O.'d in combat, you may trash 1 card from the top of your deck: Give the attacking card -2000 power until the end of your next turn."
+      }
+    ]
+  },
+
+  "IMU1-003": {
+    "id": "IMU1-003",
+    "cardNumber": "IMU1-003",
+    "name": "Cerberus",
+    "cardType": "character",
+    "type": "Holy Knight/Animal",
+    "color": "red",
+    "cost": 3,
+    "power": 3000,
+    "counter": 1000,
+    "attribute": "slash",
+    "image": "../images/RB Nerona Imu/IMU1-003.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "IMU1-003-on-play",
+        "type": "onPlay",
+        "text": "On Play: Up to 1 {Holy Knight} type Character gains +1000 power during this turn."
+      },
+      {
+        "id": "IMU1-003-when-attacking",
+        "type": "whenAttacking",
+        "text": "When Attacking: Give up to 1 of your opponent's Leaders or Characters -1000 power during this turn."
+      }
+    ]
+  },
+
+  "IMU1-004": {
+    "id": "IMU1-004",
+    "cardNumber": "IMU1-004",
+    "name": "Harald",
+    "cardType": "character",
+    "type": "Holy Knight/Giant",
+    "color": "red",
+    "cost": 8,
+    "power": 9000,
+    "counter": 1000,
+    "attribute": "slash",
+    "image": "../images/RB Nerona Imu/IMU1-004.png",
+    "keywords": ["doubleAttack"],
+    "effects": [
+      {
+        "id": "IMU1-004-when-attacking",
+        "type": "whenAttacking",
+        "text": "When Attacking: Trash 1 card from the top of your deck."
+      },
+      {
+        "id": "IMU1-004-on-ko",
+        "type": "onKO",
+        "text": "On K.O.: Trash 3 cards from the top of your deck."
+      }
+    ]
+  },
+
+  "IMU1-005": {
+    "id": "IMU1-005",
+    "cardNumber": "IMU1-005",
+    "name": "St. Figarland Garling",
+    "cardType": "character",
+    "type": "Holy Knight/Five Elders",
+    "color": "black",
+    "cost": 4,
+    "power": 4000,
+    "counter": 2000,
+    "attribute": "slash",
+    "image": "../images/RB Nerona Imu/IMU1-005.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "IMU1-005-stage-protection",
+        "type": "replacement",
+        "text": "If one of your Stage cards would be removed from the field by your opponent's effect, you may trash this Character instead."
+      },
+      {
+        "id": "IMU1-005-on-play",
+        "type": "onPlay",
+        "text": "On Play: Play up to 1 [Mary Geoise] from your hand or trash."
+      }
+    ]
+  },
+
+  "IMU1-006": {
+    "id": "IMU1-006",
+    "cardNumber": "IMU1-006",
+    "name": "St. Figarland Shamrock",
+    "cardType": "character",
+    "type": "Holy Knight/Celestial Dragon",
+    "color": "red",
+    "cost": 7,
+    "power": 9000,
+    "counter": 0,
+    "attribute": "slash",
+    "image": "../images/RB Nerona Imu/IMU1-006.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "IMU1-006-on-play",
+        "type": "onPlay",
+        "text": "On Play: Trash up to 1 of your opponent's Characters with a power of 8000 or less."
+      },
+      {
+        "id": "IMU1-006-end-of-turn",
+        "type": "endOfTurn",
+        "text": "End of Your Turn: Place this Character on the bottom of your deck."
+      }
+    ]
+  },
+
+  "IMU1-007": {
+    "id": "IMU1-007",
+    "cardNumber": "IMU1-007",
+    "name": "St. Manmayer Gunko",
+    "cardType": "character",
+    "type": "Holy Knight/Celestial Dragon",
+    "color": "black",
+    "cost": 6,
+    "power": 7000,
+    "counter": 1000,
+    "attribute": "strike",
+    "image": "../images/RB Nerona Imu/IMU1-007.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "IMU1-007-effect-protection",
+        "type": "continuous",
+        "text": "This Character cannot be K.O'd by your opponent's effects."
+      },
+      {
+        "id": "IMU1-007-on-opponents-attack",
+        "type": "onOpponentsAttack",
+        "oncePerTurn": true,
+        "text": "On Your Opponent's Attack Once Per Turn: You may trash 2 cards from the top of your deck: If your Leader is [Imu], change the target of that attack to your Leader or one of your {Holy Knight} type Characters."
+      }
+    ]
+  },
+
+  "IMU1-008": {
+    "id": "IMU1-008",
+    "cardNumber": "IMU1-008",
+    "name": "St. Rimoshifu Killingham",
+    "cardType": "character",
+    "type": "Holy Knight/Celestial Dragon",
+    "color": "black",
+    "cost": 5,
+    "power": 5000,
+    "counter": 2000,
+    "attribute": "wisdom",
+    "image": "../images/RB Nerona Imu/IMU1-008.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "IMU1-008-battle-protection",
+        "type": "replacement",
+        "text": "If this Character would be K.O'd in combat, you may trash 2 cards from the top of your deck instead."
+      },
+      {
+        "id": "IMU1-008-on-play",
+        "type": "onPlay",
+        "text": "On Play: You may trash 1 card from the top of your deck: Add up to 1 {Holy Knight} or {Celestial Dragon} type Character from your trash to your hand."
+      }
+    ]
+  },
+
+  "IMU1-009": {
+    "id": "IMU1-009",
+    "cardNumber": "IMU1-009",
+    "name": "St. Satchels Maffey",
+    "cardType": "character",
+    "type": "Holy Knight/Celestial Dragon",
+    "color": "red",
+    "cost": 1,
+    "power": 2000,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/RB Nerona Imu/IMU1-009.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "IMU1-009-don-one",
+        "type": "continuous",
+        "text": "DON!! x1 This Character gains +1000 power."
+      },
+      {
+        "id": "IMU1-009-on-play",
+        "type": "onPlay",
+        "text": "On Play: Look at 4 cards from the top of your deck; reveal up to 1 {Holy Knight} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order."
+      }
+    ]
+  },
+
+  "IMU1-010": {
+    "id": "IMU1-010",
+    "cardNumber": "IMU1-010",
+    "name": "Nerona Imu",
+    "cardType": "character",
+    "type": "Celestial Dragon",
+    "color": "black",
+    "cost": 10,
+    "power": 13000,
+    "counter": 0,
+    "attribute": "unknown",
+    "image": "../images/RB Nerona Imu/IMU1-010.png",
+    "keywords": ["rush"],
+    "effects": [
+      {
+        "id": "IMU1-010-when-attacking",
+        "type": "whenAttacking",
+        "text": "When Attacking: Set up to 1 of your {Holy Knight} type Characters as active."
+      },
+      {
+        "id": "IMU1-010-end-of-turn",
+        "type": "endOfTurn",
+        "text": "End of Your Turn: Trash 5 cards from the top of your deck."
       }
     ]
   }

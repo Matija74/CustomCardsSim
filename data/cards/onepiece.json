@@ -10,7 +10,7 @@
     "power": 6000,
     "counter": 0,
     "attribute": "slash",
-    "image": "../images/One Piece cards/OP06-104.png",
+    "image": "../images/.op staples/OP06-104.png",
     "keywords": [],
     "effects": [
       {
@@ -36,7 +36,7 @@
     "power": 6000,
     "counter": 0,
     "attribute": "wisdom",
-    "image": "../images/One Piece cards/OP06-107.png",
+    "image": "../images/.op staples/OP06-107.png",
     "keywords": ["blocker"],
     "effects": [
       {
@@ -57,13 +57,35 @@
     "power": 0,
     "counter": 1000,
     "attribute": "wisdom",
-    "image": "../images/One Piece cards/OP13-104.png",
+    "image": "../images/.op staples/OP13-104.png",
     "keywords": ["blocker"],
     "effects": [
       {
         "id": "OP13-104-on-ko-add-life",
         "type": "onKO",
         "text": "On K.O.: You may trash 1 card from your hand: If your Leader is multicolored, add up to 1 card from the top of your deck to the top of your Life cards."
+      }
+    ]
+  },
+  "OP14-005": {
+    "id": "OP14-005",
+    "cardNumber": "OP14-005",
+    "name": "Killer",
+    "cardType": "character",
+    "type": "Supernovas/Kid Pirates",
+    "color": "red",
+    "cost": 1,
+    "power": 1000,
+    "counter": 1000,
+    "attribute": "slash",
+    "image": "../images/.op staples/OP14-005.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "OP14-005-activate-main",
+        "type": "activateMain",
+        "oncePerTurn": true,
+        "text": "Activate: Main Once Per Turn: Give up to 1 rested DON!! card to your Leader or 1 of your Characters."
       }
     ]
   },
@@ -78,7 +100,7 @@
     "power": 5000,
     "counter": 0,
     "attribute": "slash",
-    "image": "../images/One Piece cards/OP14-089.png",
+    "image": "../images/.op staples/OP14-089.png",
     "keywords": [],
     "effects": [
       {
@@ -104,7 +126,7 @@
     "power": 6000,
     "counter": 0,
     "attribute": "slash",
-    "image": "../images/One Piece cards/OP16-082.webp",
+    "image": "../images/.op staples/OP16-082.webp",
     "keywords": [],
     "effects": [
       {
@@ -130,7 +152,7 @@
     "power": 6000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/One Piece cards/OP16-085.jpg",
+    "image": "../images/.op staples/OP16-085.jpg",
     "keywords": ["blocker"],
     "effects": [
       {
@@ -151,7 +173,7 @@
     "power": 8000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/One Piece cards/OP16-096.jpg",
+    "image": "../images/.op staples/OP16-096.jpg",
     "keywords": ["unblockable"],
     "effects": [
       {
@@ -172,7 +194,7 @@
     "power": 5000,
     "counter": 1000,
     "attribute": "strike",
-    "image": "../images/One Piece cards/OP16-098.jpg",
+    "image": "../images/.op staples/OP16-098.jpg",
     "keywords": [],
     "effects": [
       {
@@ -187,6 +209,55 @@
       }
     ]
   },
+  "OP16-099": {
+    "id": "OP16-099",
+    "cardNumber": "OP16-099",
+    "name": "I've Come Here... To Cut Those Chains!!!",
+    "cardType": "event",
+    "type": "Land of Wano",
+    "color": "black",
+    "cost": 1,
+    "image": "../images/.op staples/OP16-099.webp",
+    "effects": [
+      {
+        "id": "OP16-099-main",
+        "type": "main",
+        "text": "Main: You may rest 6 of your DON!! cards: Trash 5 cards from the top of your deck. Then, play up to 1 {Land of Wano} type Character card with a cost of 6 or less from your trash."
+      },
+      {
+        "id": "OP16-099-counter",
+        "type": "counter",
+        "text": "Counter: Your Leader gains +3000 power during this battle.",
+        "powerModifier": 3000
+      }
+    ]
+  },
+  "EB03-057": {
+    "id": "EB03-057",
+    "cardNumber": "EB03-057",
+    "name": "Yamato",
+    "cardType": "character",
+    "type": "Land of Wano",
+    "color": "yellow",
+    "cost": 5,
+    "power": 6000,
+    "counter": 1000,
+    "attribute": "strike",
+    "image": "../images/.op staples/EB03-057.png",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "EB03-057-on-play-don",
+        "type": "onPlay",
+        "text": "On Play: Give up to 3 rested DON!! cards to your {Land of Wano} type Leader."
+      },
+      {
+        "id": "EB03-057-on-ko-trash-life",
+        "type": "onKO",
+        "text": "On K.O.: Trash up to 1 card from the top of your opponent's Life cards."
+      }
+    ]
+  },
   "PRB02-016": {
     "id": "PRB02-016",
     "cardNumber": "PRB02-016",
@@ -198,7 +269,7 @@
     "power": 0,
     "counter": 2000,
     "attribute": "special",
-    "image": "../images/One Piece cards/PRB02-016.png",
+    "image": "../images/.op staples/PRB02-016.png",
     "keywords": [],
     "effects": [
       {
@@ -224,7 +295,7 @@
     "power": 7000,
     "counter": 0,
     "attribute": "slash",
-    "image": "../images/One Piece cards/ST28-004.png",
+    "image": "../images/.op staples/ST28-004.png",
     "keywords": [],
     "effects": [
       {
@@ -251,7 +322,7 @@
     "power": 0,
     "counter": 1000,
     "attribute": "strike",
-    "image": "../images/One Piece cards/ST28-005.png",
+    "image": "../images/.op staples/ST28-005.png",
     "keywords": [],
     "effects": [
       {
@@ -263,55 +334,6 @@
         "id": "ST28-005-on-play-search",
         "type": "onPlay",
         "text": "On Play: Look at 5 cards from the top of your deck; reveal up to 1 {Land of Wano} type card with a cost of 2 or more and add it to your hand. Then, place the rest at the bottom of your deck in any order."
-      }
-    ]
-  },
-  "OP16-099": {
-    "id": "OP16-099",
-    "cardNumber": "OP16-099",
-    "name": "I've Come Here... To Cut Those Chains!!!",
-    "cardType": "event",
-    "type": "Land of Wano",
-    "color": "black",
-    "cost": 1,
-    "image": "../images/One Piece cards/OP16-099.webp",
-    "effects": [
-      {
-        "id": "OP16-099-main",
-        "type": "main",
-        "text": "Main: You may rest 6 of your DON!! cards: Trash 5 cards from the top of your deck. Then, play up to 1 {Land of Wano} type Character card with a cost of 6 or less from your trash."
-      },
-      {
-        "id": "OP16-099-counter",
-        "type": "counter",
-        "text": "Counter: Your Leader gains +3000 power during this battle.",
-        "powerModifier": 3000
-      }
-    ]
-  },
-  "EB03-057": {
-    "id": "EB03-057",
-    "cardNumber": "EB03-057",
-    "name": "Yamato",
-    "cardType": "character",
-    "type": "Land of Wano",
-    "color": "yellow",
-    "cost": 5,
-    "power": 6000,
-    "counter": 1000,
-    "attribute": "strike",
-    "image": "../images/One Piece cards/EB03-057.png",
-    "keywords": [],
-    "effects": [
-      {
-        "id": "EB03-057-on-play-don",
-        "type": "onPlay",
-        "text": "On Play: Give up to 3 rested DON!! cards to your {Land of Wano} type Leader."
-      },
-      {
-        "id": "EB03-057-on-ko-trash-life",
-        "type": "onKO",
-        "text": "On K.O.: Trash up to 1 card from the top of your opponent's Life cards."
       }
     ]
   }

@@ -39,6 +39,11 @@ body {
     left: 20px;
     top: 20px;
     z-index: 1200;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    pointer-events: auto;
 
     color: white;
     text-decoration: none;

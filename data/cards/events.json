@@ -7,7 +7,7 @@
     "type": "Dandadan",
     "color": "purple",
     "cost": 3,
-    "image": "../images/GP Okarun by Matija/DD01-004.png",
+    "image": "../images/GP Okarun/DD01-004.png",
     "effects": [
       {
         "id": "DD01-004-main",
@@ -31,7 +31,7 @@
     "type": "Dandadan/Curse",
     "color": "green",
     "cost": 1,
-    "image": "../images/GP Okarun by Matija/DD01-005.png",
+    "image": "../images/GP Okarun/DD01-005.png",
     "effects": [
       {
         "id": "DD01-005-main",
@@ -56,7 +56,7 @@
     "type": "Dandadan/The Cursed",
     "color": "green",
     "cost": 3,
-    "image": "../images/GP Okarun by Matija/DD01-011.png",
+    "image": "../images/GP Okarun/DD01-011.png",
     "effects": [
       {
         "id": "DD01-011-main",
@@ -79,7 +79,7 @@
     "type": "Dandadan",
     "color": "green",
     "cost": 1,
-    "image": "../images/GP Okarun by Matija/DD01-013.png",
+    "image": "../images/GP Okarun/DD01-013.png",
     "effects": [
       {
         "id": "DD01-013-main",
@@ -103,7 +103,7 @@
     "type": "Eggman Empire",
     "color": "red",
     "cost": 1,
-    "image": "../images/R Eggman by MrJeremic/EGG1-007.png",
+    "image": "../images/R Eggman/EGG1-007.png",
     "effects": [
       {
         "id": "EGG1-007-counter",
@@ -123,7 +123,7 @@
     "type": "Eggman Empire",
     "color": "red",
     "cost": 0,
-    "image": "../images/R Eggman by MrJeremic/EGG1-012.png",
+    "image": "../images/R Eggman/EGG1-012.png",
     "effects": [
       {
         "id": "EGG1-012-main",
@@ -148,7 +148,7 @@
     "type": "Black Swordsman Party/Fetish",
     "color": "red",
     "cost": 5,
-    "image": "../images/RB Guts by Mrki/BK01-002.jpg",
+    "image": "../images/RB Guts/BK01-002.jpg",
     "effects": [
       {
         "id": "BK01-002-main",
@@ -171,7 +171,7 @@
     "type": "Black Swordsman Party",
     "color": "black",
     "cost": 6,
-    "image": "../images/RB Guts by Mrki/BK01-011.jpg",
+    "image": "../images/RB Guts/BK01-011.jpg",
     "effects": [
       {
         "id": "BK01-011-main",
@@ -189,7 +189,7 @@
     "type": "Black Swordsman Party",
     "color": "black",
     "cost": 3,
-    "image": "../images/RB Guts by Mrki/BK01-015.jpg",
+    "image": "../images/RB Guts/BK01-015.jpg",
     "effects": [
       {
         "id": "BK01-015-main",
@@ -207,7 +207,7 @@
     "type": "Zanpakto/Soul Reaper",
     "color": "red",
     "cost": 10,
-    "image": "../images/RY Ichigo by Mrki/BL01-006.png",
+    "image": "../images/RY Ichigo/BL01-006.png",
     "effects": [
       {
         "id": "BL01-006-main",
@@ -225,7 +225,7 @@
     "type": "Human",
     "color": "yellow",
     "cost": 1,
-    "image": "../images/RY Ichigo by Mrki/BL01-016.png",
+    "image": "../images/RY Ichigo/BL01-016.png",
     "effects": [
       {
         "id": "BL01-016-counter",
@@ -251,7 +251,7 @@
     "type": "Human",
     "color": "yellow",
     "cost": 1,
-    "image": "../images/RY Ichigo by Mrki/BL01-017.png",
+    "image": "../images/RY Ichigo/BL01-017.png",
     "effects": [
       {
         "id": "BL01-017-main",
@@ -276,7 +276,7 @@
     "type": "Film",
     "color": "blue",
     "cost": 1,
-    "image": "../images/U Taglavnovič by Porentov/POG1-004.jpg",
+    "image": "../images/U Taglavnovič/POG1-004.jpg",
     "effects": [
       {
         "id": "POG1-004-main",
@@ -299,7 +299,7 @@
     "type": "Film",
     "color": "blue",
     "cost": 0,
-    "image": "../images/U Taglavnovič by Porentov/POG1-008.jpg",
+    "image": "../images/U Taglavnovič/POG1-008.jpg",
     "effects": [
       {
         "id": "POG1-008-main",
@@ -322,7 +322,7 @@
     "type": "Film",
     "color": "blue",
     "cost": 0,
-    "image": "../images/U Taglavnovič by Porentov/POG1-009.jpg",
+    "image": "../images/U Taglavnovič/POG1-009.jpg",
     "effects": [
       {
         "id": "POG1-009-main",
@@ -340,12 +340,12 @@
   "POG1-010": {
     "id": "POG1-010",
     "cardNumber": "POG1-010",
-    "name": "Manifestirana žoga",
+    "name": "Manifestirana ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¾oga",
     "cardType": "event",
     "type": "Film",
     "color": "blue",
     "cost": 0,
-    "image": "../images/U Taglavnovič by Porentov/POG1-010.jpg",
+    "image": "../images/U Taglavnovič/POG1-010.jpg",
     "effects": [
       {
         "id": "POG1-010-main",
@@ -368,7 +368,7 @@
     "type": "Film",
     "color": "blue",
     "cost": 0,
-    "image": "../images/U Taglavnovič by Porentov/POG1-011.jpg",
+    "image": "../images/U Taglavnovič/POG1-011.jpg",
     "effects": [
       {
         "id": "POG1-011-main",
@@ -391,7 +391,7 @@
     "type": "Film",
     "color": "blue",
     "cost": 1,
-    "image": "../images/U Taglavnovič by Porentov/POG1-014.jpg",
+    "image": "../images/U Taglavnovič/POG1-014.jpg",
     "effects": [
       {
         "id": "POG1-014-counter",
@@ -486,7 +486,7 @@
     "type": "Land of Wano",
     "color": "yellow",
     "cost": 1,
-    "image": "../images/BY AceYamato by DarkSpectre/YAM1-003.png",
+    "image": "../images/BY AceYamato/YAM1-003.png",
     "effects": [
       {
         "id": "YAM1-003-main",
@@ -510,7 +510,7 @@
     "type": "Curse technique",
     "color": "green",
     "cost": 1,
-    "image": "../images/GB Hanami by Yue-chan/JK02-002.jpg",
+    "image": "../images/GB Hanami/JK02-002.jpg",
     "effects": [
       {
         "id": "JK02-002-on-play",
@@ -534,7 +534,7 @@
     "type": "Curse technique",
     "color": "black",
     "cost": 2,
-    "image": "../images/GB Hanami by Yue-chan/JK02-003.jpg",
+    "image": "../images/GB Hanami/JK02-003.jpg",
     "effects": [
       {
         "id": "JK02-003-on-play",
@@ -552,7 +552,7 @@
     "type": "Curse technique",
     "color": "black",
     "cost": 3,
-    "image": "../images/GB Hanami by Yue-chan/JK02-004.jpg",
+    "image": "../images/GB Hanami/JK02-004.jpg",
     "effects": [
       {
         "id": "JK02-004-main",
@@ -570,7 +570,7 @@
     "type": "Curse technique",
     "color": "green",
     "cost": 2,
-    "image": "../images/GB Hanami by Yue-chan/JK02-005.jpg",
+    "image": "../images/GB Hanami/JK02-005.jpg",
     "effects": [
       {
         "id": "JK02-005-main",
@@ -588,7 +588,7 @@
     "type": "Curse technique",
     "color": "green",
     "cost": 6,
-    "image": "../images/GB Hanami by Yue-chan/JK02-006.jpg",
+    "image": "../images/GB Hanami/JK02-006.jpg",
     "effects": [
       {
         "id": "JK02-006-main",
@@ -606,7 +606,7 @@
     "type": "Curse technique",
     "color": "black",
     "cost": 3,
-    "image": "../images/GB Hanami by Yue-chan/JK02-007.jpg",
+    "image": "../images/GB Hanami/JK02-007.jpg",
     "effects": [
       {
         "id": "JK02-007-main",
@@ -624,7 +624,7 @@
     "type": "Curse technique",
     "color": "black",
     "cost": 2,
-    "image": "../images/GB Hanami by Yue-chan/JK02-008.jpg",
+    "image": "../images/GB Hanami/JK02-009.jpg",
     "effects": [
       {
         "id": "JK02-009-main",
@@ -648,7 +648,7 @@
     "type": "RE:ZERO",
     "color": "yellow",
     "cost": 0,
-    "image": "../images/Y Subaru by Porentov/SUB1-011.jpg",
+    "image": "../images/Y Subaru/SUB1-011.jpg",
     "effects": [
       {
         "id": "SUB1-011-counter",
@@ -660,6 +660,310 @@
         "id": "SUB1-011-trigger",
         "type": "trigger",
         "text": "Trigger: If you have 0 Life cards, you may add up to 1 card from the top of your deck to the top of your Life cards. Then, trash 1 card from your hand."
+      }
+    ]
+  }
+,
+  "DD02-003": {
+    "id": "DD02-003",
+    "cardNumber": "DD02-003",
+    "name": "The Ultimate Yokai",
+    "cardType": "event",
+    "type": "Dandadan/Curse",
+    "color": "black",
+    "cost": 1,
+    "image": "../images/PB Saint-Germain/DD02-003.png",
+    "effects": [
+      {
+        "id": "DD02-003-main",
+        "type": "main",
+        "text": "Main: Look at 3 cards from the top of your deck; reveal up to 1 [Curse] or [The Cursed] type card or up to 1 [Ashura] and add it to your hand. Then, trash the rest."
+      },
+      {
+        "id": "DD02-003-trigger",
+        "type": "trigger",
+        "text": "Trigger: Activate this card's Main effect."
+      }
+    ]
+  },
+
+  "DD02-005": {
+    "id": "DD02-005",
+    "cardNumber": "DD02-005",
+    "name": "Extrasensory Perception",
+    "cardType": "event",
+    "type": "Dandadan/The Cursed",
+    "color": "black",
+    "cost": 0,
+    "image": "../images/PB Saint-Germain/DD02-005.png",
+    "effects": [
+      {
+        "id": "DD02-005-counter",
+        "type": "counter",
+        "text": "Counter: You may trash 1 card from your hand: Up to 1 of your Leader or Character cards gains +3000 power during this battle.",
+        "powerModifier": 3000
+      },
+      {
+        "id": "DD02-005-trigger",
+        "type": "trigger",
+        "text": "Trigger: Draw 2 cards and trash 2 cards from your hand."
+      }
+    ]
+  },
+
+  "DD02-009": {
+    "id": "DD02-009",
+    "cardNumber": "DD02-009",
+    "name": "Fairy-Tale Card",
+    "cardType": "event",
+    "type": "Dandadan/Curse",
+    "color": "black",
+    "cost": 5,
+    "image": "../images/PB Saint-Germain/DD02-009.png",
+    "effects": [
+      {
+        "id": "DD02-009-main",
+        "type": "main",
+        "text": "Main: DON!!-1: Choose 1: Negate the effect of 1 of your opponent's Characters until the end of their next turn. - Attack your opponent with one of their active Characters with a cost of 6 or less."
+      },
+      {
+        "id": "DD02-009-trigger",
+        "type": "trigger",
+        "text": "Trigger: Add up to 1 DON!! card from your DON!! deck and rest it."
+      }
+    ]
+  },
+
+  "DD02-010": {
+    "id": "DD02-010",
+    "cardNumber": "DD02-010",
+    "name": "I'll Kill Every Last One of You",
+    "cardType": "event",
+    "type": "Dandadan/Curse",
+    "color": "black",
+    "cost": 10,
+    "image": "../images/PB Saint-Germain/DD02-010.png",
+    "effects": [
+      {
+        "id": "DD02-010-deck-rule",
+        "type": "continuous",
+        "text": "You can only have 1 copy of this card in your deck."
+      },
+      {
+        "id": "DD02-010-main",
+        "type": "main",
+        "text": "Main: DON!!-4: K.O. all Characters except [Reiko Kashima]."
+      }
+    ]
+  },
+
+  "DD02-012": {
+    "id": "DD02-012",
+    "cardNumber": "DD02-012",
+    "name": "Do You Yield?",
+    "cardType": "event",
+    "type": "Dandadan/The Cursed",
+    "color": "black",
+    "cost": 1,
+    "image": "../images/PB Saint-Germain/DD02-012.png",
+    "effects": [
+      {
+        "id": "DD02-012-counter",
+        "type": "counter",
+        "text": "Counter: Up to 1 of your Leader or Character cards gains +3000 power during this battle.",
+        "powerModifier": 3000
+      },
+      {
+        "id": "DD02-012-trigger",
+        "type": "trigger",
+        "text": "Trigger: Trash 3 cards from the top of your deck. Then, add 1 Event card from your trash to your hand."
+      }
+    ]
+  },
+
+  "DD02-013": {
+    "id": "DD02-013",
+    "cardNumber": "DD02-013",
+    "name": "Jumping Crone",
+    "cardType": "event",
+    "type": "Dandadan/Curse",
+    "color": "black",
+    "cost": 3,
+    "image": "../images/PB Saint-Germain/DD02-013.png",
+    "effects": [
+      {
+        "id": "DD02-013-main",
+        "type": "main",
+        "text": "Main: Add up to 1 DON!! from your DON!! deck and set it as active. Then, if this effect was activated by your [Count Saint-Germain] Leader, add 1 additional DON!! and set it as active."
+      },
+      {
+        "id": "DD02-013-trigger",
+        "type": "trigger",
+        "text": "Trigger: Add up to 1 DON!! from your DON!! deck and set it as active."
+      }
+    ]
+  },
+
+  "DD02-014": {
+    "id": "DD02-014",
+    "cardNumber": "DD02-014",
+    "name": "Kurokamikiri",
+    "cardType": "event",
+    "type": "Dandadan/Curse",
+    "color": "black",
+    "cost": 4,
+    "image": "../images/PB Saint-Germain/DD02-014.png",
+    "effects": [
+      {
+        "id": "DD02-014-main",
+        "type": "main",
+        "text": "Main: Your Leader gains Unblockable until the end of this turn."
+      },
+      {
+        "id": "DD02-014-trigger",
+        "type": "trigger",
+        "text": "Trigger: K.O. up to 1 of your opponent's Blocker Characters with a base cost of 5 or less."
+      }
+    ]
+  },
+
+  "DD02-015": {
+    "id": "DD02-015",
+    "cardNumber": "DD02-015",
+    "name": "Suitora",
+    "cardType": "event",
+    "type": "Dandadan/Curse",
+    "color": "black",
+    "cost": 4,
+    "image": "../images/PB Saint-Germain/DD02-015.png",
+    "effects": [
+      {
+        "id": "DD02-015-main",
+        "type": "main",
+        "text": "Main: Your Leader gains Banish until the end of this turn."
+      },
+      {
+        "id": "DD02-015-trigger",
+        "type": "trigger",
+        "text": "Trigger: Draw 2 cards and trash 1 card from your hand."
+      }
+    ]
+  },
+
+  "KIL1-013": {
+    "id": "KIL1-013",
+    "cardNumber": "KIL1-013",
+    "name": "Sonic Scyther",
+    "cardType": "event",
+    "type": "Kid Pirates/Supernovas",
+    "color": "red",
+    "cost": 3,
+    "image": "../images/RB Killer/KIL1-013.png",
+    "effects": [
+      {
+        "id": "KIL1-013-counter",
+        "type": "counter",
+        "text": "Counter: K.O. up to 1 of your opponent's Characters with 6000 power or less."
+      },
+      {
+        "id": "KIL1-013-trigger",
+        "type": "trigger",
+        "text": "Trigger: Activate this card's Counter effect."
+      }
+    ]
+  },
+
+  "KIL1-014": {
+    "id": "KIL1-014",
+    "cardNumber": "KIL1-014",
+    "name": "Kid Has No Left Arm!!!",
+    "cardType": "event",
+    "type": "Kid Pirates/Supernovas",
+    "color": "black",
+    "cost": 1,
+    "image": "../images/RB Killer/KIL1-014.png",
+    "effects": [
+      {
+        "id": "KIL1-014-main",
+        "type": "main",
+        "text": "Main: You may rest 1 DON!!: You and your opponent each trash the top 3 cards of your deck."
+      },
+      {
+        "id": "KIL1-014-counter",
+        "type": "counter",
+        "text": "Counter: If your Leader is [Killer] or you control a Character with 8000 power or more, up to 1 of your Leader or Characters gets +4000 during this battle.",
+        "powerModifier": 4000
+      }
+    ]
+  },
+
+  "IMU1-011": {
+    "id": "IMU1-011",
+    "cardNumber": "IMU1-011",
+    "name": "Omen",
+    "cardType": "event",
+    "type": "Celestial Dragon/Holy Knight",
+    "color": "red",
+    "cost": 2,
+    "image": "../images/RB Nerona Imu/IMU1-011.png",
+    "effects": [
+      {
+        "id": "IMU1-011-main",
+        "type": "main",
+        "text": "Main: You may rest 2 of your DON!! cards: Trash up to 1 of your opponent's Characters with 5000 power or less."
+      },
+      {
+        "id": "IMU1-011-counter",
+        "type": "counter",
+        "text": "Counter: You may trash 1 card from the top of your deck: If your Leader is [Imu], up to 1 of your Leader or Character cards gains +2000 power until the end of your next End Phase.",
+        "powerModifier": 2000
+      }
+    ]
+  },
+
+  "IMU1-012": {
+    "id": "IMU1-012",
+    "cardNumber": "IMU1-012",
+    "name": "There is Little Time",
+    "cardType": "event",
+    "type": "Holy Knight",
+    "color": "black",
+    "cost": 2,
+    "image": "../images/RB Nerona Imu/IMU1-012.png",
+    "effects": [
+      {
+        "id": "IMU1-012-main",
+        "type": "main",
+        "text": "Main: You may trash 1 card from the top of your deck: Up to 1 of your [IMU] Leaders or {Holy Knight} type Characters gains Banish during this turn. Then, draw 1 card."
+      },
+      {
+        "id": "IMU1-012-trigger",
+        "type": "trigger",
+        "text": "Trigger: Up to 1 of your Leader or Character cards gains +1000 power until the end of your next turn.",
+        "powerModifier": 1000
+      }
+    ]
+  },
+
+  "IMU1-013": {
+    "id": "IMU1-013",
+    "cardNumber": "IMU1-013",
+    "name": "A Magic Circle?!!",
+    "cardType": "event",
+    "type": "Celestial Dragon/Holy Knight",
+    "color": "black",
+    "cost": 4,
+    "image": "../images/RB Nerona Imu/IMU1-013.png",
+    "effects": [
+      {
+        "id": "IMU1-013-main",
+        "type": "main",
+        "text": "Main: You may trash 2 cards from the top of your deck: Play up to 1 {Holy Knight} type Character with a cost of 6 or less from your trash. Then, draw 1 card."
+      },
+      {
+        "id": "IMU1-013-trigger",
+        "type": "trigger",
+        "text": "Trigger: Add up to 1 {Holy Knight} type card from your trash to your hand."
       }
     ]
   }
