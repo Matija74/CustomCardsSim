@@ -3,7 +3,6 @@ PATCH NOTES RULES
 Required format for every patch note:
 
 Patch Note X.XX
------------------------------
 [UPDATE]: _______________________
 [FIX]: ___________________________
 [ADDITION]: _________________________
@@ -13,6 +12,7 @@ Patch Note X.XX
 Rules:
 - Always write entries in this exact order: Update, Fix, Addition, Dev Note.
 - Always include the patch note number in the title as: Patch Note X.XX
+- Use the page's existing divider line automatically. Do not type a row of dashes into the note body.
 - Only list changes that affect users directly.
 - Skip internal-only changes that users do not normally see.
 - Dev Note text will be provided separately each time.
