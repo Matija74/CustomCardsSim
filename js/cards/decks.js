@@ -142,6 +142,23 @@ const gbHanamiDeckText = `
 1xJK02-009
 `;
 
+const ySubaruDeckText = `
+4xSUB1-002
+4xSUB1-003
+4xSUB1-004
+4xSUB1-005
+4xSUB1-006
+4xSUB1-007
+4xSUB1-008
+4xSUB1-009
+4xSUB1-010
+4xSUB1-011
+4xSUB1-012
+2xST28-004
+2xST28-005
+2xOP06-104
+`;
+
 const availableDecks = [
     {
         id: "okarun-deck",
@@ -190,6 +207,12 @@ const availableDecks = [
         name: "GB Hanami",
         leaderKey: "JK02-001",
         deckText: gbHanamiDeckText
+    },
+    {
+        id: "y-subaru-deck",
+        name: "Y Subaru",
+        leaderKey: "SUB1-001",
+        deckText: ySubaruDeckText
     }
 ];
 

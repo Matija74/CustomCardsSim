@@ -13,6 +13,7 @@ Rules:
 - Always write entries in this exact order: Update, Fix, Addition, Dev Note.
 - Always include the patch note number in the title as: Patch Note X.XX
 - Use the page's existing divider line automatically. Do not type a row of dashes into the note body.
+- Whenever a user-facing change is made, update patch notes in the same task.
 - Only list changes that affect users directly.
 - Skip internal-only changes that users do not normally see.
 - Dev Note text will be provided separately each time.
