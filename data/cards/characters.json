@@ -1895,6 +1895,54 @@
     ]
   }
 ,
+  "SUB1-013": {
+    "id": "SUB1-013",
+    "cardNumber": "SUB1-013",
+    "name": "Roswaal L. Mathers",
+    "cardType": "character",
+    "type": "RE:ZERO",
+    "color": "yellow",
+    "cost": 3,
+    "power": 0,
+    "counter": 1000,
+    "attribute": "special",
+    "image": "../images/Y Subaru/SUB1-013.jpg",
+    "keywords": [],
+    "effects": [
+      {
+        "id": "SUB1-013-on-play-search-two",
+        "type": "onPlay",
+        "text": "On Play: Flip any card in your Life area; Look at 5 cards from the top of your deck and reveal up to 2 \"RE:ZERO\" type cards and add them to your hand. Then place the rest at the bottom of the deck in any order."
+      },
+      {
+        "id": "SUB1-013-trigger-on-play",
+        "type": "trigger",
+        "actionId": "activateOnPlayEffect",
+        "text": "Trigger: Activate this card's On Play effect."
+      }
+    ]
+  },
+  "SUB1-014": {
+    "id": "SUB1-014",
+    "cardNumber": "SUB1-014",
+    "name": "Rem",
+    "cardType": "character",
+    "type": "RE:ZERO",
+    "color": "yellow",
+    "cost": 6,
+    "power": 7000,
+    "counter": 0,
+    "attribute": "special",
+    "image": "../images/Y Subaru/SUB1-014.jpg",
+    "keywords": ["blocker"],
+    "effects": [
+      {
+        "id": "SUB1-014-on-play-play-ram",
+        "type": "onPlay",
+        "text": "On Play: Play up to 1 Ram from your hand or Trash."
+      }
+    ]
+  },
   "DD02-004": {
     "id": "DD02-004",
     "cardNumber": "DD02-004",

@@ -702,6 +702,68 @@ function playCharacterFromTrashWithoutCost(player, sourceCard, card, ui, options
         : `${sourceCard.name} played ${card.name} from the trash${card.state === "rested" ? " rested" : ""}.`;
 }
 
+function playUpToOneNamedCharacterFromHandOrTrash(player, sourceCard, ui, cardName) {
+    if (!player || !sourceCard) {
+        return "";
+    }
+
+    if (getFirstOpenCharacterSlotIndex(player) === -1) {
+        return `${sourceCard.name} could not play ${cardName} because ${player.name}'s character area is full.`;
+    }
+
+    const handChoices = getHandCardChoices(player, card => {
+        return card.cardType === "character" && CardEffects.hasCardName(card, cardName);
+    }).map(choice => ({
+        ...choice,
+        choiceLabel: "Hand"
+    }));
+
+    const trashChoices = getTrashCardChoices(player, card => {
+        return card.cardType === "character" && CardEffects.hasCardName(card, cardName);
+    }).map(choice => ({
+        ...choice,
+        choiceLabel: "Trash"
+    }));
+
+    const choices = [...handChoices, ...trashChoices];
+
+    if (choices.length === 0) {
+        return `${sourceCard.name} found no ${cardName} in hand or trash to play.`;
+    }
+
+    return chooseBoardCard(player, sourceCard, choices, {
+        prompt: `Choose up to 1 ${cardName} from your hand or trash to play.`,
+        optional: true,
+        onSelect: ({ cardType, handIndex, trashIndex }) => {
+            if (cardType === "hand") {
+                const playedCard = player.hand.splice(handIndex, 1)[0];
+
+                if (!playedCard) {
+                    addGameLog(`${sourceCard.name} could not find that ${cardName} in hand anymore.`);
+                    return;
+                }
+
+                addGameLog(playCardFromDeckWithoutCost(player, sourceCard, playedCard, ui, "hand"));
+            } else {
+                const playedCard = player.trash.splice(trashIndex, 1)[0];
+
+                if (!playedCard) {
+                    addGameLog(`${sourceCard.name} could not find that ${cardName} in trash anymore.`);
+                    return;
+                }
+
+                addGameLog(playCharacterFromTrashWithoutCost(player, sourceCard, playedCard, ui));
+            }
+
+            if (typeof queueMultiplayerStateSync === "function") {
+                queueMultiplayerStateSync();
+            }
+        },
+        skipMessage: `${player.name} did not play ${cardName} with ${sourceCard.name}.`,
+        emptyMessage: `${sourceCard.name} found no ${cardName} in hand or trash to play.`
+    });
+}
+
 function resolveJeremicOnPlay(player, sourceCard, ui) {
     const deckCards = player.deck.filter(Boolean);
 
@@ -2100,6 +2162,24 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
 
     if (effect.id === "SUB1-006-on-play-search") {
         return lookTopCardsForType(player, sourceCard, 5, "RE:ZERO", ui);
+    }
+
+    if (effect.id === "SUB1-013-on-play-search-two") {
+        const revealMessage = revealSubaruLifeCard(player, sourceCard, ui, {
+            allowBottomChoice: true,
+            prompt: `Choose which life card to reveal for ${sourceCard.name}.`
+        });
+
+        if (revealMessage) {
+            addGameLog(revealMessage);
+        }
+
+        const searchMessage = lookTopCardsForTypeAddUpTo(player, sourceCard, 5, 2, "RE:ZERO", ui);
+        return `${revealMessage || ""} ${searchMessage}`.trim();
+    }
+
+    if (effect.id === "SUB1-014-on-play-play-ram") {
+        return playUpToOneNamedCharacterFromHandOrTrash(player, sourceCard, ui, "Ram");
     }
 
     if (effect.id === "SUB1-007-on-play-stage-copy") {
@@ -5457,6 +5537,152 @@ function lookTopCardsAddOneToHandTrashRest(player, sourceCard, amount, ui, optio
     finishSelection(firstValidIndex === -1 ? null : firstValidIndex);
 
     return `${sourceCard.name}'s look top effect resolved.`;
+}
+
+function lookTopCardsForTypeAddUpTo(player, sourceCard, amount, maxAdds, typeText, ui, options = {}) {
+    if (!player || !sourceCard) {
+        return "";
+    }
+
+    const cardsToLookAt = player.deck.splice(0, amount);
+
+    if (cardsToLookAt.length === 0) {
+        return `${sourceCard.name}'s effect found no cards because ${player.name}'s deck is empty.`;
+    }
+
+    const isSelectable = options.isSelectable || ((card) => {
+        const matchesType = String(card.type || "")
+            .toLowerCase()
+            .includes(String(typeText).toLowerCase());
+        const isExcludedName = (options.excludeNames || [])
+            .some(name => CardEffects.hasCardName(card, name));
+
+        return matchesType && !isExcludedName;
+    });
+
+    const selectedCards = [];
+
+    const placeRemainingCards = (orderedRemainingCards) => {
+        player.deck.push(...orderedRemainingCards);
+
+        ui?.renderHands?.();
+        ui?.renderDecks?.();
+
+        if (orderedRemainingCards.length > 0) {
+            addGameLog(`${player.name} placed the remaining card${orderedRemainingCards.length === 1 ? "" : "s"} on the bottom of the deck.`);
+        }
+
+        options.onResolved?.();
+    };
+
+    const finishSelection = () => {
+        if (selectedCards.length > 0) {
+            selectedCards.forEach(card => {
+                player.hand.push(assignCardInstance(card));
+                addGameLog(`${player.name} revealed ${card.name} and added it to hand.`);
+            });
+        } else {
+            addGameLog(`${player.name} did not add a card with ${sourceCard.name}'s effect.`);
+        }
+
+        if (cardsToLookAt.length <= 1 || !ui?.chooseBoardCard) {
+            placeRemainingCards([...cardsToLookAt]);
+            return;
+        }
+
+        const totalRemainingCount = cardsToLookAt.length;
+        const orderedRemainingCards = [];
+
+        const chooseNextRemainingCard = () => {
+            if (cardsToLookAt.length === 0) {
+                placeRemainingCards(orderedRemainingCards);
+                return "";
+            }
+
+            return chooseBoardCard(player, sourceCard, cardsToLookAt.map((card, choiceIndex) => ({
+                card,
+                choiceIndex
+            })), {
+                prompt: `Choose remaining card ${orderedRemainingCards.length + 1} of ${totalRemainingCount} to place on the bottom of your deck next.`,
+                optional: false,
+                onSelect: ({ choiceIndex }) => {
+                    const orderedCard = cardsToLookAt.splice(choiceIndex, 1)[0];
+
+                    if (!orderedCard) {
+                        addGameLog(`${sourceCard.name} could not order that card anymore.`);
+                        placeRemainingCards([...orderedRemainingCards, ...cardsToLookAt]);
+                        return;
+                    }
+
+                    orderedRemainingCards.push(orderedCard);
+
+                    const chooseMessage = chooseNextRemainingCard();
+
+                    if (chooseMessage) {
+                        addGameLog(chooseMessage);
+                    }
+                },
+                onEmpty: () => {
+                    placeRemainingCards([...orderedRemainingCards, ...cardsToLookAt]);
+                }
+            });
+        };
+
+        const chooseMessage = chooseNextRemainingCard();
+
+        if (chooseMessage) {
+            addGameLog(chooseMessage);
+        }
+    };
+
+    const chooseNextCard = () => {
+        if (selectedCards.length >= maxAdds) {
+            finishSelection();
+            return "";
+        }
+
+        const choices = cardsToLookAt
+            .map((card, choiceIndex) => ({
+                card,
+                choiceIndex
+            }))
+            .filter(choice => isSelectable(choice.card));
+
+        if (choices.length === 0) {
+            finishSelection();
+            return "";
+        }
+
+        return chooseBoardCard(player, sourceCard, choices, {
+            prompt: `Choose up to 1 eligible card to add to your hand (${selectedCards.length + 1} of ${maxAdds}).`,
+            optional: true,
+            onSelect: ({ choiceIndex }) => {
+                const selectedCard = cardsToLookAt.splice(choiceIndex, 1)[0];
+
+                if (!selectedCard) {
+                    addGameLog(`${sourceCard.name} could not find that card anymore.`);
+                    finishSelection();
+                    return;
+                }
+
+                selectedCards.push(selectedCard);
+
+                const chooseMessage = chooseNextCard();
+
+                if (chooseMessage) {
+                    addGameLog(chooseMessage);
+                }
+            },
+            onSkip: finishSelection,
+            onEmpty: finishSelection,
+            skipMessage: `${player.name} stopped adding cards with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no eligible cards.`
+        });
+    };
+
+    const chooseMessage = chooseNextCard();
+
+    return chooseMessage || `${sourceCard.name}'s effect resolved.`;
 }
 
 function resolveDavidTaglavnovicTurnStartSearch(player, ui, onResolved = null) {
@@ -10449,6 +10675,20 @@ function resolveSingleTriggerEffect(player, card, effect, ui) {
 
     if (effect.actionId === "playThisCardFromTrigger") {
         return playCardFromTrigger(player, card, ui);
+    }
+
+    if (effect.actionId === "activateOnPlayEffect") {
+        const onPlayMessages = resolveOnPlayEffects(player, card, ui);
+
+        moveCardToTrash(player, card, ui);
+
+        if (ui?.renderTrash) {
+            ui.renderTrash();
+        }
+
+        return onPlayMessages.length > 0
+            ? `${card.name}'s Trigger activated its On Play effect. ${onPlayMessages.join(" ")}`
+            : `${card.name}'s Trigger activated, then it was placed in trash.`;
     }
 
     if (effect.actionId === "activateMainEffect") {

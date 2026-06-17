@@ -154,9 +154,8 @@ const ySubaruDeckText = `
 4xSUB1-010
 4xSUB1-011
 4xSUB1-012
-2xST28-004
-2xST28-005
-2xOP06-104
+4xSUB1-013
+2xSUB1-014
 `;
 
 const availableDecks = [
