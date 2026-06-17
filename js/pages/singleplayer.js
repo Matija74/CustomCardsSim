@@ -2124,7 +2124,21 @@ function refreshSelectedBoardCardElement() {
 }
 
 function getActivateMainEffect(card) {
-    return card?.effects?.find(effect => effect.type === "activateMain") || null;
+    return card?.effects?.find(effect => {
+        if (effect.id === "SUB1-001-checkpoint") {
+            return false;
+        }
+
+        return effect.type === "activateMain" ||
+            (card?.cardNumber === "KIL1-001" && effect.id === "KIL1-001-custom");
+    }) || null;
+}
+
+function getOnOpponentAttackEffect(card) {
+    return getCardAllEffects(card)?.find(effect => {
+        return effect.type === "onOpponentAttack" ||
+            effect.id === "KIL1-001-custom";
+    }) || null;
 }
 
 function isWanoCountryAttachDonEffect(card, effect) {
@@ -2161,6 +2175,13 @@ function canUseActivateMainEffect(player, card, effect) {
         return false;
     }
 
+    if (
+        effect.oncePerGame &&
+        CardEffects.hasUsedOncePerGameEffect(card, effect.id)
+    ) {
+        return false;
+    }
+
     if (effect.id === "JK01-011-activate-main") {
         if ((card.state || "active") === "rested") {
             return false;
@@ -2174,6 +2195,25 @@ function canUseActivateMainEffect(player, card, effect) {
     if (effect.id === "YAM1-001-activate-main-life") {
         return typeof getAceYamatoLeaderKOTargetChoices === "function" &&
             getAceYamatoLeaderKOTargetChoices(player).length >= 2;
+    }
+
+    if (effect.id === "DD02-001-activate-main") {
+        return CardEffects.hasCardName(player.stage, "Ashura") &&
+            (player.stage?.state || "active") === "active" &&
+            typeof canCardBeRested === "function" &&
+            canCardBeRested(player.stage) &&
+            player.trash.some(card => hasTypeText(card, "Curse") || hasTypeText(card, "The Cursed"));
+    }
+
+    if (effect.id === "SUB1-007-activate-main-stage-copy") {
+        return Boolean(player.life?.length) &&
+            Boolean(player.stage) &&
+            typeof getSubaruStageEffect === "function" &&
+            Boolean(getSubaruStageEffect(player));
+    }
+
+    if (effect.id === "KIL1-001-custom") {
+        return Number(card?.attachedDon || 0) >= 2;
     }
 
     if (isWanoCountryAttachDonEffect(card, effect)) {
@@ -2264,6 +2304,8 @@ function createActivateMainButton(player, card, effect) {
             activateMainButton.title = `It is currently ${gameState.currentPlayer?.name ?? "another player"}'s turn.`;
         } else if (effect.oncePerTurn && CardEffects.hasUsedOncePerTurnEffect(card, effect.id, player.turns)) {
             activateMainButton.title = "This Once Per Turn effect has already been used this turn.";
+        } else if (effect.oncePerGame && CardEffects.hasUsedOncePerGameEffect(card, effect.id)) {
+            activateMainButton.title = "This Once Per Game effect has already been used.";
         } else {
             activateMainButton.title = "This effect cannot be activated right now.";
         }
@@ -2324,6 +2366,10 @@ async function resolveActivateMainBoardEffect(player, card, effect) {
         CardEffects.markOncePerTurnEffectUsed(card, effect.id, player.turns);
     }
 
+    if (effect.oncePerGame) {
+        CardEffects.markOncePerGameEffectUsed(card, effect.id);
+    }
+
     addGameLog(`${player.name} activated ${card.name}'s Activate: Main effect. ${result.message}`);
 
     showSelectedBoardActions();
@@ -2332,6 +2378,22 @@ async function resolveActivateMainBoardEffect(player, card, effect) {
 function resolveBoardActionEffect(player, card, effect) {
     if (effect.id === "YAM1-001-activate-main-life") {
         return resolveAceYamatoLeaderActivateMain(player, card, ui);
+    }
+
+    if (effect.id === "SUB1-001-checkpoint") {
+        return resolveSubaruLeaderActivateMain(player, card, ui);
+    }
+
+    if (effect.id === "DD02-001-activate-main") {
+        return resolveSaintGermainLeaderActivateMain(player, card, ui);
+    }
+
+    if (effect.id === "SUB1-007-activate-main-stage-copy") {
+        return resolveEchidnaActivateMain(player, card, ui);
+    }
+
+    if (effect.id === "KIL1-001-custom") {
+        return resolveKillerLeaderActivateMain(player, card, ui);
     }
 
     if (isWanoCountryAttachDonEffect(card, effect)) {
@@ -3096,12 +3158,10 @@ function promptOnOpponentAttackCharacterEffects(defenderPlayer, onComplete) {
 
     const effects = [];
 
-    const leaderEffect = getCardAllEffects(defenderPlayer.leader)?.find(effect => {
-        return effect.type === "onOpponentAttack" &&
-            (!canUseOnOpponentAttackEffect || canUseOnOpponentAttackEffect(defenderPlayer, defenderPlayer.leader, effect));
-    });
+    const leaderEffect = getOnOpponentAttackEffect(defenderPlayer.leader);
 
-    if (defenderPlayer.leader && leaderEffect) {
+    if (defenderPlayer.leader && leaderEffect &&
+            (!canUseOnOpponentAttackEffect || canUseOnOpponentAttackEffect(defenderPlayer, defenderPlayer.leader, leaderEffect))) {
         effects.push({
             cardType: "leader"
         });
@@ -3109,10 +3169,11 @@ function promptOnOpponentAttackCharacterEffects(defenderPlayer, onComplete) {
 
     defenderPlayer.characters
         .map((card, slotIndex) => ({ card, slotIndex }))
-        .filter(entry => getCardAllEffects(entry.card)?.some(effect => {
-            return effect.type === "onOpponentAttack" &&
+        .filter(entry => {
+            const effect = getOnOpponentAttackEffect(entry.card);
+            return effect &&
                 (!canUseOnOpponentAttackEffect || canUseOnOpponentAttackEffect(defenderPlayer, entry.card, effect));
-        }))
+        })
         .forEach(entry => {
             effects.push({
                 cardType: "character",
@@ -3134,7 +3195,7 @@ function promptOnOpponentAttackCharacterEffects(defenderPlayer, onComplete) {
         const currentCard = entry.cardType === "leader"
             ? defenderPlayer.leader
             : defenderPlayer.characters[entry.slotIndex];
-        const effect = getCardAllEffects(currentCard)?.find(cardEffect => cardEffect.type === "onOpponentAttack");
+        const effect = getOnOpponentAttackEffect(currentCard);
 
         if (!currentCard || !effect) {
             promptNext(index + 1);
@@ -3158,6 +3219,18 @@ function promptOnOpponentAttackCharacterEffects(defenderPlayer, onComplete) {
 
                 if (effect.id === "JK01-001-on-opponent-attack") {
                     const message = resolveHiromiHigurumaLeaderOnOpponentAttack(defenderPlayer, currentCard, ui, {
+                        onComplete: () => promptNext(index + 1)
+                    });
+
+                    if (message) {
+                        addGameLog(message);
+                    }
+
+                    return;
+                }
+
+                if (effect.id === "KIL1-001-custom") {
+                    const message = resolveKillerLeaderOnOpponentAttack(defenderPlayer, currentCard, ui, {
                         onComplete: () => promptNext(index + 1)
                     });
 
@@ -3495,9 +3568,18 @@ async function resolveCurrentAttack() {
 
     if (attackerWins && currentAttack.target.cardType === "leader") {
         if (defenderPlayer.life.length === 0) {
-            gameWinner = attackerPlayer;
-            battleResultText += `<br>${defenderPlayer.name} has no life cards left.`;
-            battleResultText += `<br>${attackerPlayer.name} wins the game.`;
+            const lifeLossResult = loseByLifeDamage(
+                defenderPlayer,
+                `${defenderPlayer.name} took a direct attack with no life cards remaining.`
+            );
+
+            if (lifeLossResult.restoredByCheckpoint) {
+                battleResultText += `<br>${defenderPlayer.name} would lose the game, but Subaru's checkpoint restored the saved zones.`;
+            } else {
+                gameWinner = attackerPlayer;
+                battleResultText += `<br>${defenderPlayer.name} has no life cards left.`;
+                battleResultText += `<br>${attackerPlayer.name} wins the game.`;
+            }
         } else {
             const damageAmount = CardEffects.getLeaderDamageAmount(attackerCard);
 
@@ -4740,6 +4822,7 @@ function getPowerModifier(card, player = null) {
 
     return getCopiedEffectPowerModifier(card, player) +
         getYourTurnPowerBonus(card, player) +
+        getSubaruRamPowerModifier(card) +
         getSt28MomonosukeLeaderPowerModifier(card, player) +
         getSt28YamatoPowerModifier(card, player) +
         getWanoCountryPowerModifier(card, player) +
@@ -4756,6 +4839,12 @@ function getPowerModifier(card, player = null) {
         getDurationPowerModifier(card) +
         getDonAttachedPowerModifier(card) +
         getBattlePowerModifier(card);
+}
+
+function getSubaruRamPowerModifier(card) {
+    return typeof hasRamBoostedRem === "function" && hasRamBoostedRem(card)
+        ? 1000
+        : 0;
 }
 
 function getPlayerForBoardCard(card) {

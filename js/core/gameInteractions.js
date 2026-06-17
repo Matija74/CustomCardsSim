@@ -1379,6 +1379,14 @@ function canUseCounterEffect(card, player, effect) {
         return false;
     }
 
+    if (effect.id === "SUB1-011-counter") {
+        const handCardsAvailable = player.hand.some(handCard => handCard?.instanceId === card.instanceId)
+            ? player.hand.length - 1
+            : player.hand.length;
+
+        return handCardsAvailable > 0;
+    }
+
     const higurumaCounterPowerLimits = {
         "JK01-002-counter": 7000,
         "JK01-003-counter": 7000,
@@ -1999,6 +2007,221 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
 
     if (sourceCard.cardType !== "event" && areCardEffectsNegated(sourceCard)) {
         return `${sourceCard.name}'s effects are negated.`;
+    }
+
+    if (effect.id === "SUB1-008-on-play-checkpoint") {
+        return saveSubaruCheckpointState(player, sourceCard, ui);
+    }
+
+    if (effect.id === "SUB1-002-on-play-life") {
+        if ((player.life?.length || 0) > 2) {
+            return `${sourceCard.name}'s On Play effect did not resolve because ${player.name} has more than 2 life cards.`;
+        }
+
+        const topDeckCard = player.deck.shift();
+
+        if (!topDeckCard) {
+            return `${sourceCard.name}'s On Play effect found no card in deck to add to life.`;
+        }
+
+        addCardToLife(player, topDeckCard, ui);
+        ui?.renderDecks?.();
+        return `${sourceCard.name}'s On Play effect added the top card of the deck to life.`;
+    }
+
+    if (effect.id === "SUB1-004-on-play-rush") {
+        if (!player.life?.length) {
+            return `${sourceCard.name}'s On Play effect found no life card to reveal.`;
+        }
+
+        if (player.hand.length === 0) {
+            return `${sourceCard.name}'s On Play effect found no card in hand to trash.`;
+        }
+
+        return chooseHandCard(player, sourceCard, {
+            prompt: `Choose 1 card from your hand to trash for ${sourceCard.name}.`,
+            optional: false,
+            onSelect: ({ handIndex, card }) => {
+                const trashedCard = player.hand.splice(handIndex, 1)[0];
+
+                if (!trashedCard) {
+                    addGameLog(`${sourceCard.name} could not find that hand card to trash.`);
+                    return;
+                }
+
+                moveCardToTrash(player, trashedCard, ui);
+                ui?.renderHands?.();
+                ui?.renderTrash?.();
+                addGameLog(`${player.name} trashed ${card.name} for ${sourceCard.name}.`);
+
+                const revealMessage = revealSubaruLifeCard(player, sourceCard, ui);
+
+                if (revealMessage) {
+                    addGameLog(revealMessage);
+                }
+
+                addTemporaryKeyword(sourceCard, "rush");
+                ui?.renderCharacters?.();
+                addGameLog(`${sourceCard.name} gained Rush this turn.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            emptyMessage: `${sourceCard.name} found no card in hand to trash.`
+        });
+    }
+
+    if (effect.id === "SUB1-005-on-play-life-rush") {
+        const topDeckCard = player.deck.shift();
+
+        if (!topDeckCard) {
+            return `${sourceCard.name}'s On Play effect found no card in deck to add to life.`;
+        }
+
+        addCardToLife(player, topDeckCard, ui);
+        addTemporaryKeyword(sourceCard, "rushCharacters");
+        ui?.renderDecks?.();
+        ui?.renderCharacters?.();
+        return `${sourceCard.name}'s On Play effect added the top card of the deck to life and gave it Character Rush this turn.`;
+    }
+
+    if (effect.id === "SUB1-005-trigger-draw-trash") {
+        return resolveDrawTwoTrashOne(player, sourceCard, ui);
+    }
+
+    if (effect.id === "SUB1-006-on-play-search") {
+        return lookTopCardsForType(player, sourceCard, 5, "RE:ZERO", ui);
+    }
+
+    if (effect.id === "SUB1-007-on-play-stage-copy") {
+        return resolveEchidnaStageCopy(player, sourceCard, ui).message;
+    }
+
+    if (effect.id === "SUB1-011-counter") {
+        if (player.hand.length === 0) {
+            return `${sourceCard.name}'s Counter found no card in hand to trash.`;
+        }
+
+        return chooseHandCard(player, sourceCard, {
+            prompt: `Choose 1 card from your hand to trash for ${sourceCard.name}.`,
+            optional: false,
+            onSelect: ({ handIndex, card }) => {
+                const trashedCard = player.hand.splice(handIndex, 1)[0];
+
+                if (!trashedCard) {
+                    addGameLog(`${sourceCard.name} could not find that hand card to trash.`);
+                    return;
+                }
+
+                moveCardToTrash(player, trashedCard, ui);
+                ui?.renderHands?.();
+                ui?.renderTrash?.();
+                addGameLog(`${player.name} trashed ${card.name} for ${sourceCard.name}.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            emptyMessage: `${sourceCard.name} found no card in hand to trash.`
+        });
+    }
+
+    if (effect.id === "SUB1-011-trigger") {
+        if ((player.life?.length || 0) !== 0) {
+            return `${sourceCard.name}'s Trigger did not resolve because ${player.name} does not have 0 life cards.`;
+        }
+
+        const topDeckCard = player.deck.shift();
+
+        if (topDeckCard) {
+            addCardToLife(player, topDeckCard, ui);
+            ui?.renderDecks?.();
+            addGameLog(`${sourceCard.name} added the top card of the deck to life.`);
+        } else {
+            addGameLog(`${sourceCard.name} found no card in deck to add to life.`);
+        }
+
+        if (player.hand.length === 0) {
+            return `${sourceCard.name}'s Trigger added a card to life, but found no card in hand to trash.`;
+        }
+
+        return chooseHandCard(player, sourceCard, {
+            prompt: `Choose 1 card from your hand to trash for ${sourceCard.name}.`,
+            optional: false,
+            onSelect: ({ handIndex, card }) => {
+                const trashedCard = player.hand.splice(handIndex, 1)[0];
+
+                if (!trashedCard) {
+                    addGameLog(`${sourceCard.name} could not find that hand card to trash.`);
+                    return;
+                }
+
+                moveCardToTrash(player, trashedCard, ui);
+                ui?.renderHands?.();
+                ui?.renderTrash?.();
+                addGameLog(`${player.name} trashed ${card.name} for ${sourceCard.name}.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            emptyMessage: `${sourceCard.name} found no card in hand to trash.`
+        });
+    }
+
+    if (effect.id === "SUB1-012-on-play-search-emilia") {
+        const trashedLifeResult = trashTopLifeCard(player, sourceCard, ui);
+
+        if (!trashedLifeResult.success) {
+            return trashedLifeResult.message;
+        }
+
+        addGameLog(trashedLifeResult.message);
+
+        const searchMessage = lookTopCardsForType(player, sourceCard, 6, "RE:ZERO", ui, {
+            onResolved: () => {
+                if (getFirstOpenCharacterSlotIndex(player) === -1) {
+                    addGameLog(`${sourceCard.name} could not play Emilia because ${player.name}'s character area is full.`);
+                    return;
+                }
+
+                const emiliaChoices = getHandCardChoices(player, card => CardEffects.hasCardName(card, "Emilia"));
+
+                if (emiliaChoices.length === 0) {
+                    addGameLog(`${sourceCard.name} found no Emilia in hand to play.`);
+                    return;
+                }
+
+                const chooseMessage = chooseHandCard(player, sourceCard, {
+                    prompt: "Choose up to 1 Emilia from your hand to play.",
+                    optional: true,
+                    filter: card => CardEffects.hasCardName(card, "Emilia"),
+                    onSelect: ({ handIndex }) => {
+                        const playedCard = player.hand.splice(handIndex, 1)[0];
+
+                        if (!playedCard) {
+                            addGameLog(`${sourceCard.name} could not find that Emilia in hand.`);
+                            return;
+                        }
+
+                        addGameLog(playCardFromDeckWithoutCost(player, sourceCard, playedCard, ui, "hand"));
+
+                        if (typeof queueMultiplayerStateSync === "function") {
+                            queueMultiplayerStateSync();
+                        }
+                    },
+                    skipMessage: `${player.name} did not play Emilia with ${sourceCard.name}.`,
+                    emptyMessage: `${sourceCard.name} found no Emilia in hand to play.`
+                });
+
+                if (chooseMessage) {
+                    addGameLog(chooseMessage);
+                }
+            }
+        });
+
+        return `${trashedLifeResult.message} ${searchMessage}`.trim();
     }
 
     if (
@@ -6099,6 +6322,10 @@ function hasContinuousOpponentEffectProtection(card, actingPlayer) {
         return hasTypeText(owner.leader, "Culling Game Participant");
     }
 
+    if (hasRamBoostedRem(card)) {
+        return true;
+    }
+
     return false;
 }
 
@@ -6368,7 +6595,17 @@ function hasReachedPerTurnEffectUseLimit(card, effect, turnNumber) {
 }
 
 function canUseOnOpponentAttackEffect(player, card, effect) {
-    if (!player || !card || !effect || effect.type !== "onOpponentAttack") {
+    if (!player || !card || !effect) {
+        return false;
+    }
+
+    if (effect.id === "KIL1-001-custom") {
+        return card.cardNumber === "KIL1-001" &&
+            Number(card.attachedDon || 0) >= 2 &&
+            !CardEffects.hasUsedOncePerTurnEffect(card, effect.id, player.turns);
+    }
+
+    if (effect.type !== "onOpponentAttack") {
         return false;
     }
 
@@ -7221,6 +7458,736 @@ function resolveHiromiHigurumaLeaderOnOpponentAttack(player, leader, ui, options
     return `${leader.name}'s effect resolved.`;
 }
 
+function cloneGameStateValue(value) {
+    if (typeof structuredClone === "function") {
+        return structuredClone(value);
+    }
+
+    return JSON.parse(JSON.stringify(value));
+}
+
+function clearTransientStateAfterCheckpointRestore() {
+    selectedHandCard = null;
+    selectedHandCardData = null;
+    pendingReplacePlay = null;
+    selectedBoardCard = null;
+    selectedBoardCardData = null;
+    pendingAttack = null;
+    currentAttack = null;
+    pendingBlock = null;
+    pendingTrashChoice = null;
+
+    if (typeof pendingOpponentAttackEffect !== "undefined") {
+        pendingOpponentAttackEffect = null;
+    }
+
+    if (typeof pendingDeferredCombatChoices !== "undefined") {
+        pendingDeferredCombatChoices = 0;
+    }
+
+    if (typeof deferredCombatContinuation !== "undefined") {
+        deferredCombatContinuation = null;
+    }
+
+    if (typeof deferredAttackCleanup !== "undefined") {
+        deferredAttackCleanup = null;
+    }
+
+    if (typeof lastAutoPhaseAdvanceKey !== "undefined") {
+        lastAutoPhaseAdvanceKey = null;
+    }
+
+    if (typeof lastStartOfTurnResumeKey !== "undefined") {
+        lastStartOfTurnResumeKey = null;
+    }
+
+    if (typeof gameOverState !== "undefined") {
+        gameOverState = null;
+    }
+
+    if (typeof removeEffectChoiceOverlay === "function") {
+        removeEffectChoiceOverlay();
+    }
+
+    if (typeof clearTrashChoiceTargets === "function") {
+        clearTrashChoiceTargets();
+    }
+
+    if (typeof clearAttackTargets === "function") {
+        clearAttackTargets();
+    }
+
+    if (typeof clearBlockerTargets === "function") {
+        clearBlockerTargets();
+    }
+
+    if (typeof clearBattleControls === "function") {
+        clearBattleControls();
+    }
+
+    if (typeof clearHandSelection === "function") {
+        clearHandSelection();
+    }
+
+    if (typeof clearBoardSelection === "function") {
+        clearBoardSelection();
+    }
+
+    if (typeof clearReplaceTargets === "function") {
+        clearReplaceTargets();
+    }
+
+    if (typeof clearCancelAttackButton === "function") {
+        clearCancelAttackButton();
+    }
+
+    if (typeof clearAttackArrow === "function") {
+        clearAttackArrow();
+    }
+}
+
+function getSubaruLeader(player) {
+    const leader = player?.leader;
+
+    if (!leader || leader.cardNumber !== "SUB1-001" || areCardEffectsNegated(leader)) {
+        return null;
+    }
+
+    return leader;
+}
+
+function revealSubaruLifeCard(player, sourceCard, ui, options = {}) {
+    if (!player?.life?.length) {
+        return `${sourceCard.name} found no life card to reveal.`;
+    }
+
+    const revealAtPosition = (position) => {
+        const useBottomCard = position === "bottom" && player.life.length > 1;
+        const revealedCard = useBottomCard
+            ? player.life[player.life.length - 1]
+            : player.life[0];
+
+        if (!revealedCard) {
+            addGameLog(`${sourceCard.name} could not reveal that life card.`);
+            return;
+        }
+
+        revealedCard.faceUp = true;
+        ui?.renderLifeCards?.();
+        addGameLog(`${player.name} turned the ${useBottomCard ? "bottom" : "top"} life card face-up for ${sourceCard.name}.`);
+        options.onComplete?.(revealedCard, useBottomCard ? "bottom" : "top");
+
+        if (typeof queueMultiplayerStateSync === "function") {
+            queueMultiplayerStateSync();
+        }
+    };
+
+    if (options.allowBottomChoice && player.life.length > 1 && ui?.chooseEffectOption) {
+        ui.chooseEffectOption({
+            player,
+            sourceCard,
+            title: options.title || sourceCard.name,
+            prompt: options.prompt || `Choose which life card to reveal for ${sourceCard.name}.`,
+            options: [
+                { label: "Top", value: "top" },
+                { label: "Bottom", value: "bottom" }
+            ],
+            onComplete: (value) => {
+                revealAtPosition(value === "bottom" ? "bottom" : "top");
+            }
+        });
+
+        return `${player.name} is choosing a life card to reveal for ${sourceCard.name}.`;
+    }
+
+    revealAtPosition("top");
+    return `${sourceCard.name}'s effect revealed a life card.`;
+}
+
+function trashTopLifeCard(player, sourceCard, ui) {
+    const trashedCard = player?.life?.shift();
+
+    if (!trashedCard) {
+        return {
+            success: false,
+            card: null,
+            message: `${sourceCard.name} found no top life card to trash.`
+        };
+    }
+
+    moveCardToTrash(player, trashedCard, ui);
+    ui?.renderLifeCards?.();
+    ui?.renderTrash?.();
+
+    return {
+        success: true,
+        card: trashedCard,
+        message: `${player.name} trashed ${trashedCard.name} from the top of life for ${sourceCard.name}.`
+    };
+}
+
+function getSubaruStageEffect(player) {
+    const stage = player?.stage;
+
+    if (!stage || areCardEffectsNegated(stage)) {
+        return null;
+    }
+
+    return getCardAllEffects(stage)?.find(effect => {
+        return effect.id === "SUB1-008-on-play-checkpoint" ||
+            effect.type === "main" ||
+            effect.type === "activateMain" ||
+            effect.type === "onPlay";
+    }) || null;
+}
+
+function resolveEchidnaStageCopy(player, sourceCard, ui) {
+    const stage = player?.stage;
+    const stageEffect = getSubaruStageEffect(player);
+
+    if (!stage || !stageEffect) {
+        return {
+            success: false,
+            message: `${sourceCard.name} found no Stage effect to activate.`
+        };
+    }
+
+    const revealMessage = revealSubaruLifeCard(player, sourceCard, ui, {
+        onComplete: () => {
+            const stageMessage = resolveEffectAction(player, stage, stageEffect, ui, {
+                skipActivationPrompt: true
+            });
+
+            if (stageMessage) {
+                addGameLog(stageMessage);
+            }
+
+            addTemporaryPowerBonus(sourceCard, 1000);
+            ui?.renderCharacters?.();
+            addGameLog(`${sourceCard.name} gained +1000 power this turn.`);
+
+            if (typeof queueMultiplayerStateSync === "function") {
+                queueMultiplayerStateSync();
+            }
+        }
+    });
+
+    return {
+        success: true,
+        message: revealMessage || `${sourceCard.name}'s effect resolved.`
+    };
+}
+
+function hasRamBoostedRem(card) {
+    if (!card || card.cardType !== "character" || !CardEffects.hasCardName(card, "Rem")) {
+        return false;
+    }
+
+    const owner = getPlayerForBoardCard(card);
+
+    if (!owner) {
+        return false;
+    }
+
+    return owner.characters.some(boardCard => {
+        return boardCard?.cardNumber === "SUB1-003" && !areCardEffectsNegated(boardCard);
+    });
+}
+
+function buildSubaruCheckpointState() {
+    if (!gameState) {
+        return null;
+    }
+
+    const clonePlayerZones = (player) => ({
+        characters: cloneGameStateValue(player?.characters || []),
+        hand: cloneGameStateValue(player?.hand || []),
+        life: cloneGameStateValue(player?.life || []),
+        trash: cloneGameStateValue(player?.trash || []),
+        deck: cloneGameStateValue(player?.deck || []),
+        don: Number(player?.don || 0),
+        restedDon: Number(player?.restedDon || 0),
+        donDeck: Number(player?.donDeck || 0)
+    });
+
+    return {
+        player1: clonePlayerZones(gameState.player1),
+        player2: clonePlayerZones(gameState.player2)
+    };
+}
+
+function applySubaruCheckpointState(checkpointState, ui) {
+    if (!checkpointState || !gameState?.player1 || !gameState?.player2) {
+        return false;
+    }
+
+    const applyPlayerZones = (playerKey) => {
+        const player = gameState[playerKey];
+        const saved = checkpointState[playerKey];
+
+        if (!player || !saved) {
+            return;
+        }
+
+        player.characters = cloneGameStateValue(saved.characters || []);
+        player.hand = cloneGameStateValue(saved.hand || []);
+        player.life = cloneGameStateValue(saved.life || []);
+        player.trash = cloneGameStateValue(saved.trash || []);
+        player.deck = cloneGameStateValue(saved.deck || []);
+        player.don = Number(saved.don || 0);
+        player.restedDon = Number(saved.restedDon || 0);
+        player.donDeck = Number(saved.donDeck || 0);
+    };
+
+    applyPlayerZones("player1");
+    applyPlayerZones("player2");
+    clearTransientStateAfterCheckpointRestore();
+    gameState.currentPhase = "main";
+    ui?.updateDonDisplay?.();
+    ui?.renderDonDecks?.();
+    ui?.renderLeaders?.();
+    ui?.renderStages?.();
+    ui?.renderHands?.();
+    ui?.renderDecks?.();
+    ui?.renderLifeCards?.();
+    ui?.renderCharacters?.();
+    ui?.renderTrash?.();
+
+    if (typeof showSelectedBoardActions === "function") {
+        showSelectedBoardActions();
+    }
+
+    return true;
+}
+
+function tryResolveSubaruCheckpointLoss(player, reasonText = "") {
+    const leader = getSubaruLeader(player);
+    const effectId = "SUB1-001-checkpoint";
+
+    if (!leader ||
+        CardEffects.hasUsedOncePerGameEffect(leader, effectId) ||
+        !gameState?.subaruCheckpointState) {
+        return false;
+    }
+
+    const restored = applySubaruCheckpointState(gameState.subaruCheckpointState, ui);
+
+    if (!restored) {
+        return false;
+    }
+
+    CardEffects.markOncePerGameEffectUsed(leader, effectId);
+    addGameLog(`${leader.name} prevented a loss and reset the saved zones to the last checkpoint.${reasonText ? ` ${reasonText}` : ""}`);
+
+    if (typeof removeGameOverPopup === "function") {
+        removeGameOverPopup();
+    }
+
+    if (typeof queueMultiplayerStateSync === "function") {
+        queueMultiplayerStateSync();
+    }
+
+    return true;
+}
+
+function saveSubaruCheckpointState(player, sourceCard, ui) {
+    if (!player || !sourceCard || !gameState) {
+        return `${sourceCard?.name || "This effect"} could not save a checkpoint.`;
+    }
+
+    const opponent = getOpponentOfPlayer(player);
+    const ownTopLife = player.life?.[0];
+    const opponentTopLife = opponent?.life?.[0];
+
+    if (ownTopLife) {
+        ownTopLife.faceUp = true;
+    }
+
+    if (opponentTopLife) {
+        opponentTopLife.faceUp = true;
+    }
+
+    ui?.renderLifeCards?.();
+
+    gameState.subaruCheckpointState = buildSubaruCheckpointState();
+    gameState.subaruCheckpointOwnerKey = getPlayerKey(player);
+
+    if (typeof queueMultiplayerStateSync === "function") {
+        queueMultiplayerStateSync();
+    }
+
+    return `${sourceCard.name} set the current game state as a checkpoint.`;
+}
+
+function resolveSubaruLeaderActivateMain(player, leader, ui) {
+    const activeLeader = getSubaruLeader(player);
+
+    if (!activeLeader || leader?.instanceId !== activeLeader.instanceId) {
+        return {
+            success: false,
+            message: "Subaru Natsuki's effect could not be found."
+        };
+    }
+
+    if (!gameState?.subaruCheckpointState) {
+        return {
+            success: false,
+            message: `${leader.name} has no checkpoint to reset to.`
+        };
+    }
+
+    if (!applySubaruCheckpointState(gameState.subaruCheckpointState, ui)) {
+        return {
+            success: false,
+            message: `${leader.name} could not find a valid checkpoint state.`
+        };
+    }
+
+    CardEffects.markOncePerGameEffectUsed(activeLeader, "SUB1-001-checkpoint");
+    ui?.renderLeaders?.();
+    ui?.renderStages?.();
+
+    return {
+        success: true,
+        message: `${leader.name} reset the game to the last checkpoint.`
+    };
+}
+
+function getSaintGermainLeader(player) {
+    const leader = player?.leader;
+
+    if (!leader || leader.cardNumber !== "DD02-001" || areCardEffectsNegated(leader)) {
+        return null;
+    }
+
+    return leader;
+}
+
+function isSaintGermainCurseCard(card) {
+    return hasTypeText(card, "Curse") || hasTypeText(card, "The Cursed");
+}
+
+function getSaintGermainActivatableEffects(card) {
+    const activatableTypes = new Set([
+        "main",
+        "counter",
+        "trigger",
+        "onPlay",
+        "activateMain",
+        "whenAttacking",
+        "onKO",
+        "onOpponentAttack"
+    ]);
+
+    return (getCardAllEffects(card) || []).filter(effect => activatableTypes.has(effect.type));
+}
+
+function getSaintGermainTrashEffectChoices(player) {
+    return (player?.trash || [])
+        .map((card, trashIndex) => ({
+            card,
+            trashIndex,
+            effects: getSaintGermainActivatableEffects(card)
+        }))
+        .filter(entry => entry.card && isSaintGermainCurseCard(entry.card) && entry.effects.length > 0);
+}
+
+function activateSaintGermainTrashEffect(player, sourceCard, ui) {
+    const validChoices = getSaintGermainTrashEffectChoices(player);
+
+    if (validChoices.length === 0) {
+        return `${sourceCard.name} found no activatable [Curse] or [The Cursed] effects in trash.`;
+    }
+
+    const activateChosenEffect = (entry, effectId) => {
+        const targetEffect = entry.effects.find(effect => effect.id === effectId) || entry.effects[0];
+
+        if (!targetEffect) {
+            addGameLog(`${sourceCard.name} could not find that effect anymore.`);
+            return;
+        }
+
+        const message = resolveEffectAction(player, entry.card, targetEffect, ui, {
+            skipActivationPrompt: true
+        });
+
+        addGameLog(
+            message ||
+            `${sourceCard.name} activated ${entry.card.name}'s ${getEffectLabel(targetEffect)} effect from trash.`
+        );
+
+        if (typeof queueMultiplayerStateSync === "function") {
+            queueMultiplayerStateSync();
+        }
+    };
+
+    const chooseEffectFromCard = (entry) => {
+        if (entry.effects.length === 1 || !ui?.chooseEffectOption) {
+            activateChosenEffect(entry, entry.effects[0]?.id);
+            return;
+        }
+
+        ui.chooseEffectOption({
+            sourceCard: entry.card,
+            title: entry.card.name,
+            prompt: `Choose which effect to activate from ${entry.card.name}.`,
+            options: entry.effects.map(effect => ({
+                label: getEffectLabel(effect),
+                value: effect.id,
+                title: effect.text || getEffectLabel(effect)
+            })),
+            onComplete: (effectId) => {
+                activateChosenEffect(entry, effectId);
+            }
+        });
+    };
+
+    const chooseMessage = chooseTrashCard(player, sourceCard, ui, {
+        prompt: `Choose up to 1 [Curse] or [The Cursed] card from your trash to activate with ${sourceCard.name}.`,
+        optional: true,
+        filter: card => {
+            return isSaintGermainCurseCard(card) &&
+                getSaintGermainActivatableEffects(card).length > 0;
+        },
+        onSelect: ({ trashIndex }) => {
+            const entry = getSaintGermainTrashEffectChoices(player)
+                .find(choice => choice.trashIndex === trashIndex);
+
+            if (!entry) {
+                addGameLog(`${sourceCard.name} could not find that trash card anymore.`);
+                return;
+            }
+
+            chooseEffectFromCard(entry);
+        },
+        skipMessage: `${player.name} did not activate a trash effect with ${sourceCard.name}.`,
+        emptyMessage: `${sourceCard.name} found no activatable [Curse] or [The Cursed] card effects in trash.`
+    });
+
+    return chooseMessage || `${sourceCard.name}'s effect resolved.`;
+}
+
+function resolveSaintGermainLeaderActivateMain(player, leader, ui) {
+    const activeLeader = getSaintGermainLeader(player);
+
+    if (!activeLeader || leader?.instanceId !== activeLeader.instanceId) {
+        return {
+            success: false,
+            message: "Count Saint-Germain's effect could not be found."
+        };
+    }
+
+    const ashura = player.stage;
+
+    if (!ashura || !CardEffects.hasCardName(ashura, "Ashura")) {
+        return {
+            success: false,
+            message: `${leader.name} requires [Ashura] in play.`
+        };
+    }
+
+    if ((ashura.state || "active") !== "active" || !canCardBeRested(ashura)) {
+        return {
+            success: false,
+            message: `${ashura.name} cannot be rested for ${leader.name}.`
+        };
+    }
+
+    const validTrashCards = player.trash.filter(card => isSaintGermainCurseCard(card));
+
+    if (validTrashCards.length === 0) {
+        return {
+            success: false,
+            message: `${leader.name} found no [Curse] or [The Cursed] cards in trash to add to hand.`
+        };
+    }
+
+    if (!setCardRested(ashura)) {
+        return {
+            success: false,
+            message: `${ashura.name} could not be rested for ${leader.name}.`
+        };
+    }
+
+    const addMessage = addCardFromTrashToHand(player, leader, ui, {
+        prompt: `Choose up to 1 [Curse] or [The Cursed] card from your trash to add to your hand with ${leader.name}.`,
+        optional: true,
+        filter: card => isSaintGermainCurseCard(card),
+        skipMessage: `${player.name} rested ${ashura.name} for ${leader.name} but did not add a card from trash.`,
+        emptyMessage: `${leader.name} found no [Curse] or [The Cursed] cards in trash.`
+    });
+
+    if (typeof queueMultiplayerStateSync === "function") {
+        queueMultiplayerStateSync();
+    }
+
+    return {
+        success: true,
+        message: `${leader.name} rested ${ashura.name}. ${addMessage || `${leader.name}'s effect resolved.`}`.trim()
+    };
+}
+
+function getKillerLeader(player) {
+    const leader = player?.leader;
+
+    if (!leader || leader.cardNumber !== "KIL1-001" || areCardEffectsNegated(leader)) {
+        return null;
+    }
+
+    return leader;
+}
+
+function resolveKillerLeaderMill(player, sourceCard, ui) {
+    const opponent = getOpponentOfPlayer(player);
+    const ownMill = trashTopCardsOfDeck(player, 2, ui);
+    const opponentMill = opponent
+        ? trashTopCardsOfDeck(opponent, 2, ui)
+        : { message: `${sourceCard.name} found no opponent deck to trash from.` };
+
+    addGameLog(ownMill.message);
+    addGameLog(opponentMill.message);
+
+    return `${player.name} and ${opponent?.name || "the opponent"} each trashed up to 2 cards from the top of their deck for ${sourceCard.name}.`;
+}
+
+function resolveKillerLeaderActivateMain(player, leader, ui) {
+    const activeLeader = getKillerLeader(player);
+
+    if (!activeLeader || leader?.instanceId !== activeLeader.instanceId) {
+        return {
+            success: false,
+            message: "Killer's effect could not be found."
+        };
+    }
+
+    if (Number(activeLeader.attachedDon || 0) < 2) {
+        return {
+            success: false,
+            message: `${leader.name} requires DON!! x2.`
+        };
+    }
+
+    const millMessage = resolveKillerLeaderMill(player, leader, ui);
+
+    if (!player.characters.some(card => card?.cardType === "character")) {
+        return {
+            success: true,
+            message: `${millMessage} ${leader.name} found no Characters to receive rested DON!!.`.trim()
+        };
+    }
+
+    const maxAttach = Math.min(2, Number(player.restedDon || 0));
+
+    if (maxAttach <= 0) {
+        return {
+            success: true,
+            message: `${millMessage} ${leader.name} found no rested DON!! to give.`.trim()
+        };
+    }
+
+    const chooseMessage = chooseOwnBoardCard(player, leader, {
+        prompt: `Choose up to 1 of your Characters to receive up to ${maxAttach} rested DON!! with ${leader.name}.`,
+        optional: true,
+        includeLeader: false,
+        filter: card => card.cardType === "character",
+        onSelect: ({ card }) => {
+            const giveDon = (count) => {
+                const resolvedCount = Math.max(0, Math.min(maxAttach, Number(count || 0)));
+
+                if (resolvedCount <= 0) {
+                    addGameLog(`${player.name} did not give any rested DON!! with ${leader.name}.`);
+                    return;
+                }
+
+                for (let index = 0; index < resolvedCount; index++) {
+                    const attachMessage = giveRestedDonToCard(player, leader, card, ui);
+
+                    if (attachMessage) {
+                        addGameLog(attachMessage);
+                    }
+                }
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            };
+
+            if (maxAttach > 1 && ui?.chooseNumberValue) {
+                ui.chooseNumberValue({
+                    player,
+                    sourceCard: leader,
+                    title: leader.name,
+                    prompt: `Choose how many rested DON!! to give to ${card.name}.`,
+                    min: 0,
+                    max: maxAttach,
+                    initialValue: maxAttach,
+                    valueLabel: "DON!!",
+                    onComplete: giveDon
+                });
+                return;
+            }
+
+            giveDon(maxAttach);
+        },
+        skipMessage: `${player.name} did not choose a Character for ${leader.name}.`,
+        emptyMessage: `${leader.name} found no Characters to receive rested DON!!.`
+    });
+
+    return {
+        success: true,
+        message: `${millMessage} ${chooseMessage || `${leader.name}'s effect resolved.`}`.trim()
+    };
+}
+
+function resolveKillerLeaderOnOpponentAttack(player, leader, ui, options = {}) {
+    const activeLeader = getKillerLeader(player);
+    const effect = getCardAllEffects(activeLeader)?.find(cardEffect => cardEffect.id === "KIL1-001-custom");
+
+    if (!activeLeader || !leader || !effect) {
+        options.onComplete?.();
+        return "";
+    }
+
+    if (CardEffects.hasUsedOncePerTurnEffect(activeLeader, effect.id, player.turns)) {
+        options.onComplete?.();
+        return `${leader.name}'s On Your Opponent's Attack effect has already been used this turn.`;
+    }
+
+    if (Number(activeLeader.attachedDon || 0) < 2) {
+        options.onComplete?.();
+        return `${leader.name}'s On Your Opponent's Attack effect requires DON!! x2.`;
+    }
+
+    CardEffects.markOncePerTurnEffectUsed(activeLeader, effect.id, player.turns);
+
+    const millMessage = resolveKillerLeaderMill(player, leader, ui);
+    const chooseMessage = chooseBoardCard(player, leader, getOpponentBoardChoices(player, {
+        includeLeader: true,
+        filter: card => card.cardType === "leader" || card.cardType === "character"
+    }), {
+        prompt: `Choose up to 1 of your opponent's Leaders or Characters to give -2000 power during this battle with ${leader.name}.`,
+        optional: true,
+        onSelect: ({ card }) => {
+            addBattlePowerBonus(card, -2000);
+            ui?.renderLeaders?.();
+            ui?.renderCharacters?.();
+            addGameLog(`${leader.name} gave ${card.name} -2000 power during this battle.`);
+
+            if (typeof queueMultiplayerStateSync === "function") {
+                queueMultiplayerStateSync();
+            }
+
+            options.onComplete?.();
+        },
+        onSkip: options.onComplete,
+        onEmpty: options.onComplete,
+        skipMessage: `${player.name} did not choose an opposing card for ${leader.name}.`,
+        emptyMessage: `${leader.name} found no opposing leader or character.`
+    });
+
+    return `${millMessage} ${chooseMessage || `${leader.name}'s effect resolved.`}`.trim();
+}
+
 function resolveCounterEffects(player, card, ui) {
     const messages = [];
 
@@ -7235,6 +8202,10 @@ function resolveCounterEffects(player, card, ui) {
     });
 
     return messages;
+}
+
+function resolveEchidnaActivateMain(player, sourceCard, ui) {
+    return resolveEchidnaStageCopy(player, sourceCard, ui);
 }
 
 function getAceYamatoLeader(player) {
@@ -7417,6 +8388,16 @@ function resolveAceYamatoLeaderActivateMain(player, leader, ui) {
         success: true,
         message: `${player.name} is choosing 2 of their {Land of Wano} Characters to K.O. for ${leader.name}.`
     };
+}
+
+function getImuLeader(player) {
+    const leader = player?.leader;
+
+    if (!leader || leader.cardNumber !== "IMU1-001" || areCardEffectsNegated(leader)) {
+        return null;
+    }
+
+    return leader;
 }
 
 function resolveKouzukiOdenTriggerPlay(player, card, ui) {
@@ -8086,6 +9067,16 @@ function resolveOnPlayEffects(player, card, ui) {
     card.effects
         ?.filter(effect => effect.type === "onPlay")
         .forEach(effect => {
+            if (effect.id === "SUB1-008-on-play-checkpoint") {
+                const message = saveSubaruCheckpointState(player, card, ui);
+
+                if (message) {
+                    messages.push(message);
+                }
+
+                return;
+            }
+
             if (effect.id === "POG1-002-on-play-mark-character") {
                 const message = placeOpponentCharacterWithParfum(player, card, ui);
 
@@ -8499,6 +9490,13 @@ function KOCharacter(player, slotIndex, ui, options = {}) {
         };
     }
 
+    if (options.byEffect && hasRamBoostedRem(character)) {
+        return {
+            success: false,
+            message: `${character.name} cannot be removed from the field by effects.`
+        };
+    }
+
     const trashResult = trashCharacterFromField(player, slotIndex, ui, {
         render: false
     });
@@ -8747,6 +9745,10 @@ function resolveSingleTriggerEffect(player, card, effect, ui) {
         return resolveKouzukiOdenTriggerPlay(player, card, ui);
     }
 
+    if (effect.id === "SUB1-009-trigger-play") {
+        return playCardFromTrigger(player, card, ui);
+    }
+
     if (effect.actionId === "playThisCardFromTrigger") {
         return playCardFromTrigger(player, card, ui);
     }
@@ -8794,6 +9796,14 @@ function resolveSingleTriggerEffect(player, card, effect, ui) {
 }
 
 function loseByLifeDamage(player, reasonText = "") {
+    if (tryResolveSubaruCheckpointLoss(player, reasonText || `${player.name} took damage with no life cards remaining.`)) {
+        return {
+            success: true,
+            restoredByCheckpoint: true,
+            winnerPlayer: null
+        };
+    }
+
     const winnerPlayer = getOpponentOfPlayer(player);
 
     if (!winnerPlayer) {
@@ -8925,6 +9935,15 @@ function getOpponentOfPlayer(player) {
 }
 
 function loseByDeckOut(player, reasonText = "") {
+    if (tryResolveSubaruCheckpointLoss(player, reasonText || `${player.name} has no cards left in deck.`)) {
+        return {
+            success: true,
+            deckOut: false,
+            restoredByCheckpoint: true,
+            winnerPlayer: null
+        };
+    }
+
     const winnerPlayer = getOpponentOfPlayer(player);
 
     if (!winnerPlayer) {

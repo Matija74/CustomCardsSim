@@ -300,6 +300,25 @@ window.CardEffects = {
         card.oncePerTurnEffectsUsed[effectId] = this.getOncePerTurnUsageKey(turnNumber);
     },
 
+    hasUsedOncePerGameEffect(card, effectId) {
+        return Array.isArray(card?.oncePerGameEffectsUsed) &&
+            card.oncePerGameEffectsUsed.includes(effectId);
+    },
+
+    markOncePerGameEffectUsed(card, effectId) {
+        if (!card || !effectId) {
+            return;
+        }
+
+        if (!Array.isArray(card.oncePerGameEffectsUsed)) {
+            card.oncePerGameEffectsUsed = [];
+        }
+
+        if (!card.oncePerGameEffectsUsed.includes(effectId)) {
+            card.oncePerGameEffectsUsed.push(effectId);
+        }
+    },
+
     getPerTurnEffectUseCount(card, effectId, turnNumber) {
         const usage = card?.perTurnEffectUses?.[effectId];
 
@@ -677,6 +696,252 @@ window.CardEffects = {
             message: chooseMessage
                 ? `${leader.name}'s When Attacking effect rested 4 DON!!. ${chooseMessage}`
                 : `${leader.name}'s When Attacking effect rested 4 DON!! and resolved.`
+        };
+    },
+
+    resolveSubaruLeaderWhenAttacking(player, attackerData, ui) {
+        const leader = attackerData?.cardType === "leader"
+            ? player?.leader
+            : null;
+
+        if (!leader || leader.cardNumber !== "SUB1-001") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const effectId = "SUB1-001-when-attacking-power";
+
+        if (this.wasEffectSkippedForAttack(leader, effectId)) {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        if (!Array.isArray(player?.life) || player.life.length === 0) {
+            return {
+                activated: false,
+                message: `${leader.name}'s When Attacking effect found no life cards to move.`
+            };
+        }
+
+        const placeLifeCardOnTop = (position) => {
+            if (position === "bottom" && player.life.length > 1) {
+                const movedCard = player.life.pop();
+
+                if (movedCard) {
+                    player.life.unshift(movedCard);
+                }
+            }
+
+            addTemporaryPowerBonus(leader, 1000);
+            ui?.renderLifeCards?.();
+            ui?.renderLeaders?.();
+            addGameLog(`${leader.name} placed a life card on top and gained +1000 power this turn.`);
+
+            if (typeof queueMultiplayerStateSync === "function") {
+                queueMultiplayerStateSync();
+            }
+        };
+
+        if (player.life.length > 1 && ui?.chooseEffectOption) {
+            ui.chooseEffectOption({
+                player,
+                sourceCard: leader,
+                title: leader.name,
+                prompt: `Choose which life card to place on top for ${leader.name}.`,
+                options: [
+                    { label: "Current Top", value: "top" },
+                    { label: "Current Bottom", value: "bottom" }
+                ],
+                onComplete: (value) => {
+                    placeLifeCardOnTop(value === "bottom" ? "bottom" : "top");
+                }
+            });
+
+            return {
+                activated: true,
+                message: `${player.name} is choosing which life card to place on top for ${leader.name}.`
+            };
+        }
+
+        placeLifeCardOnTop("top");
+
+        return {
+            activated: true,
+            message: `${leader.name}'s When Attacking effect placed a life card on top and gave it +1000 power this turn.`
+        };
+    },
+
+    resolveSubaruElsaWhenAttacking(player, attackerData, ui) {
+        const character = attackerData?.cardType === "character"
+            ? player?.characters?.[attackerData.slotIndex]
+            : null;
+
+        if (!character || character.cardNumber !== "SUB1-009") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        if (Number(character.attachedDon || 0) < 1) {
+            return {
+                activated: false,
+                message: `${character.name}'s When Attacking effect did not activate because it has no attached DON!!`
+            };
+        }
+
+        const revealMessage = typeof revealSubaruLifeCard === "function"
+            ? revealSubaruLifeCard(player, character, ui, {
+                allowBottomChoice: true,
+                onComplete: (revealedCard) => {
+                    const revealedPower = Number(revealedCard?.power || 0);
+                    const powerGain = Math.floor(revealedPower / 2);
+
+                    if (powerGain <= 0) {
+                        addGameLog(`${character.name} revealed ${revealedCard?.name || "a life card"}, but gained no power.`);
+                        return;
+                    }
+
+                    addTemporaryPowerBonus(character, powerGain);
+                    ui?.renderCharacters?.();
+                    addGameLog(`${character.name} gained +${powerGain} power this turn from the revealed life card.`);
+
+                    if (typeof queueMultiplayerStateSync === "function") {
+                        queueMultiplayerStateSync();
+                    }
+                }
+            })
+            : `${character.name} could not reveal a life card.`;
+
+        return {
+            activated: true,
+            message: revealMessage || `${character.name}'s When Attacking effect resolved.`
+        };
+    },
+
+    resolveSaintGermainLeaderWhenAttacking(player, attackerData, ui) {
+        const leader = attackerData?.cardType === "leader"
+            ? player?.leader
+            : null;
+
+        if (!leader || leader.cardNumber !== "DD02-001") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const effectId = "DD02-001-when-attacking";
+
+        if (this.wasEffectSkippedForAttack(leader, effectId)) {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        if (typeof getSaintGermainTrashEffectChoices !== "function" ||
+            getSaintGermainTrashEffectChoices(player).length === 0) {
+            return {
+                activated: false,
+                message: `${leader.name}'s When Attacking effect found no activatable [Curse] or [The Cursed] card effects in trash.`
+            };
+        }
+
+        const returnedDon = returnDonToDeck(player, 1, ui);
+
+        if (returnedDon < 1) {
+            return {
+                activated: false,
+                message: `${leader.name}'s When Attacking effect could not pay DON!! -1.`
+            };
+        }
+
+        const activationMessage = typeof activateSaintGermainTrashEffect === "function"
+            ? activateSaintGermainTrashEffect(player, leader, ui)
+            : "";
+
+        return {
+            activated: true,
+            message: activationMessage
+                ? `${leader.name}'s When Attacking effect returned 1 DON!!. ${activationMessage}`
+                : `${leader.name}'s When Attacking effect returned 1 DON!! and resolved.`
+        };
+    },
+
+    resolveImuLeaderWhenAttacking(player, attackerData, ui) {
+        const leader = attackerData?.cardType === "leader"
+            ? player?.leader
+            : null;
+
+        if (!leader || leader.cardNumber !== "IMU1-001") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const effectId = "IMU1-001-when-attacking";
+
+        if (this.wasEffectSkippedForAttack(leader, effectId)) {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const trashResult = trashTopCardsOfDeck(player, 1, ui);
+
+        if (!trashResult.success || trashResult.trashedCards.length < 1) {
+            return {
+                activated: false,
+                message: `${leader.name}'s When Attacking effect found no card in deck to trash.`
+            };
+        }
+
+        const holyKnightCharacters = player.characters.filter(card => {
+            return card?.cardType === "character" &&
+                hasTypeText(card, "Holy Knight");
+        });
+
+        if (holyKnightCharacters.length === 0) {
+            return {
+                activated: true,
+                message: `${leader.name}'s When Attacking effect trashed 1 card from the top of the deck but found no {Holy Knight} Characters to empower.`
+            };
+        }
+
+        const opponent = getOpponentOfPlayer(player);
+        const opponentKey = getPlayerKey(opponent);
+        const expiresAtEndOfTurns = Number(opponent?.turns || 0) + 1;
+        const chooseMessage = chooseOwnBoardCard(player, leader, {
+            prompt: `Choose up to 1 of your {Holy Knight} Characters to give Rush and +1000 power with ${leader.name}.`,
+            optional: true,
+            includeLeader: false,
+            filter: card => card.cardType === "character" && hasTypeText(card, "Holy Knight"),
+            onSelect: ({ card }) => {
+                addDurationKeyword(card, "rush", expiresAtEndOfTurns, opponentKey);
+                addDurationPowerBonus(card, 1000, expiresAtEndOfTurns, opponentKey);
+                ui?.renderCharacters?.();
+                addGameLog(`${leader.name} gave ${card.name} Rush and +1000 power until the end of ${opponent?.name || "the opponent"}'s next End Phase.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} trashed 1 card from deck for ${leader.name} but did not choose a {Holy Knight} Character.`,
+            emptyMessage: `${leader.name} found no {Holy Knight} Characters to empower.`
+        });
+
+        return {
+            activated: true,
+            message: chooseMessage
+                ? `${leader.name}'s When Attacking effect trashed 1 card from the top of the deck. ${chooseMessage}`
+                : `${leader.name}'s When Attacking effect trashed 1 card from the top of the deck and resolved.`
         };
     },
 
@@ -1094,6 +1359,10 @@ window.CardEffects = {
             this.resolveAiraWhenAttacking(player, attackerData, ui),
             this.resolveEggmanLeaderWhenAttacking(player, attackerData, ui),
             this.resolveHanamiLeaderWhenAttacking(player, attackerData, ui),
+            this.resolveSubaruLeaderWhenAttacking(player, attackerData, ui),
+            this.resolveSubaruElsaWhenAttacking(player, attackerData, ui),
+            this.resolveSaintGermainLeaderWhenAttacking(player, attackerData, ui),
+            this.resolveImuLeaderWhenAttacking(player, attackerData, ui),
             this.resolveJogoWhenAttacking(player, attackerData, ui),
             this.resolveKenjakuWhenAttacking(player, attackerData, ui),
             this.resolveKisukeWhenAttacking(player, attackerData, ui),

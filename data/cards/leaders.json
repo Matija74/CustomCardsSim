@@ -102,7 +102,7 @@
   "POG1-001": {
     "id": "POG1-001",
     "cardNumber": "POG1-001",
-    "name": "David TaglavnoviÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚Â",
+    "name": "David Taglavnovič",
     "cardType": "leader",
     "type": "Film",
     "color": "blue",
@@ -229,12 +229,12 @@
         "id": "SUB1-001-checkpoint",
         "type": "activateMain",
         "oncePerGame": true,
-        "text": "Once per Game: The game resets to the last checkpoint."
+        "text": "Once per Game: If you would lose the game, it instead resets to the last checkpoint."
       },
       {
         "id": "SUB1-001-when-attacking-power",
         "type": "whenAttacking",
-        "text": "When Attacking: You may place one of your life cards at the top of your Life area: this Leader gains +1000 power during this turn."
+        "text": "When Attacking: You may place one of your life cards other than the top card at the top of your Life area: this Leader gains +1000 power during this turn."
       }
     ]
   }
