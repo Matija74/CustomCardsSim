@@ -229,12 +229,12 @@
         "id": "SUB1-001-checkpoint",
         "type": "activateMain",
         "oncePerGame": true,
-        "text": "Once per Game: The game's state becomes the same as the last set Checkpoint."
+        "text": "Once per Game: The game resets to the last checkpoint."
       },
       {
         "id": "SUB1-001-when-attacking-power",
         "type": "whenAttacking",
-        "text": "When Attacking: Place any card from your Life area at the top of the Life area; this Leader gains +1000 power during this turn."
+        "text": "When Attacking: You may place one of your life cards at the top of your Life area: this Leader gains +1000 power during this turn."
       }
     ]
   }
