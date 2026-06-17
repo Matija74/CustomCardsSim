@@ -1365,7 +1365,8 @@ function getCounterEffectPower(card, player) {
                 effect.actionId === "eggmanCounterPower" ||
                 effect.actionId === "leaderOrCharacterCounterPower" ||
                 effect.actionId === "santenKesshunCounterPower" ||
-                effect.actionId === "leaderCounterPower"
+                effect.actionId === "leaderCounterPower" ||
+                effect.id === "IMU1-011-counter"
             ) {
                 return total;
             }
@@ -1377,6 +1378,12 @@ function getCounterEffectPower(card, player) {
 function canUseCounterEffect(card, player, effect) {
     if (!card || !player || !effect) {
         return false;
+    }
+
+    if (effect.id === "IMU1-011-counter") {
+        return player.leader?.cardNumber === "IMU1-001" &&
+            (player.deck?.length || 0) >= 1 &&
+            Boolean(player.leader);
     }
 
     if (effect.id === "SUB1-011-counter") {
@@ -1816,6 +1823,7 @@ function getEffectLabel(effect) {
         onKO: "On K.O.",
         whenAttacking: "When Attacking",
         onOpponentAttack: "On Opponent Attack",
+        onOpponentsAttack: "On Opponent Attack",
         yourTurn: "Your Turn",
         opponentsTurn: "Opponent's Turn",
         continuous: "Continuous",
@@ -2222,6 +2230,438 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
         });
 
         return `${trashedLifeResult.message} ${searchMessage}`.trim();
+    }
+
+    if (effect.id === "IMU1-002-on-ko-in-combat") {
+        if (!options.byBattle) {
+            return `${sourceCard.name}'s On K.O. effect did not resolve because it was not K.O.'d in combat.`;
+        }
+
+        if ((player.deck?.length || 0) < 1) {
+            return `${sourceCard.name}'s On K.O. effect found no card in deck to trash.`;
+        }
+
+        const attackerPlayer = typeof currentAttack !== "undefined" && currentAttack
+            ? gameState?.[currentAttack.attackerPlayerKey]
+            : null;
+        const attackerCard = typeof currentAttack !== "undefined" && currentAttack
+            ? getBoardCardFromData(currentAttack.attacker)
+            : null;
+
+        if (!attackerPlayer || !attackerCard) {
+            return `${sourceCard.name}'s On K.O. effect could not find the attacking card.`;
+        }
+
+        const applyPenalty = () => {
+            const trashResult = trashTopCardsOfDeck(player, 1, ui);
+            const expiresAtPlayerKey = getPlayerKey(player);
+            const expiresAtEndOfTurns = Number(player.turns || 0) + 1;
+
+            addDurationPowerBonus(attackerCard, -2000, expiresAtEndOfTurns, expiresAtPlayerKey);
+            ui?.renderCharacters?.();
+            ui?.renderLeaders?.();
+
+            if (typeof queueMultiplayerStateSync === "function") {
+                queueMultiplayerStateSync();
+            }
+
+            return `${trashResult.message} ${sourceCard.name} gave ${attackerCard.name} -2000 power until the end of ${player.name}'s next turn.`.trim();
+        };
+
+        if (ui?.chooseEffectActivation) {
+            ui.chooseEffectActivation({
+                player,
+                sourceCard,
+                effect,
+                title: sourceCard.name,
+                prompt: `Trash 1 card from the top of your deck for ${sourceCard.name}?`,
+                activateText: "Trash 1",
+                skipText: "Skip",
+                onComplete: (shouldActivate) => {
+                    addGameLog(
+                        shouldActivate
+                            ? applyPenalty()
+                            : `${player.name} did not trash a card from deck for ${sourceCard.name}.`
+                    );
+                }
+            });
+
+            return `${player.name} is choosing whether to use ${sourceCard.name}'s On K.O. effect.`;
+        }
+
+        return applyPenalty();
+    }
+
+    if (effect.id === "IMU1-003-on-play") {
+        return chooseOwnBoardCard(player, sourceCard, {
+            prompt: "Choose up to 1 of your {Holy Knight} type Characters to give +1000 power this turn.",
+            optional: true,
+            includeLeader: false,
+            filter: card => card.cardType === "character" && hasTypeText(card, "Holy Knight"),
+            onSelect: ({ card }) => {
+                addTemporaryPowerBonus(card, 1000);
+                ui?.renderCharacters?.();
+                addGameLog(`${sourceCard.name} gave ${card.name} +1000 power this turn.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} did not choose a {Holy Knight} Character for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no {Holy Knight} Characters to empower.`
+        });
+    }
+
+    if (effect.id === "IMU1-003-when-attacking") {
+        return chooseBoardCard(player, sourceCard, getOpponentBoardChoices(player, {
+            includeLeader: true,
+            filter: card => card.cardType === "leader" || card.cardType === "character"
+        }), {
+            prompt: "Choose up to 1 of your opponent's Leaders or Characters to give -1000 power this turn.",
+            optional: true,
+            onSelect: ({ card }) => {
+                addTemporaryPowerBonus(card, -1000);
+                ui?.renderLeaders?.();
+                ui?.renderCharacters?.();
+                addGameLog(`${sourceCard.name} gave ${card.name} -1000 power this turn.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} did not choose a target for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no opposing Leader or Character to weaken.`
+        });
+    }
+
+    if (effect.id === "IMU1-004-when-attacking") {
+        return trashTopCardsOfDeck(player, 1, ui).message;
+    }
+
+    if (effect.id === "IMU1-004-on-ko") {
+        return trashTopCardsOfDeck(player, 3, ui).message;
+    }
+
+    if (effect.id === "IMU1-005-on-play") {
+        const handChoices = getHandCardChoices(player, card => {
+            return card.cardType === "stage" && CardEffects.hasCardName(card, "Mary Geoise");
+        });
+        const trashChoices = getTrashCardChoices(player, card => {
+            return card.cardType === "stage" && CardEffects.hasCardName(card, "Mary Geoise");
+        });
+        const choices = [...handChoices, ...trashChoices];
+
+        if (choices.length === 0) {
+            return `${sourceCard.name} found no [Mary Geoise] in hand or trash to play.`;
+        }
+
+        return chooseBoardCard(player, sourceCard, choices, {
+            prompt: "Choose up to 1 [Mary Geoise] from your hand or trash to play.",
+            optional: true,
+            onSelect: (choice) => {
+                let playedCard = null;
+
+                if (choice.cardType === "hand") {
+                    playedCard = player.hand.splice(choice.handIndex, 1)[0];
+                    ui?.renderHands?.();
+                } else if (choice.cardType === "trash") {
+                    playedCard = player.trash.splice(choice.trashIndex, 1)[0];
+                    ui?.renderTrash?.();
+                }
+
+                if (!playedCard) {
+                    addGameLog(`${sourceCard.name} could not find that [Mary Geoise] anymore.`);
+                    return;
+                }
+
+                addGameLog(
+                    playCardFromDeckWithoutCost(
+                        player,
+                        sourceCard,
+                        playedCard,
+                        ui,
+                        choice.cardType === "hand" ? "hand" : "trash"
+                    )
+                );
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} did not play [Mary Geoise] with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no [Mary Geoise] in hand or trash to play.`
+        });
+    }
+
+    if (effect.id === "IMU1-006-on-play") {
+        return chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing Character with 8000 power or less to trash.",
+            optional: true,
+            filter: card => getCardBattlePower(card, getPlayerForBoardCard(card)) <= 8000,
+            onSelect: ({ card, playerKey, slotIndex }) => {
+                const targetPlayer = playerKey ? gameState?.[playerKey] : getPlayerForBoardCard(card);
+                const targetPlayerKey = getPlayerKey(targetPlayer);
+
+                if (isProtectedFromOpponentEffects(card, targetPlayerKey, player)) {
+                    addGameLog(`${card.name} is protected from opponent effects.`);
+                    return;
+                }
+
+                const trashResult = trashCharacterFromField(targetPlayer, slotIndex, ui);
+                addGameLog(`${sourceCard.name} trashed ${card.name}. ${trashResult.linkedStageMessage || ""}`.trim());
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} did not trash a Character with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no opposing Characters with 8000 power or less.`
+        });
+    }
+
+    if (effect.id === "IMU1-008-on-play") {
+        if ((player.deck?.length || 0) < 1) {
+            return `${sourceCard.name}'s On Play effect found no card in deck to trash.`;
+        }
+
+        const resolveSearch = () => {
+            const trashResult = trashTopCardsOfDeck(player, 1, ui);
+            const addMessage = addCardFromTrashToHand(player, sourceCard, ui, {
+                prompt: "Choose up to 1 {Holy Knight} or {Celestial Dragon} Character from your trash to add to your hand.",
+                optional: true,
+                filter: card => {
+                    return card.cardType === "character" &&
+                        (hasTypeText(card, "Holy Knight") || hasTypeText(card, "Celestial Dragon"));
+                },
+                skipMessage: `${player.name} trashed 1 card from deck for ${sourceCard.name} but did not add a card from trash.`,
+                emptyMessage: `${sourceCard.name} found no {Holy Knight} or {Celestial Dragon} Characters in trash.`
+            });
+
+            return `${trashResult.message} ${addMessage || ""}`.trim();
+        };
+
+        if (ui?.chooseEffectActivation) {
+            ui.chooseEffectActivation({
+                player,
+                sourceCard,
+                effect,
+                title: sourceCard.name,
+                prompt: `Trash 1 card from the top of your deck for ${sourceCard.name}?`,
+                activateText: "Trash 1",
+                skipText: "Skip",
+                onComplete: (shouldActivate) => {
+                    addGameLog(
+                        shouldActivate
+                            ? resolveSearch()
+                            : `${player.name} did not trash a card from deck for ${sourceCard.name}.`
+                    );
+                }
+            });
+
+            return `${player.name} is choosing whether to use ${sourceCard.name}'s On Play effect.`;
+        }
+
+        return resolveSearch();
+    }
+
+    if (effect.id === "IMU1-009-on-play") {
+        return lookTopCardsForType(player, sourceCard, 4, "Holy Knight", ui);
+    }
+
+    if (effect.id === "IMU1-010-when-attacking") {
+        return chooseOwnBoardCard(player, sourceCard, {
+            prompt: "Choose up to 1 of your {Holy Knight} type Characters to set as active.",
+            optional: true,
+            includeLeader: false,
+            filter: card => card.cardType === "character" && hasTypeText(card, "Holy Knight"),
+            onSelect: ({ card }) => {
+                card.uiAnimation = "readied";
+                card.state = "active";
+                ui?.renderCharacters?.();
+                addGameLog(`${sourceCard.name} set ${card.name} as active.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} did not choose a {Holy Knight} Character for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no {Holy Knight} Characters to set active.`
+        });
+    }
+
+    if (effect.id === "IMU1-011-main") {
+        if (!restDonForCost(player, 2, ui)) {
+            return `${player.name} does not have enough active DON!! to use ${sourceCard.name}'s Main effect.`;
+        }
+
+        return chooseOpponentCharacter(player, sourceCard, {
+            prompt: "Choose up to 1 opposing Character with 5000 power or less to trash.",
+            optional: true,
+            filter: card => getCardBattlePower(card, getPlayerForBoardCard(card)) <= 5000,
+            onSelect: ({ card, playerKey, slotIndex }) => {
+                const targetPlayer = playerKey ? gameState?.[playerKey] : getPlayerForBoardCard(card);
+                const targetPlayerKey = getPlayerKey(targetPlayer);
+
+                if (isProtectedFromOpponentEffects(card, targetPlayerKey, player)) {
+                    addGameLog(`${card.name} is protected from opponent effects.`);
+                    return;
+                }
+
+                const trashResult = trashCharacterFromField(targetPlayer, slotIndex, ui);
+                addGameLog(`${sourceCard.name} trashed ${card.name}. ${trashResult.linkedStageMessage || ""}`.trim());
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} rested 2 DON!! for ${sourceCard.name} but did not choose a Character.`,
+            emptyMessage: `${sourceCard.name} found no opposing Characters with 5000 power or less.`
+        });
+    }
+
+    if (effect.id === "IMU1-011-counter") {
+        if (player.leader?.cardNumber !== "IMU1-001") {
+            return `${sourceCard.name}'s Counter did not resolve because ${player.name}'s leader is not Imu.`;
+        }
+
+        if ((player.deck?.length || 0) < 1) {
+            return `${sourceCard.name}'s Counter found no card in deck to trash.`;
+        }
+
+        const trashResult = trashTopCardsOfDeck(player, 1, ui);
+        const expiresAtPlayerKey = getPlayerKey(player);
+        const expiresAtEndOfTurns = Number(player.turns || 0) + 1;
+
+        const chooseMessage = chooseOwnBoardCard(player, sourceCard, {
+            prompt: "Choose up to 1 of your Leader or Characters to gain +2000 power until the end of your next End Phase.",
+            optional: true,
+            includeLeader: true,
+            filter: card => card.cardType === "leader" || card.cardType === "character",
+            onSelect: ({ card }) => {
+                addDurationPowerBonus(card, 2000, expiresAtEndOfTurns, expiresAtPlayerKey);
+                ui?.renderLeaders?.();
+                ui?.renderCharacters?.();
+                addGameLog(`${sourceCard.name} gave ${card.name} +2000 power until the end of ${player.name}'s next End Phase.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} trashed 1 card from deck for ${sourceCard.name} but did not choose a target.`,
+            emptyMessage: `${sourceCard.name} found no Leader or Character to empower.`
+        });
+
+        return `${trashResult.message} ${chooseMessage || ""}`.trim();
+    }
+
+    if (effect.id === "IMU1-012-main") {
+        if ((player.deck?.length || 0) < 1) {
+            return `${sourceCard.name}'s Main effect found no card in deck to trash.`;
+        }
+
+        const trashResult = trashTopCardsOfDeck(player, 1, ui);
+        const chooseMessage = chooseOwnBoardCard(player, sourceCard, {
+            prompt: "Choose up to 1 [IMU] Leader or {Holy Knight} Character to gain Banish this turn.",
+            optional: true,
+            includeLeader: true,
+            filter: card => {
+                return (card.cardType === "leader" && card.cardNumber === "IMU1-001") ||
+                    (card.cardType === "character" && hasTypeText(card, "Holy Knight"));
+            },
+            onSelect: ({ card }) => {
+                addTemporaryKeyword(card, "banish");
+                ui?.renderLeaders?.();
+                ui?.renderCharacters?.();
+                addGameLog(`${sourceCard.name} gave ${card.name} Banish this turn.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} did not choose a target for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no [IMU] Leader or {Holy Knight} Character to give Banish.`
+        });
+        const drawResult = drawCard(player, ui);
+        const drawMessage = drawResult?.deckOut
+            ? `${sourceCard.name} tried to draw 1 card, but ${player.name} lost by deck out.`
+            : `${sourceCard.name} drew 1 card.`;
+
+        return `${trashResult.message} ${chooseMessage || ""} ${drawMessage}`.trim();
+    }
+
+    if (effect.id === "IMU1-012-trigger") {
+        const expiresAtPlayerKey = getPlayerKey(player);
+        const expiresAtEndOfTurns = Number(player.turns || 0) + 1;
+
+        return chooseOwnBoardCard(player, sourceCard, {
+            prompt: "Choose up to 1 of your Leader or Characters to gain +1000 power until the end of your next turn.",
+            optional: true,
+            includeLeader: true,
+            filter: card => card.cardType === "leader" || card.cardType === "character",
+            onSelect: ({ card }) => {
+                addDurationPowerBonus(card, 1000, expiresAtEndOfTurns, expiresAtPlayerKey);
+                ui?.renderLeaders?.();
+                ui?.renderCharacters?.();
+                addGameLog(`${sourceCard.name} gave ${card.name} +1000 power until the end of ${player.name}'s next turn.`);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            },
+            skipMessage: `${player.name} did not choose a target for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no Leader or Character to empower.`
+        });
+    }
+
+    if (effect.id === "IMU1-013-main") {
+        if ((player.deck?.length || 0) < 2) {
+            return `${sourceCard.name}'s Main effect requires 2 cards in deck to trash.`;
+        }
+
+        const trashResult = trashTopCardsOfDeck(player, 2, ui);
+        const playMessage = getFirstOpenCharacterSlotIndex(player) === -1
+            ? `${sourceCard.name} could not play a Character from trash because ${player.name}'s character area is full.`
+            : chooseTrashCard(player, sourceCard, ui, {
+                prompt: "Choose up to 1 {Holy Knight} type Character with a cost of 6 or less from your trash to play.",
+                optional: true,
+                filter: card => {
+                    return card.cardType === "character" &&
+                        hasTypeText(card, "Holy Knight") &&
+                        getCardEffectiveCost(card) <= 6;
+                },
+                onSelect: ({ trashIndex }) => {
+                    const playedCard = player.trash.splice(trashIndex, 1)[0];
+
+                    if (!playedCard) {
+                        addGameLog(`${sourceCard.name} could not find that trash card anymore.`);
+                        return;
+                    }
+
+                    addGameLog(playCharacterFromTrashWithoutCost(player, sourceCard, playedCard, ui));
+
+                    if (typeof queueMultiplayerStateSync === "function") {
+                        queueMultiplayerStateSync();
+                    }
+                },
+                skipMessage: `${player.name} did not play a Character from trash with ${sourceCard.name}.`,
+                emptyMessage: `${sourceCard.name} found no {Holy Knight} Characters with a cost of 6 or less in trash.`
+            });
+        const drawResult = drawCard(player, ui);
+        const drawMessage = drawResult?.deckOut
+            ? `${sourceCard.name} tried to draw 1 card, but ${player.name} lost by deck out.`
+            : `${sourceCard.name} drew 1 card.`;
+
+        return `${trashResult.message} ${playMessage || ""} ${drawMessage}`.trim();
+    }
+
+    if (effect.id === "IMU1-013-trigger") {
+        return addCardFromTrashToHand(player, sourceCard, ui, {
+            prompt: "Choose up to 1 {Holy Knight} type card from your trash to add to your hand.",
+            optional: true,
+            filter: card => hasTypeText(card, "Holy Knight"),
+            skipMessage: `${player.name} did not add a {Holy Knight} type card from trash with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no {Holy Knight} type cards in trash.`
+        });
     }
 
     if (
@@ -4168,7 +4608,7 @@ function resolveCopiedBoardAbility(player, sourceCard, copiedEffect, ui, copiedF
         return applyCopiedKeywordEffect(sourceCard, copiedEffect, ui, copiedFromCard);
     }
 
-    if (copiedEffect.type === "onOpponentAttack") {
+    if (copiedEffect.type === "onOpponentAttack" || copiedEffect.type === "onOpponentsAttack") {
         return resolveImmediateCopiedOnOpponentAttackEffect(
             player,
             sourceCard,
@@ -5940,7 +6380,54 @@ function removeStageByOpponentEffect(actingPlayer, targetPlayer, sourceCard, ui)
     };
 
     if (!replacementEffect || CardEffects.hasUsedOncePerTurnEffect(stage, replacementEffect.id, targetPlayer.turns)) {
-        return finishRemoval();
+        const imuReplacement = getAvailableImuStageProtectionReplacement(targetPlayer, actingPlayer);
+
+        if (!imuReplacement) {
+            return finishRemoval();
+        }
+
+        const useImuReplacement = () => {
+            const imuSlotIndex = targetPlayer.characters.findIndex(card => {
+                return card?.instanceId === imuReplacement.instanceId;
+            });
+
+            if (imuSlotIndex === -1) {
+                return finishRemoval();
+            }
+
+            const trashResult = trashCharacterFromField(targetPlayer, imuSlotIndex, ui);
+
+            if (typeof queueMultiplayerStateSync === "function") {
+                queueMultiplayerStateSync();
+            }
+
+            return trashResult.linkedStageMessage
+                ? `${imuReplacement.name} was trashed instead, so ${stage.name} stayed in play. ${trashResult.linkedStageMessage}`
+                : `${imuReplacement.name} was trashed instead, so ${stage.name} stayed in play.`;
+        };
+
+        if (ui?.chooseEffectActivation) {
+            ui.chooseEffectActivation({
+                player: targetPlayer,
+                sourceCard: imuReplacement,
+                effect: imuReplacement.effects?.find(cardEffect => cardEffect.id === "IMU1-005-stage-protection") || {
+                    id: "IMU1-005-stage-protection",
+                    type: "replacement",
+                    text: "Trash this Character instead?"
+                },
+                title: imuReplacement.name,
+                prompt: `${stage.name} would be removed by ${sourceCard.name}. Trash ${imuReplacement.name} instead?`,
+                activateText: "Trash Instead",
+                skipText: "Let Remove",
+                onComplete: (shouldActivate) => {
+                    addGameLog(shouldActivate ? useImuReplacement() : finishRemoval());
+                }
+            });
+
+            return `${targetPlayer.name} is choosing whether to use ${imuReplacement.name}'s replacement effect.`;
+        }
+
+        return useImuReplacement();
     }
 
     const useReplacement = () => {
@@ -6605,7 +7092,16 @@ function canUseOnOpponentAttackEffect(player, card, effect) {
             !CardEffects.hasUsedOncePerTurnEffect(card, effect.id, player.turns);
     }
 
-    if (effect.type !== "onOpponentAttack") {
+    if (effect.id === "IMU1-007-on-opponents-attack") {
+        return card.cardNumber === "IMU1-007" &&
+            player.leader?.cardNumber === "IMU1-001" &&
+            (player.deck?.length || 0) >= 2 &&
+            Boolean(typeof currentAttack !== "undefined" && currentAttack) &&
+            currentAttack.defenderPlayerKey === getPlayerKey(player) &&
+            !hasReachedPerTurnEffectUseLimit(card, effect, player.turns);
+    }
+
+    if (effect.type !== "onOpponentAttack" && effect.type !== "onOpponentsAttack") {
         return false;
     }
 
@@ -7876,7 +8372,8 @@ function getSaintGermainActivatableEffects(card) {
         "activateMain",
         "whenAttacking",
         "onKO",
-        "onOpponentAttack"
+        "onOpponentAttack",
+        "onOpponentsAttack"
     ]);
 
     return (getCardAllEffects(card) || []).filter(effect => activatableTypes.has(effect.type));
@@ -8398,6 +8895,144 @@ function getImuLeader(player) {
     }
 
     return leader;
+}
+
+function getAvailableImuStageProtectionReplacement(targetPlayer, actingPlayer) {
+    if (!targetPlayer || !actingPlayer || targetPlayer === actingPlayer) {
+        return null;
+    }
+
+    if (areOpponentReplacementEffectsNegated(targetPlayer, actingPlayer)) {
+        return null;
+    }
+
+    return targetPlayer.characters.find(card => {
+        return card?.cardNumber === "IMU1-005" &&
+            !areCardEffectsNegated(card);
+    }) || null;
+}
+
+function clearCardStateForDeck(card) {
+    if (!card) {
+        return;
+    }
+
+    card.state = "active";
+    card.uiAnimation = "";
+    card.temporaryKeywords = [];
+    card.durationKeywords = [];
+    card.battleKeywords = [];
+    card.battlePowerBonus = 0;
+    card.temporaryPowerBonus = 0;
+    card.durationPowerBonuses = [];
+    card.costModifiers = [];
+    card.protectedFromOpponentEffects = false;
+    card.cannotBeRestedUntil = null;
+    card.cannotAttackUntil = null;
+    card.playedOnTurn = null;
+    card.playedFromZone = null;
+}
+
+function moveCharacterToBottomOfDeck(player, slotIndex, sourceCard, ui) {
+    const character = player?.characters?.[slotIndex];
+
+    if (!player || !character) {
+        return `${sourceCard.name} could not find that Character anymore.`;
+    }
+
+    player.characters[slotIndex] = null;
+    detachAttachedDonToCostArea(player, character, ui);
+    resolveGutsLeaderCharacterRemovedBonus(player, ui);
+    const linkedStageMessage = trashLinkedParfumStageForCharacter(player, character, ui);
+    clearCardStateForDeck(character);
+    player.deck.push(character);
+    ui?.renderCharacters?.();
+    ui?.renderDecks?.();
+
+    if (typeof queueMultiplayerStateSync === "function") {
+        queueMultiplayerStateSync();
+    }
+
+    return linkedStageMessage
+        ? `${sourceCard.name} placed ${character.name} on the bottom of the deck. ${linkedStageMessage}`
+        : `${sourceCard.name} placed ${character.name} on the bottom of the deck.`;
+}
+
+function resolveImuOnOpponentAttack(player, sourceCard, ui, options = {}) {
+    const finish = () => {
+        if (typeof queueMultiplayerStateSync === "function") {
+            queueMultiplayerStateSync();
+        }
+
+        options.onComplete?.();
+    };
+
+    const activeLeader = getImuLeader(player);
+    const effect = sourceCard?.effects?.find(cardEffect => cardEffect.id === "IMU1-007-on-opponents-attack");
+
+    if (!activeLeader || !sourceCard || sourceCard.cardNumber !== "IMU1-007" || areCardEffectsNegated(sourceCard)) {
+        finish();
+        return `${sourceCard?.name || "This effect"} could not be used because Imu is not active.`;
+    }
+
+    if (!effect || CardEffects.hasUsedOncePerTurnEffect(sourceCard, effect.id, player.turns)) {
+        finish();
+        return `${sourceCard.name}'s On Your Opponent's Attack effect has already been used this turn.`;
+    }
+
+    if (typeof currentAttack === "undefined" || !currentAttack) {
+        finish();
+        return `${sourceCard.name} could not be used because there is no current attack.`;
+    }
+
+    if (currentAttack.defenderPlayerKey !== getPlayerKey(player)) {
+        finish();
+        return `${sourceCard.name} could not be used because ${player.name} is not the defending player.`;
+    }
+
+    if ((player.deck?.length || 0) < 2) {
+        finish();
+        return `${sourceCard.name} requires 2 cards in deck to trash.`;
+    }
+
+    const retargetChoices = getOwnBoardChoices(player, {
+        includeLeader: true,
+        filter: card => {
+            return card.cardType === "leader" ||
+                (card.cardType === "character" && hasTypeText(card, "Holy Knight"));
+        }
+    });
+
+    if (retargetChoices.length === 0) {
+        finish();
+        return `${sourceCard.name} found no valid targets for the attack.`;
+    }
+
+    CardEffects.markOncePerTurnEffectUsed(sourceCard, effect.id, player.turns);
+
+    const trashResult = trashTopCardsOfDeck(player, 2, ui);
+    const chooseMessage = chooseBoardCard(player, sourceCard, retargetChoices, {
+        prompt: "Choose your Leader or up to 1 of your {Holy Knight} Characters to become the new attack target.",
+        optional: false,
+        onSelect: ({ cardType, slotIndex }) => {
+            currentAttack.target = {
+                playerKey: getPlayerKey(player),
+                cardType,
+                ...(cardType === "character" ? { slotIndex } : {})
+            };
+
+            if (typeof drawAttackArrow === "function") {
+                drawAttackArrow(currentAttack.attacker, currentAttack.target);
+            }
+
+            addGameLog(`${sourceCard.name} changed the attack target.`);
+            finish();
+        },
+        onEmpty: finish,
+        emptyMessage: `${sourceCard.name} found no valid targets for the attack.`
+    });
+
+    return `${trashResult.message} ${chooseMessage || ""}`.trim();
 }
 
 function resolveKouzukiOdenTriggerPlay(player, card, ui) {
@@ -9097,7 +9732,7 @@ function resolveOnPlayEffects(player, card, ui) {
     return messages;
 }
 
-function resolveOnKOEffects(player, card, ui) {
+function resolveOnKOEffects(player, card, ui, options = {}) {
     if (!player || !card) {
         return [];
     }
@@ -9122,7 +9757,7 @@ function resolveOnKOEffects(player, card, ui) {
                 return;
             }
 
-            const message = resolveEffectAction(player, card, effect, ui);
+            const message = resolveEffectAction(player, card, effect, ui, options);
 
             if (message) {
                 messages.push(message);
@@ -9497,12 +10132,75 @@ function KOCharacter(player, slotIndex, ui, options = {}) {
         };
     }
 
+    if (
+        options.byEffect &&
+        character.cardNumber === "IMU1-007" &&
+        !areCardEffectsNegated(character) &&
+        options.actingPlayer &&
+        getPlayerForBoardCard(character) !== options.actingPlayer
+    ) {
+        return {
+            success: false,
+            message: `${character.name} cannot be K.O.'d by your opponent's effects.`
+        };
+    }
+
+    if (options.byBattle && character.cardNumber === "IMU1-008" && !areCardEffectsNegated(character)) {
+        if ((player.deck?.length || 0) >= 2) {
+            const preventKO = () => {
+                const trashResult = trashTopCardsOfDeck(player, 2, ui);
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+
+                return {
+                    success: false,
+                    message: `${trashResult.message} ${character.name} stayed on the field instead of being K.O.'d in combat.`.trim()
+                };
+            };
+
+            if (ui?.chooseEffectActivation) {
+                ui.chooseEffectActivation({
+                    player,
+                    sourceCard: character,
+                    effect: character.effects?.find(effect => effect.id === "IMU1-008-battle-protection") || {
+                        id: "IMU1-008-battle-protection",
+                        type: "replacement",
+                        text: "Trash 2 cards from the top of your deck instead?"
+                    },
+                    title: character.name,
+                    prompt: `${character.name} would be K.O.'d in combat. Trash 2 cards from the top of your deck instead?`,
+                    activateText: "Trash 2",
+                    skipText: "Let K.O.",
+                    onComplete: (shouldActivate) => {
+                        addGameLog(
+                            shouldActivate
+                                ? preventKO().message
+                                : KOCharacter(player, slotIndex, ui, {
+                                    ...options,
+                                    byBattle: false
+                                }).message
+                        );
+                    }
+                });
+
+                return {
+                    success: false,
+                    message: `${player.name} is choosing whether to use ${character.name}'s battle protection effect.`
+                };
+            }
+
+            return preventKO();
+        }
+    }
+
     const trashResult = trashCharacterFromField(player, slotIndex, ui, {
         render: false
     });
     const linkedStageMessage = trashResult.linkedStageMessage;
 
-    const effectMessages = resolveOnKOEffects(player, character, ui);
+    const effectMessages = resolveOnKOEffects(player, character, ui, options);
 
     ui.renderLeaders();
     ui.renderCharacters();
@@ -10080,7 +10778,7 @@ function resolveEndOfTurnEffects(player, ui) {
         results.push(turboGrannyResult);
     }
 
-    player.characters.forEach(character => {
+    player.characters.forEach((character, slotIndex) => {
         if (!character) {
             return;
         }
@@ -10088,6 +10786,22 @@ function resolveEndOfTurnEffects(player, ui) {
         getCardAllEffects(character)
             ?.filter(effect => effect.type === "endOfYourTurn" || effect.type === "endOfTurn")
             .forEach(effect => {
+                if (effect.id === "IMU1-006-end-of-turn") {
+                    results.push({
+                        activated: true,
+                        message: moveCharacterToBottomOfDeck(player, slotIndex, character, ui)
+                    });
+                    return;
+                }
+
+                if (effect.id === "IMU1-010-end-of-turn") {
+                    results.push({
+                        activated: true,
+                        message: trashTopCardsOfDeck(player, 5, ui).message
+                    });
+                    return;
+                }
+
                 if (effect.id === "POG1-012-end-of-your-turn") {
                     results.push({
                         activated: true,

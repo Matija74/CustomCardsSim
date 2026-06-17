@@ -945,6 +945,49 @@ window.CardEffects = {
         };
     },
 
+    resolveImuCharacterWhenAttacking(player, attackerData, ui) {
+        const character = attackerData?.cardType === "character"
+            ? player?.characters?.[attackerData.slotIndex]
+            : null;
+
+        if (!character) {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const effectIdByCard = {
+            "IMU1-003": "IMU1-003-when-attacking",
+            "IMU1-004": "IMU1-004-when-attacking",
+            "IMU1-010": "IMU1-010-when-attacking"
+        };
+        const effectId = effectIdByCard[character.cardNumber];
+
+        if (!effectId) {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const effect = getCardAllEffects(character)?.find(cardEffect => cardEffect.id === effectId);
+
+        if (!effect || typeof resolveEffectAction !== "function") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        return {
+            activated: true,
+            message: resolveEffectAction(player, character, effect, ui, {
+                skipActivationPrompt: true
+            })
+        };
+    },
+
     resolveJogoWhenAttacking(player, attackerData, ui) {
         const character = attackerData?.cardType === "character"
             ? player?.characters?.[attackerData.slotIndex]
@@ -1363,6 +1406,7 @@ window.CardEffects = {
             this.resolveSubaruElsaWhenAttacking(player, attackerData, ui),
             this.resolveSaintGermainLeaderWhenAttacking(player, attackerData, ui),
             this.resolveImuLeaderWhenAttacking(player, attackerData, ui),
+            this.resolveImuCharacterWhenAttacking(player, attackerData, ui),
             this.resolveJogoWhenAttacking(player, attackerData, ui),
             this.resolveKenjakuWhenAttacking(player, attackerData, ui),
             this.resolveKisukeWhenAttacking(player, attackerData, ui),

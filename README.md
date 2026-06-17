@@ -6,37 +6,42 @@ interactions, and run self-play games without installing a full game client.
 
 ## Patch Notes
 
-### 0.5
+Patch Note 1.00
 
-- Added the `UB Higuruma` preset deck.
-- Notice: this deck has not yet been fully tested for bugs.
+[UPDATE]: Patch notes have been reset and now use the new standard format.
+[FIX]: Old patch note entries and mixed formatting have been removed from this page.
+[ADDITION]: Future notes will always be written in the Update, Fix, Addition order.
 
-### 0.4
+[Dev Note]: Write only user-facing changes. Skip internal-only changes.
 
-- Updated the game layout to adapt better across browsers and screen sizes.
-- Fixed `Banana Onemoglosti` so it now negates card effects, keywords, and
-  continuous effects until the end of the turn.
-- Fixed `Hvala hvala hvala` so it can now be played during counter phase.
-- Updated `Mr. Jeremić` so it now lets you type a card name, plays a matching
-  card from the deck if found, then shuffles the deck.
-- Fixed `Johan Johanović` so it now places both chosen cards on top of the deck
-  or both on the bottom.
-- Updated stages so they can no longer be played over another stage.
+Patch Note 1.01
 
-### 0.3
+[UPDATE]: Subaru deck cards are now available in the game.
+[FIX]: Subaru deck card data now appears correctly for players in the card pool.
+[ADDITION]: Added the Subaru deck as part of the current custom card selection.
 
-- Added local save, load, delete, and copy/import support to the Deck Editor.
-- Updated saved deck data to include deck name, selected leader, and card list.
-- Added deck selection popups for VS Self and queue-based deck selection for
-  multiplayer.
+[Dev Note]: Subaru deck update only.
 
-### 0.2
+Patch Note 1.02
 
-- Added multiplayer foundations including live board syncing.
-- Updated multiplayer visibility so each player sees their own board on bottom
-  while opponent hand, life, and deck stay hidden.
-- Added queue and match start fixes, plus gameplay settings automation.
+[UPDATE]: Subaru is now available as a preset deck option.
+[FIX]: Main logo and page icon paths now point to the correct image folder.
+[ADDITION]: Added the Subaru preset deck to deck selection and preset deck browsing.
 
-### 0.1
+[Dev Note]: Keep patch notes synced with visible changes.
 
-- Added the Patch Notes page on the main menu.
+Patch Note 1.03
+
+[UPDATE]: Nerona Imu deck cards now use their in-game effects instead of being data-only.
+[FIX]: Nerona Imu card interactions now resolve properly in both singleplayer and multiplayer.
+[ADDITION]: Added functionality for Nerona Imu characters, events, protection effects, attack effects, and counter interactions.
+
+[Dev Note]: Nerona Imu functionality update.
+
+Patch Note 1.04
+
+[UPDATE]: Image references now follow the current asset folder names.
+[FIX]: Broken favicon, logo, card-back, DON!!, and One Piece card image paths were corrected.
+[ADDITION]: Added support for the renamed `a-misc` and `a-op-staples` image folders in live app references.
+
+[Dev Note]: Image path cleanup after folder renames.

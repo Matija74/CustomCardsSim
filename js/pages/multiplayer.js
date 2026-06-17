@@ -4,9 +4,9 @@
 // Image Paths
 // =========================
 
-const cardBackImage = "../images/basic/card-back-normal.png";
-const donBackImage = "../images/basic/card-back-normal.png";
-const donImage = "../images/basic/card-front-don.png";
+const cardBackImage = "../images/a-misc/card-back-normal.png";
+const donBackImage = "../images/a-misc/card-back-normal.png";
+const donImage = "../images/a-misc/card-front-don.png";
 
 // =========================
 // Selected Card State
@@ -2679,6 +2679,7 @@ function getActivateMainEffect(card) {
 function getOnOpponentAttackEffect(card) {
     return getCardAllEffects(card)?.find(effect => {
         return effect.type === "onOpponentAttack" ||
+            effect.type === "onOpponentsAttack" ||
             effect.id === "KIL1-001-custom";
     }) || null;
 }
@@ -4012,6 +4013,19 @@ function showPendingOpponentAttackEffectChoice() {
 
             if (effect.id === "JK01-009-on-opponent-attack") {
                 const message = resolveTakakoUroOnOpponentAttack(defenderPlayer, currentCard, ui, {
+                    onComplete: () => advancePendingOnOpponentAttackEffect()
+                });
+
+                if (message) {
+                    addGameLog(message);
+                }
+
+                queueMultiplayerStateSync();
+                return;
+            }
+
+            if (effect.id === "IMU1-007-on-opponents-attack") {
+                const message = resolveImuOnOpponentAttack(defenderPlayer, currentCard, ui, {
                     onComplete: () => advancePendingOnOpponentAttackEffect()
                 });
 
@@ -5626,6 +5640,7 @@ function getPowerModifier(card, player = null) {
     return getCopiedEffectPowerModifier(card, player) +
         getYourTurnPowerBonus(card, player) +
         getSubaruRamPowerModifier(card) +
+        getImuMaffeyPowerModifier(card) +
         getSt28MomonosukeLeaderPowerModifier(card, player) +
         getSt28YamatoPowerModifier(card, player) +
         getWanoCountryPowerModifier(card, player) +
@@ -5646,6 +5661,14 @@ function getPowerModifier(card, player = null) {
 
 function getSubaruRamPowerModifier(card) {
     return typeof hasRamBoostedRem === "function" && hasRamBoostedRem(card)
+        ? 1000
+        : 0;
+}
+
+function getImuMaffeyPowerModifier(card) {
+    return card?.cardNumber === "IMU1-009" &&
+        !areCardEffectsNegated(card) &&
+        Number(card.attachedDon || 0) >= 1
         ? 1000
         : 0;
 }

@@ -10,7 +10,7 @@
     "power": 6000,
     "counter": 0,
     "attribute": "slash",
-    "image": "../images/.op staples/OP06-104.png",
+    "image": "../images/a-op-staples/OP06-104.png",
     "keywords": [],
     "effects": [
       {
@@ -36,7 +36,7 @@
     "power": 6000,
     "counter": 0,
     "attribute": "wisdom",
-    "image": "../images/.op staples/OP06-107.png",
+    "image": "../images/a-op-staples/OP06-107.png",
     "keywords": ["blocker"],
     "effects": [
       {
@@ -57,7 +57,7 @@
     "power": 0,
     "counter": 1000,
     "attribute": "wisdom",
-    "image": "../images/.op staples/OP13-104.png",
+    "image": "../images/a-op-staples/OP13-104.png",
     "keywords": ["blocker"],
     "effects": [
       {
@@ -78,7 +78,7 @@
     "power": 1000,
     "counter": 1000,
     "attribute": "slash",
-    "image": "../images/.op staples/OP14-005.jpg",
+    "image": "../images/a-op-staples/OP14-005.jpg",
     "keywords": [],
     "effects": [
       {
@@ -100,7 +100,7 @@
     "power": 5000,
     "counter": 0,
     "attribute": "slash",
-    "image": "../images/.op staples/OP14-089.png",
+    "image": "../images/a-op-staples/OP14-089.png",
     "keywords": [],
     "effects": [
       {
@@ -126,7 +126,7 @@
     "power": 6000,
     "counter": 0,
     "attribute": "slash",
-    "image": "../images/.op staples/OP16-082.webp",
+    "image": "../images/a-op-staples/OP16-082.webp",
     "keywords": [],
     "effects": [
       {
@@ -152,7 +152,7 @@
     "power": 6000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/.op staples/OP16-085.jpg",
+    "image": "../images/a-op-staples/OP16-085.jpg",
     "keywords": ["blocker"],
     "effects": [
       {
@@ -173,7 +173,7 @@
     "power": 8000,
     "counter": 1000,
     "attribute": "special",
-    "image": "../images/.op staples/OP16-096.jpg",
+    "image": "../images/a-op-staples/OP16-096.jpg",
     "keywords": ["unblockable"],
     "effects": [
       {
@@ -194,7 +194,7 @@
     "power": 5000,
     "counter": 1000,
     "attribute": "strike",
-    "image": "../images/.op staples/OP16-098.jpg",
+    "image": "../images/a-op-staples/OP16-098.jpg",
     "keywords": [],
     "effects": [
       {
@@ -217,7 +217,7 @@
     "type": "Land of Wano",
     "color": "black",
     "cost": 1,
-    "image": "../images/.op staples/OP16-099.webp",
+    "image": "../images/a-op-staples/OP16-099.webp",
     "effects": [
       {
         "id": "OP16-099-main",
@@ -243,7 +243,7 @@
     "power": 6000,
     "counter": 1000,
     "attribute": "strike",
-    "image": "../images/.op staples/EB03-057.png",
+    "image": "../images/a-op-staples/EB03-057.png",
     "keywords": [],
     "effects": [
       {
@@ -269,7 +269,7 @@
     "power": 0,
     "counter": 2000,
     "attribute": "special",
-    "image": "../images/.op staples/PRB02-016.png",
+    "image": "../images/a-op-staples/PRB02-016.png",
     "keywords": [],
     "effects": [
       {
@@ -295,7 +295,7 @@
     "power": 7000,
     "counter": 0,
     "attribute": "slash",
-    "image": "../images/.op staples/ST28-004.png",
+    "image": "../images/a-op-staples/ST28-004.png",
     "keywords": [],
     "effects": [
       {
@@ -322,7 +322,7 @@
     "power": 0,
     "counter": 1000,
     "attribute": "strike",
-    "image": "../images/.op staples/ST28-005.png",
+    "image": "../images/a-op-staples/ST28-005.png",
     "keywords": [],
     "effects": [
       {
