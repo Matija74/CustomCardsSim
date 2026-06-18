@@ -6,6 +6,26 @@ interactions, and run self-play games without installing a full game client.
 
 ## Patch Notes
 
+Patch Note 1.13
+
+[UPDATE]: Subaru checkpoints now save and restore which player's turn was active when the checkpoint was set.
+[UPDATE]: Subaru checkpoints now restore the saved turn number and phase state together with the saved turn owner.
+[FIX]: Subaru resets no longer force the game to continue under the wrong turn owner after returning to a checkpoint.
+[FIX]: Imu leader temporary +1000 power effects that expire on the opponent's turn now end when that opponent's turn ends instead of lasting one extra turn.
+
+[Dev Note]: /
+
+Patch Note 1.12
+
+[UPDATE]: GP Okarun preset deck no longer shows the creator name in its title.
+[UPDATE]: RB Guts preset deck no longer shows the creator name in its title.
+[UPDATE]: R Eggman preset deck no longer shows the creator name in its title.
+[UPDATE]: RY Ichigo preset deck no longer shows the creator name in its title.
+[UPDATE]: U Taglavnovič preset deck no longer shows the creator name in its title.
+[FIX]: Deck selection pages now load the renamed preset titles from the latest deck data file.
+
+[Dev Note]: /
+
 Patch Note 1.11
 
 [UPDATE]: RB Nerona Imu is now available as a preset deck.

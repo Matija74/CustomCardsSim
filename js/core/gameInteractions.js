@@ -8598,12 +8598,17 @@ function buildSubaruCheckpointState() {
         deck: cloneGameStateValue(player?.deck || []),
         don: Number(player?.don || 0),
         restedDon: Number(player?.restedDon || 0),
-        donDeck: Number(player?.donDeck || 0)
+        donDeck: Number(player?.donDeck || 0),
+        turns: Number(player?.turns || 0),
+        leaderAttacksThisTurn: Number(player?.leaderAttacksThisTurn || 0)
     });
 
     return {
         player1: clonePlayerZones(gameState.player1),
-        player2: clonePlayerZones(gameState.player2)
+        player2: clonePlayerZones(gameState.player2),
+        currentPlayerKey: getPlayerKey(gameState.currentPlayer),
+        currentPhase: gameState.currentPhase || "main",
+        turnNumber: Number(gameState.turnNumber || 1)
     };
 }
 
@@ -8628,12 +8633,19 @@ function applySubaruCheckpointState(checkpointState, ui) {
         player.don = Number(saved.don || 0);
         player.restedDon = Number(saved.restedDon || 0);
         player.donDeck = Number(saved.donDeck || 0);
+        player.turns = Number(saved.turns || 0);
+        player.leaderAttacksThisTurn = Number(saved.leaderAttacksThisTurn || 0);
     };
 
     applyPlayerZones("player1");
     applyPlayerZones("player2");
     clearTransientStateAfterCheckpointRestore();
-    gameState.currentPhase = "main";
+    gameState.currentPlayer = checkpointState.currentPlayerKey &&
+        gameState[checkpointState.currentPlayerKey]
+        ? gameState[checkpointState.currentPlayerKey]
+        : gameState.currentPlayer;
+    gameState.currentPhase = checkpointState.currentPhase || "main";
+    gameState.turnNumber = Number(checkpointState.turnNumber || gameState.turnNumber || 1);
     ui?.updateDonDisplay?.();
     ui?.renderDonDecks?.();
     ui?.renderLeaders?.();
@@ -8646,6 +8658,39 @@ function applySubaruCheckpointState(checkpointState, ui) {
 
     if (typeof showSelectedBoardActions === "function") {
         showSelectedBoardActions();
+    }
+
+    if (typeof syncPhaseButtonForCurrentState === "function") {
+        syncPhaseButtonForCurrentState();
+    } else {
+        const phaseButton = typeof document !== "undefined"
+            ? document.getElementById("phaseButton")
+            : null;
+
+        if (phaseButton && typeof setPhaseButtonState === "function") {
+            if (gameState.currentPhase === "draw") {
+                setPhaseButtonState(phaseButton, "Draw Card");
+            } else if (gameState.currentPhase === "don") {
+                const donAmount = typeof getCurrentTurnDonAmount === "function"
+                    ? getCurrentTurnDonAmount(gameState.currentPlayer)
+                    : 2;
+                setPhaseButtonState(phaseButton, `Add ${donAmount} DON!!`);
+            } else if (gameState.currentPhase === "startOfTurn") {
+                setPhaseButtonState(
+                    phaseButton,
+                    `${gameState.currentPlayer?.name || "Current Player"}'s Start of Turn`,
+                    true
+                );
+            } else if (gameState.currentPhase === "main") {
+                const nextPlayer = typeof getNextPlayer === "function" && gameState.currentPlayer
+                    ? getNextPlayer(gameState.currentPlayer)
+                    : null;
+                setPhaseButtonState(
+                    phaseButton,
+                    `Pass to ${nextPlayer?.name || "Opponent"}`
+                );
+            }
+        }
     }
 
     return true;
@@ -11335,6 +11380,26 @@ function clearExpiredEndPhaseEffects(expiringPlayer) {
                 });
 
                 if (card.durationKeywords.length !== beforeCount) {
+                    refreshCardStatDisplay(card);
+                }
+            }
+
+            if (Array.isArray(card.durationPowerBonuses)) {
+                const beforeCount = card.durationPowerBonuses.length;
+
+                card.durationPowerBonuses = card.durationPowerBonuses.filter(entry => {
+                    if (!entry?.expiresAtPlayerKey) {
+                        return true;
+                    }
+
+                    if (entry.expiresAtPlayerKey !== expiringPlayerKey) {
+                        return true;
+                    }
+
+                    return Number(entry.expiresAtEndOfTurns ?? 0) > Number(expiringPlayer.turns || 0);
+                });
+
+                if (card.durationPowerBonuses.length !== beforeCount) {
                     refreshCardStatDisplay(card);
                 }
             }

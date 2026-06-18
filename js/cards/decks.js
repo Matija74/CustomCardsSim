@@ -176,31 +176,31 @@ const rbNeronaImuDeckText = `
 const availableDecks = [
     {
         id: "okarun-deck",
-        name: "GP Okarun by Matija",
+        name: "GP Okarun",
         leaderKey: "DD01-001",
         deckText: okarunDeckText
     },
     {
         id: "rb-guts-deck",
-        name: "RB Guts by Mrki",
+        name: "RB Guts",
         leaderKey: "BK01-001",
         deckText: rbGutsDeckText
     },
     {
         id: "r-eggman-deck",
-        name: "R Eggman by MrJeremic",
+        name: "R Eggman",
         leaderKey: "EGG1-001",
         deckText: rEggmanDeckText
     },
     {
         id: "ry-ichigo-deck",
-        name: "RY Ichigo by Mrki",
+        name: "RY Ichigo",
         leaderKey: "BL01-001",
         deckText: ryIchigoDeckText
     },
     {
         id: "u-taglavnovic-deck",
-        name: "U Taglavnovič by Porentov",
+        name: "U Taglavnovič",
         leaderKey: "POG1-001",
         deckText: uTaglavnovicDeckText
     },
