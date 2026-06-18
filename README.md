@@ -6,6 +6,12 @@ interactions, and run self-play games without installing a full game client.
 
 ## Patch Notes
 
+Patch Note 1.20<br>
+[UPDATE]: Deck Editor card-library filtering now uses cached card data and batched rendering for faster updates.<br>
+[UPDATE]: Deck Editor search input now delays rerenders slightly to avoid rebuilding the library on every single keystroke.<br>
+[ADDITION]: RB Killer is now available as a preset deck.<br>
+[Dev Note]: /
+
 Patch Note 1.19<br>
 [UPDATE]: Deck Editor leader limiter now filters the library by the selected leader's set instead of the selected leader's type.<br>
 [FIX]: Cards from other sets are now hidden when the leader limiter is enabled in the Deck Editor.<br>

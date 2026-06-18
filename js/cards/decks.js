@@ -173,6 +173,22 @@ const rbNeronaImuDeckText = `
 2xIMU1-004
 `;
 
+const rbKillerDeckText = `
+4xKIL1-002
+2xKIL1-010
+4xKIL1-011
+4xKIL1-013
+4xKIL1-004
+4xKIL1-003
+4xKIL1-005
+4xKIL1-006
+4xKIL1-007
+4xKIL1-008
+4xKIL1-009
+4xKIL1-012
+4xKIL1-014
+`;
+
 const availableDecks = [
     {
         id: "okarun-deck",
@@ -233,6 +249,12 @@ const availableDecks = [
         name: "RB Nerona Imu",
         leaderKey: "IMU1-001",
         deckText: rbNeronaImuDeckText
+    },
+    {
+        id: "rb-killer-deck",
+        name: "RB Killer",
+        leaderKey: "KIL1-001",
+        deckText: rbKillerDeckText
     }
 ];
 

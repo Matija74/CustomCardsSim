@@ -8,6 +8,10 @@ class DeckEditor {
     constructor() {
         this.selectedLeader = null;
         this.deckCards = [];
+        this.allCards = [];
+        this.allCardRecords = [];
+        this.leaderRecords = [];
+        this.libraryRenderTimer = null;
 
         this.maxDeckSize = 50;
         this.maxCopiesPerCard = 4;
@@ -56,6 +60,7 @@ class DeckEditor {
     // =========================
 
     init() {
+        this.buildCardCaches();
         this.populateFilterOptions();
         this.setupEvents();
         this.renderSavedDeckOptions();
@@ -64,7 +69,7 @@ class DeckEditor {
     }
 
     setupEvents() {
-        this.cardSearch.addEventListener("input", () => this.renderCardLibrary());
+        this.cardSearch.addEventListener("input", () => this.scheduleLibraryRender());
         this.categoryFilter.addEventListener("change", () => this.renderCardLibrary());
         this.typeFilter.addEventListener("change", () => this.renderCardLibrary());
         this.colorFilter.addEventListener("change", () => this.renderCardLibrary());
@@ -93,6 +98,39 @@ class DeckEditor {
         });
     }
 
+    buildCardCaches() {
+        this.allCards = this.getAllCards();
+        this.allCardRecords = this.allCards.map(card => this.buildCardRecord(card));
+        this.leaderRecords = Object.values(this.leaders).map(card => this.buildCardRecord(card));
+    }
+
+    buildCardRecord(card) {
+        return {
+            card,
+            id: card.id,
+            nameLower: String(card.name || "").toLowerCase(),
+            categoryLower: String(card.cardType || "").toLowerCase(),
+            colors: this.getCardColors(card),
+            typesLower: this.getCardTypeValues(card).map(type => type.toLowerCase()),
+            cost: Number(card.cost),
+            power: Number(card.power),
+            attributeLower: String(card.attribute || "").toLowerCase(),
+            counter: Number(card.counter),
+            setCode: this.getCardSetCode(card)
+        };
+    }
+
+    scheduleLibraryRender() {
+        if (this.libraryRenderTimer) {
+            window.clearTimeout(this.libraryRenderTimer);
+        }
+
+        this.libraryRenderTimer = window.setTimeout(() => {
+            this.libraryRenderTimer = null;
+            this.renderCardLibrary();
+        }, 80);
+    }
+
     // =========================
     // Leader Selection
     // =========================
@@ -103,11 +141,14 @@ class DeckEditor {
         const filteredLeaders = this.getFilteredCards({
             leadersOnly: true
         });
+        const fragment = document.createDocumentFragment();
 
         filteredLeaders.forEach(leader => {
             const leaderCard = this.createLibraryCard(leader, true);
-            this.cardLibraryGrid.appendChild(leaderCard);
+            fragment.appendChild(leaderCard);
         });
+
+        this.cardLibraryGrid.appendChild(fragment);
     }
 
     chooseLeader(leader) {
@@ -156,11 +197,15 @@ class DeckEditor {
             return;
         }
 
+        const fragment = document.createDocumentFragment();
+
         filteredCards.forEach(card => {
             const isLeaderCard = card.cardType === "leader";
             const cardElement = this.createLibraryCard(card, isLeaderCard);
-            this.cardLibraryGrid.appendChild(cardElement);
+            fragment.appendChild(cardElement);
         });
+
+        this.cardLibraryGrid.appendChild(fragment);
     }
 
     createLibraryCard(card, isLeaderCard) {
@@ -222,7 +267,7 @@ class DeckEditor {
     // =========================
 
     populateFilterOptions() {
-        const allCards = this.getAllCards();
+        const allCards = this.allCards;
 
         this.populateSelect(
             this.typeFilter,
@@ -328,64 +373,60 @@ class DeckEditor {
             Boolean(this.selectedLeader) &&
             Boolean(this.leaderTypeFilterToggle?.checked);
 
-        const cards = options.leadersOnly
-            ? Object.values(this.leaders)
-            : this.getAllCards();
+        const records = options.leadersOnly
+            ? this.leaderRecords
+            : this.allCardRecords;
 
-        return cards.filter(card => {
-            const cardName = card.name.toLowerCase();
+        return records.filter(record => {
+            const card = record.card;
             const excludesLeadersAfterSelection =
                 !options.leadersOnly &&
                 Boolean(this.selectedLeader) &&
-                String(card.cardType || "").toLowerCase() === "leader";
+                record.categoryLower === "leader";
 
-            const cardColors = this.getCardColors(card);
             const leaderColors = matchLeaderColors
                 ? this.getCardColors(this.selectedLeader)
                 : [];
-            const cardSetCode = this.getCardSetCode(card);
             const leaderSetCode = matchLeaderSet
                 ? this.getCardSetCode(this.selectedLeader)
                 : "";
 
             const matchesSearch =
-                searchValue === "" || cardName.includes(searchValue);
+                searchValue === "" || record.nameLower.includes(searchValue);
 
             const matchesCategory =
                 selectedCategory === "all" ||
-                String(card.cardType || "").toLowerCase() === selectedCategory.toLowerCase();
+                record.categoryLower === selectedCategory.toLowerCase();
 
             const matchesType =
                 selectedType === "all" ||
-                this.getCardTypeValues(card)
-                    .map(type => type.toLowerCase())
-                    .includes(selectedType.toLowerCase());
+                record.typesLower.includes(selectedType.toLowerCase());
 
             const matchesColor =
                 selectedColor === "all" ||
-                cardColors.includes(selectedColor.toLowerCase());
+                record.colors.includes(selectedColor.toLowerCase());
 
             const matchesCost =
                 selectedCost === "all" ||
-                this.matchesNumberFilter(card.cost, selectedCost);
+                this.matchesNumberFilter(record.cost, selectedCost);
 
             const matchesPower =
                 selectedPower === "all" ||
-                this.matchesNumberFilter(card.power, selectedPower);
+                this.matchesNumberFilter(record.power, selectedPower);
 
             const matchesAttribute =
                 selectedAttribute === "all" ||
-                String(card.attribute || "").toLowerCase() === selectedAttribute.toLowerCase();
+                record.attributeLower === selectedAttribute.toLowerCase();
 
             const matchesCounter =
                 selectedCounter === "all" ||
-                this.matchesNumberFilter(card.counter, selectedCounter);
+                this.matchesNumberFilter(record.counter, selectedCounter);
             const matchesLeaderColors =
                 !matchLeaderColors ||
-                leaderColors.some(color => cardColors.includes(color));
+                leaderColors.some(color => record.colors.includes(color));
             const matchesLeaderSet =
                 !matchLeaderSet ||
-                (leaderSetCode !== "" && cardSetCode === leaderSetCode);
+                (leaderSetCode !== "" && record.setCode === leaderSetCode);
 
             return !excludesLeadersAfterSelection &&
                 matchesSearch &&
@@ -398,9 +439,9 @@ class DeckEditor {
                 matchesCounter &&
                 matchesLeaderColors &&
                 matchesLeaderSet;
-        }).sort((firstCard, secondCard) => {
-            return this.compareCardsForLibrary(firstCard, secondCard);
-        });
+        }).sort((firstRecord, secondRecord) => {
+            return this.compareCardsForLibrary(firstRecord.card, secondRecord.card);
+        }).map(record => record.card);
     }
 
     getCardColors(card) {
@@ -850,16 +891,19 @@ class DeckEditor {
 
     renderDeck() {
         this.deckDisplay.innerHTML = "";
+        const fragment = document.createDocumentFragment();
 
         if (this.selectedLeader) {
             const leaderElement = this.createDeckLeaderElement(this.selectedLeader);
-            this.deckDisplay.appendChild(leaderElement);
+            fragment.appendChild(leaderElement);
         }
 
         this.deckCards.forEach(card => {
             const cardElement = this.createDeckCardElement(card);
-            this.deckDisplay.appendChild(cardElement);
+            fragment.appendChild(cardElement);
         });
+
+        this.deckDisplay.appendChild(fragment);
 
         this.updateDeckCount();
     }
