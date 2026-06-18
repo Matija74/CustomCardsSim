@@ -13,6 +13,11 @@ Rules:
 - Always write entries in this exact order: Update, Fix, Addition, Dev Note.
 - Multiple lines of same type are allowed when needed, such as multiple [UPDATE], [FIX], or [ADDITION] lines.
 - If multiple lines are used, keep the same overall order: all [UPDATE] lines first, then all [FIX] lines, then all [ADDITION] lines, then [Dev Note].
+- Patch notes must be detailed enough to mention every user-facing change, but each line should still stay short.
+- Do not group multiple separate changes into one tag line if they can be listed separately.
+- If 2 cards were added, write 2 separate [ADDITION] lines and briefly state what each card added.
+- If 2 UI sections were changed, write 2 separate lines under the correct tags and briefly state what changed in each section.
+- This separate-line rule applies to every tag type: [UPDATE], [FIX], and [ADDITION].
 - Always include the patch note number in the title as: Patch Note X.XX
 - Use the page's existing divider line automatically. Do not type a row of dashes into the note body.
 - Whenever a user-facing change is made, update patch notes in the same task.
