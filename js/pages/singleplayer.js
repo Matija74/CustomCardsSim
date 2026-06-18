@@ -117,6 +117,7 @@ function createUiBridge() {
         renderTrash,
         renderStages,
         lookTopCardsAddToHand,
+        chooseLifeCard: showLifeCardChoice,
         chooseBoardCard: showBoardCardChoice,
         chooseEffectActivation,
         chooseEffectOption,
@@ -4081,7 +4082,6 @@ function renderTopBottomOrderStep({
     resetButton.textContent = "Reset Order";
     resetButton.addEventListener("click", () => {
         selectedOrder.splice(0, selectedOrder.length);
-        selectedOrder.push(...defaultOrder);
         syncSelectedOrderUi();
     });
 
@@ -4168,6 +4168,76 @@ function removeLookTopOverlay() {
     removeSearchCardImagePopup();
 
     const oldOverlay = document.getElementById("lookTopOverlay");
+
+    if (oldOverlay) {
+        oldOverlay.remove();
+    }
+}
+
+function showLifeCardChoice({
+    player,
+    sourceCard,
+    prompt,
+    choices,
+    onComplete
+}) {
+    removeLifeCardChoiceOverlay();
+
+    const overlay = document.createElement("div");
+    overlay.className = "look-top-overlay";
+    overlay.id = "lifeChoiceOverlay";
+
+    const popup = document.createElement("div");
+    popup.className = "look-top-popup";
+
+    const title = document.createElement("h2");
+    title.textContent = sourceCard ? sourceCard.name : "Choose a life card";
+
+    const description = document.createElement("p");
+    description.textContent = prompt || `Choose a life card for ${player.name}.`;
+
+    const cardGrid = document.createElement("div");
+    cardGrid.className = "look-top-card-grid";
+
+    choices.forEach(choice => {
+        const cardButton = document.createElement("button");
+        cardButton.className = "look-top-card-button";
+
+        const img = document.createElement("img");
+        img.src = choice.card?.faceUp && choice.card.image
+            ? choice.card.image
+            : cardBackImage;
+        img.alt = choice.card?.faceUp && choice.card.name
+            ? choice.card.name
+            : "Life Card";
+        img.className = "look-top-card-img";
+
+        const name = document.createElement("span");
+        name.className = "look-top-card-name";
+        name.textContent = choice.choiceLabel || `Life ${Number(choice.lifeIndex || 0) + 1}`;
+
+        cardButton.appendChild(img);
+        cardButton.appendChild(name);
+        cardButton.addEventListener("click", async () => {
+            removeLifeCardChoiceOverlay();
+
+            if (typeof onComplete === "function") {
+                await onComplete(choice);
+            }
+        });
+
+        cardGrid.appendChild(cardButton);
+    });
+
+    popup.appendChild(title);
+    popup.appendChild(description);
+    popup.appendChild(cardGrid);
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+}
+
+function removeLifeCardChoiceOverlay() {
+    const oldOverlay = document.getElementById("lifeChoiceOverlay");
 
     if (oldOverlay) {
         oldOverlay.remove();
@@ -4409,7 +4479,6 @@ function renderBottomOrderStep({
 
     resetButton.addEventListener("click", () => {
         selectedOrder.splice(0, selectedOrder.length);
-        selectedOrder.push(...defaultOrder);
         syncSelectedOrderUi();
     });
 

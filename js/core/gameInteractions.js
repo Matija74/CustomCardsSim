@@ -2165,16 +2165,46 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
     }
 
     if (effect.id === "SUB1-013-on-play-search-two") {
+        const waitsForLifeChoice = Boolean(
+            player.life?.length > 1 &&
+            (ui?.chooseLifeCard || ui?.chooseBoardCard)
+        );
+        let searchStarted = false;
+        const startSearch = (shouldLogMessage = false) => {
+            if (searchStarted) {
+                return "";
+            }
+
+            searchStarted = true;
+
+            const searchMessage = lookTopCardsForTypeAddUpTo(player, sourceCard, 5, 2, "RE:ZERO", ui);
+
+            if (shouldLogMessage && searchMessage) {
+                addGameLog(searchMessage);
+            }
+
+            return searchMessage;
+        };
+
         const revealMessage = revealSubaruLifeCard(player, sourceCard, ui, {
             allowAnyChoice: true,
-            prompt: `Choose which life card to reveal for ${sourceCard.name}.`
+            prompt: `Choose which life card to flip for ${sourceCard.name} before searching.`,
+            onComplete: () => {
+                if (waitsForLifeChoice) {
+                    startSearch(true);
+                }
+            }
         });
 
         if (revealMessage) {
             addGameLog(revealMessage);
         }
 
-        const searchMessage = lookTopCardsForTypeAddUpTo(player, sourceCard, 5, 2, "RE:ZERO", ui);
+        if (waitsForLifeChoice) {
+            return revealMessage || `${player.name} is choosing a life card to flip for ${sourceCard.name}.`;
+        }
+
+        const searchMessage = startSearch();
         return `${revealMessage || ""} ${searchMessage}`.trim();
     }
 
@@ -8379,6 +8409,35 @@ function revealSubaruLifeCard(player, sourceCard, ui, options = {}) {
             queueMultiplayerStateSync();
         }
     };
+
+    if (options.allowAnyChoice && player.life.length > 1 && ui?.chooseLifeCard) {
+        const choices = player.life.map((card, lifeIndex) => ({
+            card,
+            cardType: "life",
+            lifeIndex,
+            choiceLabel: lifeIndex === 0
+                ? "Top"
+                : lifeIndex === player.life.length - 1
+                    ? "Bottom"
+                    : `Life ${lifeIndex + 1}`
+        }));
+
+        ui.chooseLifeCard({
+            player,
+            sourceCard,
+            prompt: options.prompt || `Choose which life card to flip for ${sourceCard.name}.`,
+            choices,
+            onComplete: (choice) => {
+                if (!choice) {
+                    return;
+                }
+
+                revealAtIndex(choice.lifeIndex, choice.choiceLabel || `Life ${choice.lifeIndex + 1}`);
+            }
+        });
+
+        return `${player.name} is choosing a life card to flip for ${sourceCard.name}.`;
+    }
 
     if (options.allowAnyChoice && player.life.length > 1 && ui?.chooseBoardCard) {
         const choices = player.life.map((card, lifeIndex) => ({
