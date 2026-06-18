@@ -720,21 +720,27 @@ window.CardEffects = {
             };
         }
 
-        if (!Array.isArray(player?.life) || player.life.length === 0) {
+        if (!Array.isArray(player?.life) || player.life.length <= 1) {
             return {
                 activated: false,
-                message: `${leader.name}'s When Attacking effect found no life cards to move.`
+                message: `${leader.name}'s When Attacking effect found no non-top life cards to move.`
             };
         }
 
-        const placeLifeCardOnTop = (position) => {
-            if (position === "bottom" && player.life.length > 1) {
-                const movedCard = player.life.pop();
-
-                if (movedCard) {
-                    player.life.unshift(movedCard);
-                }
+        const placeLifeCardOnTop = (lifeIndex) => {
+            if (!Number.isInteger(lifeIndex) || lifeIndex <= 0 || lifeIndex >= player.life.length) {
+                addGameLog(`${leader.name} could not move that life card to the top.`);
+                return;
             }
+
+            const movedCard = player.life.splice(lifeIndex, 1)[0];
+
+            if (!movedCard) {
+                addGameLog(`${leader.name} could not move that life card to the top.`);
+                return;
+            }
+
+            player.life.unshift(movedCard);
 
             addTemporaryPowerBonus(leader, 1000);
             ui?.renderLifeCards?.();
@@ -746,28 +752,60 @@ window.CardEffects = {
             }
         };
 
-        if (player.life.length > 1 && ui?.chooseEffectOption) {
-            ui.chooseEffectOption({
+        const lifeChoices = player.life
+            .map((card, lifeIndex) => ({
+                card,
+                lifeIndex,
+                choiceLabel: lifeIndex === player.life.length - 1
+                    ? "Bottom"
+                    : `Life ${lifeIndex + 1}`
+            }))
+            .filter(choice => choice.lifeIndex > 0);
+
+        if (ui?.chooseLifeCard) {
+            ui.chooseLifeCard({
                 player,
                 sourceCard: leader,
-                title: leader.name,
                 prompt: `Choose which life card to place on top for ${leader.name}.`,
-                options: [
-                    { label: "Current Top", value: "top" },
-                    { label: "Current Bottom", value: "bottom" }
-                ],
-                onComplete: (value) => {
-                    placeLifeCardOnTop(value === "bottom" ? "bottom" : "top");
+                choices: lifeChoices,
+                onComplete: (choice) => {
+                    if (!choice) {
+                        return;
+                    }
+
+                    placeLifeCardOnTop(choice.lifeIndex);
                 }
             });
 
             return {
                 activated: true,
-                message: `${player.name} is choosing which life card to place on top for ${leader.name}.`
+                message: `${player.name} is choosing which non-top life card to place on top for ${leader.name}.`
             };
         }
 
-        placeLifeCardOnTop("top");
+        if (ui?.chooseBoardCard) {
+            ui.chooseBoardCard({
+                player,
+                sourceCard: leader,
+                prompt: `Choose which life card to place on top for ${leader.name}.`,
+                choices: lifeChoices,
+                optional: false,
+                onComplete: (choice) => {
+                    if (!choice) {
+                        return;
+                    }
+
+                    placeLifeCardOnTop(choice.lifeIndex);
+                }
+            });
+
+            return {
+                activated: true,
+                message: `${player.name} is choosing which non-top life card to place on top for ${leader.name}.`
+            };
+        }
+
+        placeLifeCardOnTop(1);
 
         return {
             activated: true,

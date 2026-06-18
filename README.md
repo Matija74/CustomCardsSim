@@ -6,6 +6,14 @@ interactions, and run self-play games without installing a full game client.
 
 ## Patch Notes
 
+Patch Note 1.09
+
+[UPDATE]: Subaru leader's When Attacking effect now uses the same Life-card popup style as Roswaal's Life selection.
+[FIX]: Subaru leader's When Attacking effect now only shows Life cards other than the current top card.
+[FIX]: Subaru leader's When Attacking effect now moves the selected Life card to the top without flipping it.
+
+[Dev Note]: /
+
 Patch Note 1.08
 
 [UPDATE]: Roswaal now flips a Life card before starting its search effect.
