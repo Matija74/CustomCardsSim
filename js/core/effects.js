@@ -796,7 +796,7 @@ window.CardEffects = {
 
         const revealMessage = typeof revealSubaruLifeCard === "function"
             ? revealSubaruLifeCard(player, character, ui, {
-                allowBottomChoice: true,
+                allowAnyChoice: true,
                 onComplete: (revealedCard) => {
                     const revealedPower = Number(revealedCard?.power || 0);
                     const powerGain = Math.floor(revealedPower / 2);

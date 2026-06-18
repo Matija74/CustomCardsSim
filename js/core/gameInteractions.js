@@ -2166,7 +2166,7 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
 
     if (effect.id === "SUB1-013-on-play-search-two") {
         const revealMessage = revealSubaruLifeCard(player, sourceCard, ui, {
-            allowBottomChoice: true,
+            allowAnyChoice: true,
             prompt: `Choose which life card to reveal for ${sourceCard.name}.`
         });
 
@@ -5560,6 +5560,83 @@ function lookTopCardsForTypeAddUpTo(player, sourceCard, amount, maxAdds, typeTex
         return matchesType && !isExcludedName;
     });
 
+    const finishSelection = (selection) => {
+        const originalCardsToLookAt = [...cardsToLookAt];
+        const selectedIndices = Array.isArray(selection?.selectedIndices)
+            ? selection.selectedIndices
+            : [];
+        const fallbackSelectedIndex = typeof selection === "object" && selection !== null
+            ? selection.selectedIndex
+            : selection;
+        const orderedBottomIndices = Array.isArray(selection?.bottomOrder)
+            ? selection.bottomOrder
+            : null;
+        const selectedIndexSequence = (selectedIndices.length > 0
+            ? selectedIndices
+            : [fallbackSelectedIndex]
+        ).filter((index, position, array) => (
+            Number.isInteger(index) &&
+            index >= 0 &&
+            index < originalCardsToLookAt.length &&
+            array.indexOf(index) === position
+        ));
+        const selectedCards = selectedIndexSequence
+            .map(index => originalCardsToLookAt[index])
+            .filter(card => isSelectable(card))
+            .filter(Boolean);
+
+        selectedCards.forEach(card => {
+            const cardIndex = cardsToLookAt.indexOf(card);
+
+            if (cardIndex !== -1) {
+                cardsToLookAt.splice(cardIndex, 1);
+            }
+        });
+
+        if (selectedCards.length > 0) {
+            selectedCards.forEach(card => {
+                player.hand.push(assignCardInstance(card));
+                addGameLog(`${player.name} revealed ${card.name} and added it to hand.`);
+            });
+        } else {
+            addGameLog(`${player.name} did not add a card with ${sourceCard.name}'s effect.`);
+        }
+
+        const orderedBottomCards = Array.isArray(orderedBottomIndices)
+            ? orderedBottomIndices
+                .map(index => originalCardsToLookAt[index])
+                .filter(card => cardsToLookAt.includes(card))
+                .filter(Boolean)
+            : [...cardsToLookAt];
+        const orderedSet = new Set(orderedBottomCards);
+        const unorderedBottomCards = cardsToLookAt.filter(card => !orderedSet.has(card));
+
+        player.deck.push(...orderedBottomCards, ...unorderedBottomCards);
+
+        ui?.renderHands?.();
+        ui?.renderDecks?.();
+
+        if (cardsToLookAt.length > 0) {
+            addGameLog(`${player.name} placed the remaining card${cardsToLookAt.length === 1 ? "" : "s"} on the bottom of the deck.`);
+        }
+
+        options.onResolved?.();
+    };
+
+    if (ui && typeof ui.lookTopCardsAddToHand === "function") {
+        ui.lookTopCardsAddToHand({
+            player,
+            sourceCard,
+            cards: cardsToLookAt,
+            isSelectable,
+            maxSelectable: maxAdds,
+            descriptionText: `Choose up to ${maxAdds} eligible card${maxAdds === 1 ? "" : "s"} to add to ${player.name}'s hand. Return the rest to the bottom of the deck in the order you want.`,
+            onComplete: finishSelection
+        });
+
+        return `${player.name} is looking at the top ${cardsToLookAt.length} card${cardsToLookAt.length === 1 ? "" : "s"} of the deck.`;
+    }
+
     const selectedCards = [];
 
     const placeRemainingCards = (orderedRemainingCards) => {
@@ -5575,7 +5652,7 @@ function lookTopCardsForTypeAddUpTo(player, sourceCard, amount, maxAdds, typeTex
         options.onResolved?.();
     };
 
-    const finishSelection = () => {
+    const finishLegacySelection = () => {
         if (selectedCards.length > 0) {
             selectedCards.forEach(card => {
                 player.hand.push(assignCardInstance(card));
@@ -5637,7 +5714,7 @@ function lookTopCardsForTypeAddUpTo(player, sourceCard, amount, maxAdds, typeTex
 
     const chooseNextCard = () => {
         if (selectedCards.length >= maxAdds) {
-            finishSelection();
+            finishLegacySelection();
             return "";
         }
 
@@ -5649,7 +5726,7 @@ function lookTopCardsForTypeAddUpTo(player, sourceCard, amount, maxAdds, typeTex
             .filter(choice => isSelectable(choice.card));
 
         if (choices.length === 0) {
-            finishSelection();
+            finishLegacySelection();
             return "";
         }
 
@@ -5661,7 +5738,7 @@ function lookTopCardsForTypeAddUpTo(player, sourceCard, amount, maxAdds, typeTex
 
                 if (!selectedCard) {
                     addGameLog(`${sourceCard.name} could not find that card anymore.`);
-                    finishSelection();
+                    finishLegacySelection();
                     return;
                 }
 
@@ -5673,8 +5750,8 @@ function lookTopCardsForTypeAddUpTo(player, sourceCard, amount, maxAdds, typeTex
                     addGameLog(chooseMessage);
                 }
             },
-            onSkip: finishSelection,
-            onEmpty: finishSelection,
+            onSkip: finishLegacySelection,
+            onEmpty: finishLegacySelection,
             skipMessage: `${player.name} stopped adding cards with ${sourceCard.name}.`,
             emptyMessage: `${sourceCard.name} found no eligible cards.`
         });
@@ -8283,26 +8360,55 @@ function revealSubaruLifeCard(player, sourceCard, ui, options = {}) {
         return `${sourceCard.name} found no life card to reveal.`;
     }
 
-    const revealAtPosition = (position) => {
-        const useBottomCard = position === "bottom" && player.life.length > 1;
-        const revealedCard = useBottomCard
-            ? player.life[player.life.length - 1]
-            : player.life[0];
+    const revealAtIndex = (lifeIndex, positionLabel = "") => {
+        const revealedCard = player.life[lifeIndex];
 
         if (!revealedCard) {
             addGameLog(`${sourceCard.name} could not reveal that life card.`);
             return;
         }
 
-        revealedCard.faceUp = true;
+        revealedCard.faceUp = !Boolean(revealedCard.faceUp);
         ui?.renderLifeCards?.();
-        addGameLog(`${player.name} turned the ${useBottomCard ? "bottom" : "top"} life card face-up for ${sourceCard.name}.`);
-        options.onComplete?.(revealedCard, useBottomCard ? "bottom" : "top");
+        addGameLog(
+            `${player.name} turned ${positionLabel || "a"} life card ${revealedCard.faceUp ? "face-up" : "face-down"} for ${sourceCard.name}.`
+        );
+        options.onComplete?.(revealedCard, positionLabel || "selected");
 
         if (typeof queueMultiplayerStateSync === "function") {
             queueMultiplayerStateSync();
         }
     };
+
+    if (options.allowAnyChoice && player.life.length > 1 && ui?.chooseBoardCard) {
+        const choices = player.life.map((card, lifeIndex) => ({
+            card,
+            cardType: "life",
+            lifeIndex,
+            choiceLabel: lifeIndex === 0
+                ? "Top"
+                : lifeIndex === player.life.length - 1
+                    ? "Bottom"
+                    : `Life ${lifeIndex + 1}`
+        }));
+
+        ui.chooseBoardCard({
+            player,
+            sourceCard,
+            prompt: options.prompt || `Choose which life card to flip for ${sourceCard.name}.`,
+            choices,
+            optional: false,
+            onComplete: (choice) => {
+                if (!choice) {
+                    return;
+                }
+
+                revealAtIndex(choice.lifeIndex, choice.choiceLabel || `Life ${choice.lifeIndex + 1}`);
+            }
+        });
+
+        return `${player.name} is choosing a life card to flip for ${sourceCard.name}.`;
+    }
 
     if (options.allowBottomChoice && player.life.length > 1 && ui?.chooseEffectOption) {
         ui.chooseEffectOption({
@@ -8315,14 +8421,18 @@ function revealSubaruLifeCard(player, sourceCard, ui, options = {}) {
                 { label: "Bottom", value: "bottom" }
             ],
             onComplete: (value) => {
-                revealAtPosition(value === "bottom" ? "bottom" : "top");
+                const useBottomCard = value === "bottom" && player.life.length > 1;
+                revealAtIndex(
+                    useBottomCard ? player.life.length - 1 : 0,
+                    useBottomCard ? "bottom" : "top"
+                );
             }
         });
 
         return `${player.name} is choosing a life card to reveal for ${sourceCard.name}.`;
     }
 
-    revealAtPosition("top");
+    revealAtIndex(0, "top");
     return `${sourceCard.name}'s effect revealed a life card.`;
 }
 

@@ -4533,7 +4533,8 @@ function lookTopCardsAddToHand({
     onComplete,
     revealSelected = true,
     descriptionText = null,
-    allowTopOrBottomPlacement = false
+    allowTopOrBottomPlacement = false,
+    maxSelectable = 1
 }) {
     removeLookTopOverlay();
 
@@ -4551,12 +4552,12 @@ function lookTopCardsAddToHand({
 
     const description = document.createElement("p");
     description.textContent = descriptionText ||
-        `Choose up to 1 valid card to add to ${player.name}'s hand. The rest go to the bottom of the deck.`;
+        `Choose up to ${maxSelectable} valid card${maxSelectable === 1 ? "" : "s"} to add to ${player.name}'s hand. The rest go to the bottom of the deck.`;
 
     const cardGrid = document.createElement("div");
     cardGrid.className = "look-top-card-grid";
 
-    let selectedIndex = null;
+    const selectedIndices = [];
 
     const completeLookTopSelection = (selection) => {
         if (typeof onComplete === "function") {
@@ -4567,9 +4568,12 @@ function lookTopCardsAddToHand({
     };
 
     const continueToBottomOrder = () => {
+        const selectedIndex = selectedIndices.length > 0
+            ? selectedIndices[0]
+            : null;
         const remainingCards = cards
             .map((card, index) => ({ card, index }))
-            .filter(entry => entry.index !== selectedIndex);
+            .filter(entry => !selectedIndices.includes(entry.index));
 
         if (allowTopOrBottomPlacement) {
             if (remainingCards.length === 0) {
@@ -4577,6 +4581,7 @@ function lookTopCardsAddToHand({
 
                 completeLookTopSelection({
                     selectedIndex,
+                    selectedIndices: [...selectedIndices],
                     orderedRemaining: [],
                     topCount: 0
                 });
@@ -4589,6 +4594,7 @@ function lookTopCardsAddToHand({
                 sourceCard,
                 remainingCards,
                 selectedIndex,
+                selectedIndices: [...selectedIndices],
                 onComplete: completeLookTopSelection
             });
             return;
@@ -4599,6 +4605,7 @@ function lookTopCardsAddToHand({
 
             completeLookTopSelection({
                 selectedIndex,
+                selectedIndices: [...selectedIndices],
                 bottomOrder: remainingCards.map(entry => entry.index)
             });
 
@@ -4610,22 +4617,37 @@ function lookTopCardsAddToHand({
             sourceCard,
             remainingCards,
             selectedIndex,
+            selectedIndices: [...selectedIndices],
             onComplete: completeLookTopSelection
         });
     };
 
-    const selectCard = (cardButton, index, validChoice) => {
+    const updateActionButtons = () => {
+        addButton.disabled = selectedIndices.length === 0;
+        addButton.textContent = maxSelectable === 1
+            ? "Add Selected"
+            : `Continue With Selected (${selectedIndices.length}/${maxSelectable})`;
+    };
+
+    const toggleSelectedCard = (cardButton, index, validChoice) => {
         if (!validChoice) return;
 
-        selectedIndex = index;
+        const existingSelectionIndex = selectedIndices.indexOf(index);
 
-        document.querySelectorAll(".look-top-card-button").forEach(button => {
-            button.classList.remove("selected-look-card");
-        });
+        if (existingSelectionIndex !== -1) {
+            selectedIndices.splice(existingSelectionIndex, 1);
+            cardButton.classList.remove("selected-look-card");
+            updateActionButtons();
+            return;
+        }
 
+        if (selectedIndices.length >= maxSelectable) {
+            return;
+        }
+
+        selectedIndices.push(index);
         cardButton.classList.add("selected-look-card");
-
-        addButton.disabled = false;
+        updateActionButtons();
     };
 
     cards.forEach((card, index) => {
@@ -4638,7 +4660,7 @@ function lookTopCardsAddToHand({
             cardButton.classList.add("disabled-choice");
             cardButton.title = "This card is not a valid choice, but you can inspect it.";
         } else {
-            cardButton.title = "Click to inspect. Use Select Card to add it.";
+            cardButton.title = "Click to inspect. Use Select Card to mark it for adding.";
         }
 
         const img = document.createElement("img");
@@ -4654,12 +4676,13 @@ function lookTopCardsAddToHand({
         cardButton.appendChild(name);
 
         cardButton.addEventListener("click", () => {
-            selectCard(cardButton, index, validChoice);
             showSearchCardImagePopup(card, {
                 canSelect: validChoice,
+                selectButtonLabel: selectedIndices.includes(index)
+                    ? "Remove Card"
+                    : "Select Card",
                 onSelect: () => {
-                    selectCard(cardButton, index, validChoice);
-                    continueToBottomOrder();
+                    toggleSelectedCard(cardButton, index, validChoice);
                 }
             });
         });
@@ -4672,7 +4695,9 @@ function lookTopCardsAddToHand({
 
     const addButton = document.createElement("button");
     addButton.className = "look-top-action-button";
-    addButton.textContent = "Add Selected";
+    addButton.textContent = maxSelectable === 1
+        ? "Add Selected"
+        : `Continue With Selected (0/${maxSelectable})`;
     addButton.disabled = true;
 
     const skipButton = document.createElement("button");
@@ -4680,13 +4705,13 @@ function lookTopCardsAddToHand({
     skipButton.textContent = "Add Nothing";
 
     addButton.addEventListener("click", () => {
-        if (selectedIndex === null) return;
+        if (selectedIndices.length === 0) return;
 
         continueToBottomOrder();
     });
 
     skipButton.addEventListener("click", () => {
-        selectedIndex = null;
+        selectedIndices.splice(0, selectedIndices.length);
 
         continueToBottomOrder();
     });
@@ -4701,6 +4726,8 @@ function lookTopCardsAddToHand({
 
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
+
+    updateActionButtons();
 }
 
 function renderTopBottomOrderStep({
@@ -4708,6 +4735,7 @@ function renderTopBottomOrderStep({
     sourceCard,
     remainingCards,
     selectedIndex,
+    selectedIndices = [],
     onComplete
 }) {
     const overlay = document.getElementById("lookTopOverlay");
@@ -4728,6 +4756,7 @@ function renderTopBottomOrderStep({
     const cardGrid = document.createElement("div");
     cardGrid.className = "look-top-card-grid";
 
+    const defaultOrder = remainingCards.map(entry => entry.index);
     const selectedOrder = [];
     const confirmRow = document.createElement("div");
     confirmRow.className = "look-top-buttons";
@@ -4743,6 +4772,7 @@ function renderTopBottomOrderStep({
             removeLookTopOverlay();
             onComplete?.({
                 selectedIndex,
+                selectedIndices: [...selectedIndices],
                 orderedRemaining: [...selectedOrder],
                 returnZone: "top"
             });
@@ -4755,6 +4785,7 @@ function renderTopBottomOrderStep({
             removeLookTopOverlay();
             onComplete?.({
                 selectedIndex,
+                selectedIndices: [...selectedIndices],
                 orderedRemaining: [...selectedOrder],
                 returnZone: "bottom"
             });
@@ -4774,9 +4805,29 @@ function renderTopBottomOrderStep({
         }
     };
 
+    const syncSelectedOrderUi = () => {
+        const orderLookup = new Map(selectedOrder.map((index, orderIndex) => [index, orderIndex + 1]));
+
+        cardGrid.querySelectorAll(".bottom-order-card-button").forEach(cardButton => {
+            const entryIndex = Number(cardButton.dataset.entryIndex);
+            const orderBadge = cardButton.querySelector(".bottom-order-badge");
+            const orderNumber = orderLookup.get(entryIndex);
+
+            cardButton.classList.toggle("selected-look-card", Boolean(orderNumber));
+            cardButton.classList.toggle("bottom-order-selected", Boolean(orderNumber));
+
+            if (orderBadge) {
+                orderBadge.textContent = orderNumber || "";
+            }
+        });
+
+        updateDoneState();
+    };
+
     remainingCards.forEach(entry => {
         const cardButton = document.createElement("button");
         cardButton.className = "look-top-card-button bottom-order-card-button";
+        cardButton.dataset.entryIndex = String(entry.index);
 
         const orderBadge = document.createElement("span");
         orderBadge.className = "bottom-order-badge";
@@ -4795,12 +4846,16 @@ function renderTopBottomOrderStep({
         cardButton.appendChild(name);
 
         cardButton.addEventListener("click", () => {
-            if (selectedOrder.includes(entry.index)) return;
+            const existingIndex = selectedOrder.indexOf(entry.index);
+
+            if (existingIndex !== -1) {
+                selectedOrder.splice(existingIndex, selectedOrder.length - existingIndex);
+                syncSelectedOrderUi();
+                return;
+            }
 
             selectedOrder.push(entry.index);
-            orderBadge.textContent = selectedOrder.length;
-            cardButton.classList.add("selected-look-card", "bottom-order-selected");
-            updateDoneState();
+            syncSelectedOrderUi();
         });
 
         cardGrid.appendChild(cardButton);
@@ -4814,17 +4869,8 @@ function renderTopBottomOrderStep({
     resetButton.textContent = "Reset Order";
     resetButton.addEventListener("click", () => {
         selectedOrder.splice(0, selectedOrder.length);
-
-        cardGrid.querySelectorAll(".bottom-order-card-button").forEach(cardButton => {
-            cardButton.classList.remove("selected-look-card", "bottom-order-selected");
-            const orderBadge = cardButton.querySelector(".bottom-order-badge");
-
-            if (orderBadge) {
-                orderBadge.textContent = "";
-            }
-        });
-
-        updateDoneState();
+        selectedOrder.push(...defaultOrder);
+        syncSelectedOrderUi();
     });
 
     buttonRow.appendChild(resetButton);
@@ -4834,6 +4880,9 @@ function renderTopBottomOrderStep({
     popup.appendChild(cardGrid);
     popup.appendChild(buttonRow);
     popup.appendChild(confirmRow);
+
+    selectedOrder.push(...defaultOrder);
+    syncSelectedOrderUi();
 }
 
 function showSearchCardImagePopup(card, options = {}) {
@@ -4862,7 +4911,7 @@ function showSearchCardImagePopup(card, options = {}) {
     if (options.canSelect) {
         const selectButton = document.createElement("button");
         selectButton.className = "look-top-action-button";
-        selectButton.textContent = "Select Card";
+        selectButton.textContent = options.selectButtonLabel || "Select Card";
         selectButton.addEventListener("click", () => {
             if (typeof options.onSelect === "function") {
                 options.onSelect();
@@ -5040,6 +5089,7 @@ function renderBottomOrderStep({
     sourceCard,
     remainingCards,
     selectedIndex,
+    selectedIndices = [],
     onComplete
 }) {
     const overlay = document.getElementById("lookTopOverlay");
@@ -5060,6 +5110,7 @@ function renderBottomOrderStep({
     const cardGrid = document.createElement("div");
     cardGrid.className = "look-top-card-grid";
 
+    const defaultOrder = remainingCards.map(entry => entry.index);
     const selectedOrder = [];
     const doneButton = document.createElement("button");
 
@@ -5067,9 +5118,29 @@ function renderBottomOrderStep({
         doneButton.disabled = selectedOrder.length !== remainingCards.length;
     };
 
+    const syncSelectedOrderUi = () => {
+        const orderLookup = new Map(selectedOrder.map((index, orderIndex) => [index, orderIndex + 1]));
+
+        cardGrid.querySelectorAll(".bottom-order-card-button").forEach(cardButton => {
+            const entryIndex = Number(cardButton.dataset.entryIndex);
+            const orderBadge = cardButton.querySelector(".bottom-order-badge");
+            const orderNumber = orderLookup.get(entryIndex);
+
+            cardButton.classList.toggle("selected-look-card", Boolean(orderNumber));
+            cardButton.classList.toggle("bottom-order-selected", Boolean(orderNumber));
+
+            if (orderBadge) {
+                orderBadge.textContent = orderNumber || "";
+            }
+        });
+
+        updateDoneState();
+    };
+
     remainingCards.forEach(entry => {
         const cardButton = document.createElement("button");
         cardButton.className = "look-top-card-button bottom-order-card-button";
+        cardButton.dataset.entryIndex = String(entry.index);
 
         const orderBadge = document.createElement("span");
         orderBadge.className = "bottom-order-badge";
@@ -5088,12 +5159,16 @@ function renderBottomOrderStep({
         cardButton.appendChild(name);
 
         cardButton.addEventListener("click", () => {
-            if (selectedOrder.includes(entry.index)) return;
+            const existingIndex = selectedOrder.indexOf(entry.index);
+
+            if (existingIndex !== -1) {
+                selectedOrder.splice(existingIndex, selectedOrder.length - existingIndex);
+                syncSelectedOrderUi();
+                return;
+            }
 
             selectedOrder.push(entry.index);
-            orderBadge.textContent = selectedOrder.length;
-            cardButton.classList.add("selected-look-card", "bottom-order-selected");
-            updateDoneState();
+            syncSelectedOrderUi();
         });
 
         cardGrid.appendChild(cardButton);
@@ -5118,6 +5193,7 @@ function renderBottomOrderStep({
         if (typeof onComplete === "function") {
             onComplete({
                 selectedIndex,
+                selectedIndices: [...selectedIndices],
                 bottomOrder: selectedOrder
             });
         }
@@ -5127,17 +5203,8 @@ function renderBottomOrderStep({
 
     resetButton.addEventListener("click", () => {
         selectedOrder.splice(0, selectedOrder.length);
-
-        cardGrid.querySelectorAll(".bottom-order-card-button").forEach(cardButton => {
-            cardButton.classList.remove("selected-look-card", "bottom-order-selected");
-            const orderBadge = cardButton.querySelector(".bottom-order-badge");
-
-            if (orderBadge) {
-                orderBadge.textContent = "";
-            }
-        });
-
-        updateDoneState();
+        selectedOrder.push(...defaultOrder);
+        syncSelectedOrderUi();
     });
 
     buttonRow.appendChild(doneButton);
@@ -5147,6 +5214,9 @@ function renderBottomOrderStep({
     popup.appendChild(description);
     popup.appendChild(cardGrid);
     popup.appendChild(buttonRow);
+
+    selectedOrder.push(...defaultOrder);
+    syncSelectedOrderUi();
 }
 
 function removeBoardChoiceOverlay() {
