@@ -188,6 +188,8 @@ class DeckEditor {
         }
 
         const filteredCards = this.getFilteredCards();
+        const deckCardAmountMap = this.getDeckCardAmountMap();
+        const deckAtSizeLimit = this.isDeckAtSizeLimit();
 
         if (filteredCards.length === 0) {
             const emptyMessage = document.createElement("div");
@@ -201,14 +203,17 @@ class DeckEditor {
 
         filteredCards.forEach(card => {
             const isLeaderCard = card.cardType === "leader";
-            const cardElement = this.createLibraryCard(card, isLeaderCard);
+            const cardElement = this.createLibraryCard(card, isLeaderCard, {
+                deckCardAmountMap,
+                deckAtSizeLimit
+            });
             fragment.appendChild(cardElement);
         });
 
         this.cardLibraryGrid.appendChild(fragment);
     }
 
-    createLibraryCard(card, isLeaderCard) {
+    createLibraryCard(card, isLeaderCard, options = {}) {
         const article = document.createElement("article");
         article.classList.add("library-card");
 
@@ -219,6 +224,8 @@ class DeckEditor {
             const image = document.createElement("img");
             image.src = card.image;
             image.alt = card.name;
+            image.loading = "lazy";
+            image.decoding = "async";
             imageBox.appendChild(image);
         } else {
             const noImage = document.createElement("span");
@@ -243,7 +250,9 @@ class DeckEditor {
             button.textContent = "Choose Leader";
             button.addEventListener("click", () => this.chooseLeader(card));
         } else {
-            const isAtLimit = !this.canAddAnotherCopy(card.id) || this.isDeckAtSizeLimit();
+            const currentAmount = options.deckCardAmountMap?.get(card.id) || 0;
+            const isAtLimit = (this.isCopyLimitEnabled() && currentAmount >= this.maxCopiesPerCard) ||
+                options.deckAtSizeLimit === true;
 
             button.textContent = isAtLimit ? "Max" : "Add";
             button.disabled = isAtLimit;
@@ -372,6 +381,12 @@ class DeckEditor {
         const matchLeaderSet = !options.leadersOnly &&
             Boolean(this.selectedLeader) &&
             Boolean(this.leaderTypeFilterToggle?.checked);
+        const leaderColors = matchLeaderColors
+            ? this.getCardColors(this.selectedLeader)
+            : [];
+        const leaderSetCode = matchLeaderSet
+            ? this.getCardSetCode(this.selectedLeader)
+            : "";
 
         const records = options.leadersOnly
             ? this.leaderRecords
@@ -383,13 +398,6 @@ class DeckEditor {
                 !options.leadersOnly &&
                 Boolean(this.selectedLeader) &&
                 record.categoryLower === "leader";
-
-            const leaderColors = matchLeaderColors
-                ? this.getCardColors(this.selectedLeader)
-                : [];
-            const leaderSetCode = matchLeaderSet
-                ? this.getCardSetCode(this.selectedLeader)
-                : "";
 
             const matchesSearch =
                 searchValue === "" || record.nameLower.includes(searchValue);
@@ -892,6 +900,8 @@ class DeckEditor {
     renderDeck() {
         this.deckDisplay.innerHTML = "";
         const fragment = document.createDocumentFragment();
+        const deckCardAmountMap = this.getDeckCardAmountMap();
+        const deckAtSizeLimit = this.isDeckAtSizeLimit();
 
         if (this.selectedLeader) {
             const leaderElement = this.createDeckLeaderElement(this.selectedLeader);
@@ -899,7 +909,10 @@ class DeckEditor {
         }
 
         this.deckCards.forEach(card => {
-            const cardElement = this.createDeckCardElement(card);
+            const cardElement = this.createDeckCardElement(card, {
+                deckCardAmountMap,
+                deckAtSizeLimit
+            });
             fragment.appendChild(cardElement);
         });
 
@@ -948,7 +961,7 @@ class DeckEditor {
         return item;
     }
 
-    createDeckCardElement(card) {
+    createDeckCardElement(card, options = {}) {
         const item = document.createElement("div");
         item.classList.add("deck-card-item");
 
@@ -959,6 +972,8 @@ class DeckEditor {
             const image = document.createElement("img");
             image.src = card.image;
             image.alt = card.name;
+            image.loading = "lazy";
+            image.decoding = "async";
             imageBox.appendChild(image);
         } else {
             const noImage = document.createElement("span");
@@ -992,7 +1007,9 @@ class DeckEditor {
         increaseButton.classList.add("quantity-button");
         increaseButton.textContent = "+";
 
-        const isAtLimit = !this.canAddAnotherCopy(card.id) || this.isDeckAtSizeLimit();
+        const currentAmount = options.deckCardAmountMap?.get(card.id) || 0;
+        const isAtLimit = (this.isCopyLimitEnabled() && currentAmount >= this.maxCopiesPerCard) ||
+            options.deckAtSizeLimit === true;
 
         increaseButton.disabled = isAtLimit;
 
@@ -1035,6 +1052,16 @@ class DeckEditor {
         const existingCard = this.deckCards.find(deckCard => deckCard.id === cardId);
 
         return existingCard ? existingCard.amount : 0;
+    }
+
+    getDeckCardAmountMap() {
+        const amountMap = new Map();
+
+        this.deckCards.forEach(card => {
+            amountMap.set(card.id, Number(card.amount || 0));
+        });
+
+        return amountMap;
     }
 
     // =========================

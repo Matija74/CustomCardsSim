@@ -2,52 +2,69 @@
 
 let cardDatabase = {};
 let leaders = {};
+const jsonLoadCache = new Map();
+let cardDatabaseLoadPromise = null;
 
 async function loadJson(path) {
-    const response = await fetch(path);
+    if (!jsonLoadCache.has(path)) {
+        jsonLoadCache.set(path, (async () => {
+            const response = await fetch(path);
 
-    if (!response.ok) {
-        throw new Error(`Failed to load JSON file: ${path}`);
+            if (!response.ok) {
+                throw new Error(`Failed to load JSON file: ${path}`);
+            }
+
+            return response.json();
+        })());
     }
 
-    return response.json();
+    return jsonLoadCache.get(path);
 }
 
 async function loadCardDatabase() {
-    const [characters, stages, events, leaderCards, onePieceCards] = await Promise.all([
-        loadJson("../data/cards/characters.json"),
-        loadJson("../data/cards/stages.json"),
-        loadJson("../data/cards/events.json"),
-        loadJson("../data/cards/leaders.json"),
-        loadJson("../data/cards/onepiece.json")
-    ]);
+    if (cardDatabaseLoadPromise) {
+        return cardDatabaseLoadPromise;
+    }
 
-    const onePieceEntries = Object.entries(onePieceCards || {});
-    const onePieceLeaders = Object.fromEntries(
-        onePieceEntries.filter(([, card]) => String(card?.cardType || "").toLowerCase() === "leader")
-    );
-    const onePieceMainDeckCards = Object.fromEntries(
-        onePieceEntries.filter(([, card]) => String(card?.cardType || "").toLowerCase() !== "leader")
-    );
+    cardDatabaseLoadPromise = (async () => {
+        const [characters, stages, events, leaderCards, onePieceCards] = await Promise.all([
+            loadJson("../data/cards/characters.json"),
+            loadJson("../data/cards/stages.json"),
+            loadJson("../data/cards/events.json"),
+            loadJson("../data/cards/leaders.json"),
+            loadJson("../data/cards/onepiece.json")
+        ]);
 
-    cardDatabase = {
-        ...characters,
-        ...stages,
-        ...events,
-        ...onePieceMainDeckCards
-    };
+        const onePieceLeaders = {};
+        const onePieceMainDeckCards = {};
 
-    leaders = {
-        ...leaderCards,
-        ...onePieceLeaders
-    };
+        Object.entries(onePieceCards || {}).forEach(([cardId, card]) => {
+            if (String(card?.cardType || "").toLowerCase() === "leader") {
+                onePieceLeaders[cardId] = card;
+                return;
+            }
 
-    window.cardDatabase = cardDatabase;
-    window.leaders = leaders;
-    window.getCardById = getCardById;
+            onePieceMainDeckCards[cardId] = card;
+        });
 
-    console.log("Card database loaded:", cardDatabase);
-    console.log("Leaders loaded:", leaders);
+        cardDatabase = {
+            ...characters,
+            ...stages,
+            ...events,
+            ...onePieceMainDeckCards
+        };
+
+        leaders = {
+            ...leaderCards,
+            ...onePieceLeaders
+        };
+
+        window.cardDatabase = cardDatabase;
+        window.leaders = leaders;
+        window.getCardById = getCardById;
+    })();
+
+    return cardDatabaseLoadPromise;
 }
 
 function cloneCard(card) {
