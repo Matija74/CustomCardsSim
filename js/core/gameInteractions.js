@@ -1345,6 +1345,10 @@ function trashTopCardsOfDeck(player, amount, uiInstance = ui) {
         const trashedCard = assignCardInstance(topCard);
         moveCardToTrash(player, trashedCard, uiInstance);
         trashedCards.push(trashedCard);
+
+        if (typeof resolveWhenTrashedFromDeckEffects === "function") {
+            resolveWhenTrashedFromDeckEffects(player, trashedCard, uiInstance);
+        }
     }
 
     uiInstance?.renderDecks?.();
@@ -1357,6 +1361,54 @@ function trashTopCardsOfDeck(player, amount, uiInstance = ui) {
             ? `${player.name} trashed ${trashedCards.length} card${trashedCards.length === 1 ? "" : "s"} from the top of the deck.`
             : `${player.name} had no cards in deck to trash.`
     };
+}
+
+function resolveWhenTrashedFromDeckEffects(player, card, ui) {
+    if (!player || !card || areCardEffectsNegated(card)) {
+        return [];
+    }
+
+    const messages = [];
+
+    getCardAllEffects(card)
+        ?.filter(effect => effect.type === "whenTrashedFromDeck")
+        .forEach(effect => {
+            if (effect.id === "KIL1-002-when-trashed-from-deck") {
+                const slotIndex = getFirstOpenCharacterSlotIndex(player);
+
+                if (slotIndex === -1) {
+                    messages.push(`${card.name} was trashed from deck, but ${player.name}'s character area is full.`);
+                    return;
+                }
+
+                const trashIndex = player.trash.findIndex(trashCard => trashCard?.instanceId === card.instanceId);
+
+                if (trashIndex === -1) {
+                    messages.push(`${card.name} was trashed from deck, but could not be found in trash.`);
+                    return;
+                }
+
+                const playedCard = player.trash.splice(trashIndex, 1)[0];
+                const playMessage = playCharacterFromTrashWithoutCost(player, card, playedCard, ui, {
+                    sourceZoneLabel: "deck"
+                });
+                messages.push(playMessage);
+                addGameLog(`${card.name}'s When Trashed From Deck effect activated. ${playMessage}`);
+                return;
+            }
+
+            const message = resolveEffectAction(player, card, effect, ui, {
+                skipActivationPrompt: true,
+                trashedFromDeck: true
+            });
+
+            if (message) {
+                messages.push(message);
+                addGameLog(message);
+            }
+        });
+
+    return messages;
 }
 
 function drawCards(player, amount, uiInstance = ui) {
@@ -2340,6 +2392,303 @@ function resolveEffectAction(player, sourceCard, effect, ui, options = {}) {
         });
 
         return `${trashedLifeResult.message} ${searchMessage}`.trim();
+    }
+
+    if (effect.id === "KIL1-002-on-play-search") {
+        const message = lookTopCardsAddOneToHandTrashRest(player, sourceCard, 3, ui, {
+            isSelectable: card => {
+                return hasTypeText(card, "Kid Pirates") &&
+                    !CardEffects.hasCardName(card, "Dive");
+            },
+            onResolved: (_selectedCard, trashedCards) => {
+                trashedCards.forEach(trashedCard => {
+                    resolveWhenTrashedFromDeckEffects(player, trashedCard, ui);
+                });
+            }
+        });
+
+        return message;
+    }
+
+    if (effect.id === "KIL1-003-activate-main") {
+        const opponent = getOpponentOfPlayer(player);
+
+        if (!opponent || (opponent.trash?.length || 0) === 0) {
+            return `${sourceCard.name} found no card in the opponent's trash to return to deck.`;
+        }
+
+        return chooseBoardCard(player, sourceCard, getTrashCardChoices(opponent), {
+            prompt: `Choose 1 card from ${opponent.name}'s trash to place on the bottom of their deck.`,
+            optional: false,
+            onSelect: ({ trashIndex, card }) => {
+                const movedCard = opponent.trash.splice(trashIndex, 1)[0];
+
+                if (!movedCard) {
+                    addGameLog(`${sourceCard.name} could not find that card in ${opponent.name}'s trash anymore.`);
+                    return;
+                }
+
+                opponent.deck.push(movedCard);
+                ui?.renderTrash?.();
+                ui?.renderDecks?.();
+                addGameLog(`${player.name} placed ${card.name} from ${opponent.name}'s trash on the bottom of their deck with ${sourceCard.name}.`);
+
+                const targetCost = getCardEffectiveCost(movedCard);
+                const addMessage = addCardFromTrashToHand(player, sourceCard, ui, {
+                    prompt: `Choose up to 1 card with cost ${targetCost} from your trash to add to hand.`,
+                    optional: true,
+                    filter: trashCard => getCardEffectiveCost(trashCard) === targetCost,
+                    skipMessage: `${player.name} did not add a cost ${targetCost} card from trash with ${sourceCard.name}.`,
+                    emptyMessage: `${sourceCard.name} found no cost ${targetCost} card in ${player.name}'s trash.`
+                });
+
+                if (addMessage) {
+                    addGameLog(addMessage);
+                }
+
+                if (typeof queueMultiplayerStateSync === "function") {
+                    queueMultiplayerStateSync();
+                }
+            }
+        });
+    }
+
+    if (effect.id === "KIL1-003-trigger") {
+        return addCardFromTrashToHand(player, sourceCard, ui, {
+            prompt: "Choose up to 1 Character card from your trash to add to your hand.",
+            optional: true,
+            filter: card => card.cardType === "character",
+            skipMessage: `${player.name} did not add a Character from trash with ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no Character cards in trash.`
+        });
+    }
+
+    if (effect.id === "KIL1-004-activate-main") {
+        if (!setCardRested(sourceCard)) {
+            return `${sourceCard.name} could not be rested.`;
+        }
+
+        return resolveKillerTrashBottomCycle(player, sourceCard, ui, {
+            prompt: `Choose any number of cards from your trash to place on the bottom of your deck with ${sourceCard.name}.`,
+            onResolved: (result) => {
+                const powerGain = Math.floor(result.totalReturned / 6) * 1000;
+
+                if (powerGain <= 0) {
+                    return;
+                }
+
+                const chooseMessage = chooseOwnBoardCard(player, sourceCard, {
+                    prompt: `Choose up to 1 of your Characters to give +${powerGain} power this turn.`,
+                    optional: true,
+                    includeLeader: false,
+                    filter: card => card.cardType === "character",
+                    onSelect: ({ card }) => {
+                        addTemporaryPowerBonus(card, powerGain);
+                        ui?.renderCharacters?.();
+                        addGameLog(`${sourceCard.name} gave ${card.name} +${powerGain} power this turn.`);
+                    },
+                    skipMessage: `${player.name} did not choose a Character to empower with ${sourceCard.name}.`,
+                    emptyMessage: `${sourceCard.name} found no Character to empower.`
+                });
+
+                if (chooseMessage) {
+                    addGameLog(chooseMessage);
+                }
+            }
+        });
+    }
+
+    if (effect.id === "KIL1-005-activate-main") {
+        const slotIndex = player.characters.findIndex(card => card?.instanceId === sourceCard.instanceId);
+
+        if (slotIndex === -1) {
+            return `${sourceCard.name} is no longer on the field.`;
+        }
+
+        trashCharacterFromField(player, slotIndex, ui);
+        const drawResult = drawCard(player, ui);
+        const opponent = getOpponentOfPlayer(player);
+        const ownMill = trashTopCardsOfDeck(player, 3, ui);
+        const opponentMill = opponent
+            ? trashTopCardsOfDeck(opponent, 3, ui)
+            : { message: `${sourceCard.name} found no opponent deck to trash from.` };
+
+        return [
+            `${player.name} trashed ${sourceCard.name} for its effect.`,
+            drawResult?.deckOut
+                ? `${sourceCard.name} tried to draw 1 card, but ${player.name} lost by deck out.`
+                : `${player.name} drew 1 card with ${sourceCard.name}.`,
+            ownMill.message,
+            opponentMill.message
+        ].join(" ");
+    }
+
+    if (effect.id === "KIL1-006-on-play") {
+        return resolveKillerTrashBottomCycle(player, sourceCard, ui, {
+            prompt: `Choose any number of cards from your trash to place on the bottom of your deck with ${sourceCard.name}.`,
+            onResolved: (result) => {
+                const drawTrashCount = Math.floor(result.totalReturned / 4);
+
+                if (drawTrashCount <= 0) {
+                    return;
+                }
+
+                const message = resolveKillerDrawThenTrash(player, sourceCard, ui, drawTrashCount);
+
+                if (message) {
+                    addGameLog(message);
+                }
+            }
+        });
+    }
+
+    if (effect.id === "KIL1-006-trigger") {
+        const opponent = getOpponentOfPlayer(player);
+        const ownMill = trashTopCardsOfDeck(player, 2, ui);
+        const opponentMill = opponent
+            ? trashTopCardsOfDeck(opponent, 2, ui)
+            : { message: `${sourceCard.name} found no opponent deck to trash from.` };
+
+        return `${ownMill.message} ${opponentMill.message}`.trim();
+    }
+
+    if (effect.id === "KIL1-008-trigger") {
+        const opponent = getOpponentOfPlayer(player);
+        const ownMill = trashTopCardsOfDeck(player, 1, ui);
+        const opponentMill = opponent
+            ? trashTopCardsOfDeck(opponent, 1, ui)
+            : { message: `${sourceCard.name} found no opponent deck to trash from.` };
+
+        return `${ownMill.message} ${opponentMill.message}`.trim();
+    }
+
+    if (effect.id === "KIL1-009-activate-main") {
+        return resolveKillerTrashBottomCycle(player, sourceCard, ui, {
+            prompt: `Choose any number of cards from your trash to place on the bottom of your deck with ${sourceCard.name}.`,
+            onResolved: (result) => {
+                const negateCount = Math.floor(result.totalReturned / 8);
+                const negatedSlots = [];
+
+                const chooseNextTarget = () => {
+                    if (negatedSlots.length >= negateCount) {
+                        return;
+                    }
+
+                    const chooseMessage = chooseOpponentCharacter(player, sourceCard, {
+                        prompt: `Choose up to 1 opposing Character to negate its effects this turn (${negatedSlots.length + 1} of ${negateCount}).`,
+                        optional: true,
+                        filter: (_card, choice) => !negatedSlots.includes(choice.slotIndex),
+                        onSelect: ({ card, slotIndex, playerKey }) => {
+                            const targetPlayer = playerKey ? gameState?.[playerKey] : getPlayerForBoardCard(card);
+                            const targetPlayerKey = getPlayerKey(targetPlayer);
+
+                            if (isProtectedFromOpponentEffects(card, targetPlayerKey, player)) {
+                                addGameLog(`${card.name} is protected from opponent effects.`);
+                                return;
+                            }
+
+                            addTemporaryEffectNegation(card, getPlayerKey(player), Number(player.turns || 0));
+                            negatedSlots.push(slotIndex);
+                            ui?.renderCharacters?.();
+                            addGameLog(`${sourceCard.name} negated ${card.name}'s effects this turn.`);
+                            chooseNextTarget();
+                        },
+                        skipMessage: `${player.name} stopped choosing targets for ${sourceCard.name}.`,
+                        emptyMessage: `${sourceCard.name} found no opposing Characters to negate.`
+                    });
+
+                    if (chooseMessage) {
+                        addGameLog(chooseMessage);
+                    }
+                };
+
+                if (negateCount > 0) {
+                    chooseNextTarget();
+                }
+            }
+        });
+    }
+
+    if (effect.id === "KIL1-010-on-play") {
+        return resolveKillerKOUpToPower(player, sourceCard, ui, 6000);
+    }
+
+    if (effect.id === "KIL1-010-on-ko") {
+        const attachedDonBeforeKO = Number(sourceCard.attachedDonBeforeKO || 0);
+
+        if (attachedDonBeforeKO < 2) {
+            return `${sourceCard.name}'s On K.O. effect did not resolve because it did not have DON!! x2.`;
+        }
+
+        return resolveKillerKOUpToPower(player, sourceCard, ui, 6000);
+    }
+
+    if (effect.id === "KIL1-011-on-play") {
+        const messages = [];
+
+        if (hasTypeText(player.leader, "Supernovas")) {
+            addTemporaryKeyword(sourceCard, "rush");
+            messages.push(`${sourceCard.name} gained Rush.`);
+        }
+
+        const blockerLock = {
+            expiresAtPlayerKey: getPlayerKey(player),
+            expiresAtEndOfTurns: Number(player.turns || 0)
+        };
+
+        getOpponentOfPlayer(player)?.characters
+            ?.filter(card => card && getCardBattlePower(card, getPlayerForBoardCard(card)) <= 6000)
+            .forEach(card => {
+                card.cannotBlockUntil = blockerLock;
+            });
+
+        const lifeCard = player.life?.shift() || null;
+
+        if (lifeCard) {
+            player.hand.push(lifeCard);
+            ui?.renderLifeCards?.();
+            ui?.renderHands?.();
+            messages.push(`${player.name} added the top life card to hand.`);
+        } else {
+            messages.push(`${sourceCard.name} found no life card to add to hand.`);
+        }
+
+        ui?.renderCharacters?.();
+        return messages.join(" ");
+    }
+
+    if (effect.id === "KIL1-013-counter") {
+        return resolveKillerKOUpToPower(player, sourceCard, ui, 6000);
+    }
+
+    if (effect.id === "KIL1-014-main") {
+        if (!restDonForCost(player, 1, ui)) {
+            return `${player.name} could not rest 1 active DON!! for ${sourceCard.name}.`;
+        }
+
+        const opponent = getOpponentOfPlayer(player);
+        const ownMill = trashTopCardsOfDeck(player, 3, ui);
+        const opponentMill = opponent
+            ? trashTopCardsOfDeck(opponent, 3, ui)
+            : { message: `${sourceCard.name} found no opponent deck to trash from.` };
+
+        return `${ownMill.message} ${opponentMill.message}`.trim();
+    }
+
+    if (effect.id === "KIL1-014-counter") {
+        if (
+            player.leader?.cardNumber !== "KIL1-001" &&
+            !player.characters.some(card => card && getCardBattlePower(card, player) >= 8000)
+        ) {
+            return `${sourceCard.name}'s Counter did not resolve because ${player.name} does not meet its condition.`;
+        }
+
+        return chooseLeaderOrCharacterForPower(player, sourceCard, ui, 4000, {
+            duration: "battle",
+            prompt: "Choose up to 1 of your Leader or Characters to give +4000 power during this battle.",
+            skipMessage: `${player.name} did not choose a card for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no Leader or Character to empower.`
+        });
     }
 
     if (effect.id === "IMU1-002-on-ko-in-combat") {
@@ -8812,6 +9161,226 @@ function resolveKillerLeaderMill(player, sourceCard, ui) {
     return `${player.name} and ${opponent?.name || "the opponent"} each trashed up to 2 cards from the top of their deck for ${sourceCard.name}.`;
 }
 
+function moveRandomTrashCardsToBottom(player, count) {
+    const movedCards = [];
+    const moveCount = Math.max(0, Math.min(Number(count || 0), player?.trash?.length || 0));
+
+    if (!player || moveCount <= 0) {
+        return movedCards;
+    }
+
+    for (let index = 0; index < moveCount; index++) {
+        const randomIndex = Math.floor(Math.random() * player.trash.length);
+        const movedCard = player.trash.splice(randomIndex, 1)[0];
+
+        if (movedCard) {
+            movedCards.push(movedCard);
+        }
+    }
+
+    player.deck.push(...movedCards);
+    return movedCards;
+}
+
+function resolveKillerTrashBottomCycle(player, sourceCard, ui, options = {}) {
+    if (!player || !sourceCard) {
+        return "";
+    }
+
+    const opponent = getOpponentOfPlayer(player);
+    const chosenCards = [];
+    const maxOwnCards = Number.isFinite(options.maxOwnCards)
+        ? Math.max(0, Number(options.maxOwnCards))
+        : Number.POSITIVE_INFINITY;
+
+    const finish = () => {
+        if (chosenCards.length > 0) {
+            player.deck.push(...chosenCards);
+        }
+
+        const opponentReturned = moveRandomTrashCardsToBottom(opponent, chosenCards.length);
+        const result = {
+            ownReturned: chosenCards.length,
+            opponentReturned: opponentReturned.length,
+            totalReturned: chosenCards.length + opponentReturned.length,
+            ownCards: [...chosenCards],
+            opponentCards: [...opponentReturned]
+        };
+        const summary = chosenCards.length > 0
+            ? `${player.name} returned ${chosenCards.length} card${chosenCards.length === 1 ? "" : "s"} from trash to the bottom of the deck, and ${opponent?.name || "the opponent"} returned ${opponentReturned.length} random card${opponentReturned.length === 1 ? "" : "s"} from trash to the bottom of the deck.`
+            : `${player.name} did not return any cards from trash with ${sourceCard.name}.`;
+
+        ui?.renderTrash?.();
+        ui?.renderDecks?.();
+        addGameLog(summary);
+        options.onResolved?.(result, summary);
+
+        if (typeof queueMultiplayerStateSync === "function") {
+            queueMultiplayerStateSync();
+        }
+    };
+
+    const chooseNext = () => {
+        if (chosenCards.length >= maxOwnCards) {
+            finish();
+            return;
+        }
+
+        const availableChoices = getTrashCardChoices(player, card => {
+            return !chosenCards.some(chosenCard => chosenCard?.instanceId === card?.instanceId);
+        });
+
+        if (availableChoices.length === 0) {
+            finish();
+            return;
+        }
+
+        const chooseMessage = chooseBoardCard(player, sourceCard, availableChoices, {
+            prompt: options.prompt || `Choose up to ${maxOwnCards === Number.POSITIVE_INFINITY ? "any number of" : maxOwnCards - chosenCards.length} card${maxOwnCards === 1 ? "" : "s"} from your trash to place on the bottom of your deck with ${sourceCard.name}.`,
+            optional: true,
+            onSelect: ({ trashIndex }) => {
+                const movedCard = player.trash.splice(trashIndex, 1)[0];
+
+                if (!movedCard) {
+                    addGameLog(`${sourceCard.name} could not find that trash card anymore.`);
+                    finish();
+                    return;
+                }
+
+                chosenCards.push(movedCard);
+                ui?.renderTrash?.();
+                addGameLog(`${player.name} chose ${movedCard.name} for ${sourceCard.name}.`);
+                chooseNext();
+            },
+            onSkip: finish,
+            onEmpty: finish,
+            skipMessage: `${player.name} finished choosing trash cards for ${sourceCard.name}.`,
+            emptyMessage: `${sourceCard.name} found no cards in trash to return.`
+        });
+
+        if (chooseMessage) {
+            addGameLog(chooseMessage);
+        }
+    };
+
+    chooseNext();
+    return `${player.name} is choosing trash cards for ${sourceCard.name}.`;
+}
+
+function resolveKillerDrawThenTrash(player, sourceCard, ui, amount, options = {}) {
+    const drawAmount = Math.max(0, Number(amount || 0));
+
+    if (drawAmount <= 0) {
+        options.onComplete?.();
+        return `${sourceCard.name} found no cards to draw and trash.`;
+    }
+
+    const drawResult = drawCards(player, drawAmount, ui);
+
+    if (drawResult?.deckOut) {
+        options.onComplete?.();
+        return `${sourceCard.name} tried to draw ${drawAmount} card${drawAmount === 1 ? "" : "s"}, but ${player.name} lost by deck out.`;
+    }
+
+    const trashAmount = Math.min(drawAmount, player.hand.length);
+
+    if (trashAmount <= 0) {
+        options.onComplete?.();
+        return `${sourceCard.name} drew ${drawAmount} card${drawAmount === 1 ? "" : "s"}, but found no cards in hand to trash.`;
+    }
+
+    chooseCardsFromHandToTrash(player, sourceCard, ui, trashAmount, () => {
+        addGameLog(`${sourceCard.name} drew ${drawAmount} card${drawAmount === 1 ? "" : "s"} and trashed ${trashAmount} card${trashAmount === 1 ? "" : "s"}.`);
+        options.onComplete?.();
+    });
+
+    return `${sourceCard.name} drew ${drawAmount} card${drawAmount === 1 ? "" : "s"} and is choosing ${trashAmount} card${trashAmount === 1 ? "" : "s"} to trash.`;
+}
+
+function resolveKillerKOUpToPower(player, sourceCard, ui, maxPower) {
+    return chooseOpponentCharacter(player, sourceCard, {
+        prompt: `Choose up to 1 opposing Character with ${maxPower} power or less to K.O.`,
+        optional: true,
+        filter: card => getCardBattlePower(card, getPlayerForBoardCard(card)) <= maxPower,
+        onSelect: ({ card, playerKey, slotIndex }) => {
+            const targetPlayer = playerKey ? gameState?.[playerKey] : getPlayerForBoardCard(card);
+            const koResult = KOCharacter(targetPlayer, slotIndex, ui, {
+                byEffect: true,
+                actingPlayer: player
+            });
+
+            addGameLog(`${sourceCard.name} ${koResult.success ? "K.O.'d" : "could not K.O."} ${card.name}. ${koResult.message || ""}`.trim());
+
+            if (typeof queueMultiplayerStateSync === "function") {
+                queueMultiplayerStateSync();
+            }
+        },
+        skipMessage: `${player.name} did not choose a Character for ${sourceCard.name}.`,
+        emptyMessage: `${sourceCard.name} found no opposing Character with ${maxPower} power or less.`
+    });
+}
+
+function resolveKillerBubblegumEffect(player, sourceCard, ui, options = {}) {
+    const attachedDonCount = Number(sourceCard?.attachedDonBeforeKO ?? sourceCard?.attachedDon ?? 0);
+
+    if (attachedDonCount < 2) {
+        options.onComplete?.();
+        return `${sourceCard?.name || "This effect"} requires DON!! x2.`;
+    }
+
+    return resolveKillerTrashBottomCycle(player, sourceCard, ui, {
+        maxOwnCards: 1,
+        prompt: `Choose up to 1 card from your trash to place on the bottom of your deck with ${sourceCard.name}.`,
+        onResolved: (_result, summary) => {
+            const opponent = getOpponentOfPlayer(player);
+            const ownMill = trashTopCardsOfDeck(player, 3, ui);
+            const opponentMill = opponent
+                ? trashTopCardsOfDeck(opponent, 3, ui)
+                : { message: `${sourceCard.name} found no opponent deck to trash from.` };
+
+            addGameLog(ownMill.message);
+            addGameLog(opponentMill.message);
+            addGameLog(`${summary} ${player.name} and ${opponent?.name || "the opponent"} then each trashed up to 3 cards from the top of their deck for ${sourceCard.name}.`.trim());
+            options.onComplete?.();
+        }
+    });
+}
+
+function resolveKillerCharacterWhenAttacked(player, sourceCard, ui, options = {}) {
+    const effect = getCardAllEffects(sourceCard)?.find(cardEffect => cardEffect.id === "KIL1-012-when-attacked");
+
+    if (!player || !sourceCard || !effect) {
+        options.onComplete?.();
+        return "";
+    }
+
+    if (CardEffects.hasUsedOncePerTurnEffect(sourceCard, effect.id, player.turns)) {
+        options.onComplete?.();
+        return `${sourceCard.name}'s When Attacked effect has already been used this turn.`;
+    }
+
+    CardEffects.markOncePerTurnEffectUsed(sourceCard, effect.id, player.turns);
+
+    return resolveKillerTrashBottomCycle(player, sourceCard, ui, {
+        prompt: `Choose any number of cards from your trash to place on the bottom of your deck with ${sourceCard.name}.`,
+        onResolved: (result, summary) => {
+            const opponent = getOpponentOfPlayer(player);
+            const opponentKey = getPlayerKey(opponent);
+            const bonusCount = Math.floor(result.totalReturned / 5);
+            const expiresAtEndOfTurns = gameState?.currentPlayer === opponent
+                ? Number(opponent?.turns || 0)
+                : Number(opponent?.turns || 0) + 1;
+
+            if (bonusCount > 0 && player.leader) {
+                addDurationPowerBonus(player.leader, bonusCount * 1000, expiresAtEndOfTurns, opponentKey);
+                ui?.renderLeaders?.();
+                addGameLog(`${sourceCard.name} gave ${player.leader.name} +${bonusCount * 1000} power until the end of ${opponent?.name || "the opponent"}'s next turn.`);
+            }
+            options.onComplete?.();
+        }
+    });
+}
+
 function resolveKillerLeaderActivateMain(player, leader, ui) {
     const activeLeader = getKillerLeader(player);
 
@@ -8829,6 +9398,7 @@ function resolveKillerLeaderActivateMain(player, leader, ui) {
         };
     }
 
+    CardEffects.markOncePerTurnEffectUsed(activeLeader, "KIL1-001-custom", player.turns);
     const millMessage = resolveKillerLeaderMill(player, leader, ui);
 
     if (!player.characters.some(card => card?.cardType === "character")) {
@@ -10008,6 +10578,14 @@ function resolveOnKOEffects(player, card, ui, options = {}) {
 
     const messages = [];
 
+    if (card.cardNumber === "KIL1-007") {
+        const bubblegumMessage = resolveKillerBubblegumEffect(player, card, ui, options);
+
+        if (bubblegumMessage) {
+            messages.push(bubblegumMessage);
+        }
+    }
+
     card.effects
         ?.filter(effect => effect.type === "onKO")
         .forEach(effect => {
@@ -10460,6 +11038,8 @@ function KOCharacter(player, slotIndex, ui, options = {}) {
         }
     }
 
+    character.attachedDonBeforeKO = Number(character.attachedDon || 0);
+
     const trashResult = trashCharacterFromField(player, slotIndex, ui, {
         render: false
     });
@@ -10712,6 +11292,39 @@ function resolveSingleTriggerEffect(player, card, effect, ui) {
         return playCardFromTrigger(player, card, ui);
     }
 
+    if (effect.id === "KIL1-007-trigger") {
+        if (!hasTypeText(player.leader, "Kid Pirates")) {
+            moveCardToTrash(player, card, ui);
+
+            if (ui?.renderTrash) {
+                ui.renderTrash();
+            }
+
+            return `${card.name}'s Trigger did not play it because ${player.name}'s leader does not have the {Kid Pirates} type. It was placed in trash.`;
+        }
+
+        return playCardFromTrigger(player, card, ui);
+    }
+
+    if (effect.id === "KIL1-013-trigger") {
+        const counterEffect = getCounterEffects(card, player)?.find(counter => counter.id === "KIL1-013-counter");
+        const message = counterEffect
+            ? resolveEffectAction(player, card, counterEffect, ui, {
+                skipActivationPrompt: true
+            })
+            : "";
+
+        moveCardToTrash(player, card, ui);
+
+        if (ui?.renderTrash) {
+            ui.renderTrash();
+        }
+
+        return message
+            ? `${card.name}'s Trigger activated its Counter effect. ${message}`
+            : `${card.name}'s Trigger activated, then it was placed in trash.`;
+    }
+
     if (effect.actionId === "playThisCardFromTrigger") {
         return playCardFromTrigger(player, card, ui);
     }
@@ -10773,14 +11386,6 @@ function resolveSingleTriggerEffect(player, card, effect, ui) {
 }
 
 function loseByLifeDamage(player, reasonText = "") {
-    if (tryResolveSubaruCheckpointLoss(player, reasonText || `${player.name} took damage with no life cards remaining.`)) {
-        return {
-            success: true,
-            restoredByCheckpoint: true,
-            winnerPlayer: null
-        };
-    }
-
     const winnerPlayer = getOpponentOfPlayer(player);
 
     if (!winnerPlayer) {
@@ -10912,15 +11517,6 @@ function getOpponentOfPlayer(player) {
 }
 
 function loseByDeckOut(player, reasonText = "") {
-    if (tryResolveSubaruCheckpointLoss(player, reasonText || `${player.name} has no cards left in deck.`)) {
-        return {
-            success: true,
-            deckOut: false,
-            restoredByCheckpoint: true,
-            winnerPlayer: null
-        };
-    }
-
     const winnerPlayer = getOpponentOfPlayer(player);
 
     if (!winnerPlayer) {

@@ -906,6 +906,47 @@ function removeGameOverPopup() {
     }
 }
 
+function showSubaruResetOverlay(message = "Game being reset...") {
+    removeSubaruResetOverlay();
+
+    const overlay = document.createElement("div");
+    overlay.className = "look-top-overlay";
+    overlay.id = "subaruResetOverlay";
+
+    const popup = document.createElement("div");
+    popup.className = "look-top-popup effect-choice-popup";
+
+    const heading = document.createElement("h2");
+    heading.textContent = "Checkpoint Reset";
+
+    const text = document.createElement("p");
+    text.textContent = message;
+
+    popup.appendChild(heading);
+    popup.appendChild(text);
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+}
+
+function removeSubaruResetOverlay() {
+    const oldOverlay = document.getElementById("subaruResetOverlay");
+
+    if (oldOverlay) {
+        oldOverlay.remove();
+    }
+}
+
+function syncSubaruResetOverlayForCurrentState() {
+    const resetNotice = gameState?.subaruResetNotice;
+
+    if (resetNotice?.message) {
+        showSubaruResetOverlay(resetNotice.message);
+        return;
+    }
+
+    removeSubaruResetOverlay();
+}
+
 function syncGameOverPopupForCurrentState() {
     if (gameState?.currentPhase !== "gameOver" || !gameOverState?.winnerPlayerKey) {
         removeGameOverPopup();
@@ -2513,6 +2554,7 @@ function showSelectedBoardActions() {
     const actionButtons = [];
     const attackButton = document.createElement("button");
     const activateMainEffect = getActivateMainEffect(card);
+    const activateAnyEffect = getActivateAnyEffect(card);
 
     attackButton.className = "board-action-button-on-card attack-action-button";
     attackButton.textContent = "Attack";
@@ -2571,6 +2613,10 @@ function showSelectedBoardActions() {
         );
 
         actionButtons.push(activateMainButton);
+    }
+
+    if (activateAnyEffect) {
+        actionButtons.push(createActivateAnyButton(player, card, activateAnyEffect));
     }
 
     const buttonContainer = getBoardActionButtonContainer();
@@ -2684,12 +2730,20 @@ function getActivateMainEffect(card) {
     }) || null;
 }
 
+function getActivateAnyEffect(card) {
+    return getCardAllEffects(card)?.find(effect => effect.id === "SUB1-001-checkpoint") || null;
+}
+
 function getOnOpponentAttackEffect(card) {
     return getCardAllEffects(card)?.find(effect => {
         return effect.type === "onOpponentAttack" ||
             effect.type === "onOpponentsAttack" ||
             effect.id === "KIL1-001-custom";
     }) || null;
+}
+
+function getWhenAttackedEffect(card) {
+    return getCardAllEffects(card)?.find(effect => effect.type === "whenAttacked") || null;
 }
 
 function isWanoCountryAttachDonEffect(card, effect) {
@@ -2699,6 +2753,22 @@ function isWanoCountryAttachDonEffect(card, effect) {
         effect?.type === "activateMain" &&
         String(card?.name || "").trim().toLowerCase() === "wano country" &&
         effectText.includes("Attach up to 1 rested DON!! to 1 of your Characters.")
+    );
+}
+
+function isBoardEffectResolutionInProgress() {
+    return Boolean(
+        pendingReplacePlay ||
+        pendingAttack ||
+        currentAttack ||
+        pendingBlock ||
+        pendingTrashChoice ||
+        pendingOpponentAttackEffect ||
+        gameState?.subaruResetNotice?.message ||
+        document.getElementById("subaruResetOverlay") ||
+        document.getElementById("lookTopOverlay") ||
+        document.getElementById("boardChoiceOverlay") ||
+        document.getElementById("effectChoiceOverlay")
     );
 }
 
@@ -2836,42 +2906,106 @@ function canUseActivateMainEffect(player, card, effect) {
     return true;
 }
 
-function createActivateMainButton(player, card, effect) {
-    const activateMainButton = document.createElement("button");
+function canUseActivateAnyEffect(player, card, effect) {
+    if (!player || !card || !effect) {
+        return false;
+    }
 
-    activateMainButton.className = "board-action-button-on-card activate-main-button";
-    activateMainButton.textContent = "Activate: Main";
+    if (!isLocalMultiplayerPlayerKey(getPlayerKeyForPlayer(player))) {
+        return false;
+    }
 
-    if (!canUseActivateMainEffect(player, card, effect)) {
-        activateMainButton.disabled = true;
+    if (effect.id !== "SUB1-001-checkpoint") {
+        return false;
+    }
 
-        if (gameState.currentPhase !== "main") {
-            activateMainButton.title = "Activate: Main effects can only be used during the Main Phase.";
+    if (gameState.currentPhase === "gameOver" || gameState.currentPhase === "diceRoll" || gameState.currentPhase === "mulligan") {
+        return false;
+    }
+
+    if (isBoardEffectResolutionInProgress()) {
+        return false;
+    }
+
+    if (effect.oncePerGame && CardEffects.hasUsedOncePerGameEffect(card, effect.id)) {
+        return false;
+    }
+
+    return Boolean(gameState?.subaruCheckpointState);
+}
+
+function createBoardEffectButton(player, card, effect, options = {}) {
+    const actionButton = document.createElement("button");
+    const activationLabel = options.activationLabel || "Activate: Main";
+    const canUseEffect = typeof options.canUseEffect === "function"
+        ? options.canUseEffect
+        : canUseActivateMainEffect;
+
+    actionButton.className = "board-action-button-on-card activate-main-button";
+    actionButton.textContent = activationLabel;
+
+    if (!canUseEffect(player, card, effect)) {
+        actionButton.disabled = true;
+
+        if (effect.id === "SUB1-001-checkpoint") {
+            if (effect.oncePerGame && CardEffects.hasUsedOncePerGameEffect(card, effect.id)) {
+                actionButton.title = "This Once Per Game effect has already been used.";
+            } else if (!gameState?.subaruCheckpointState) {
+                actionButton.title = "No checkpoint has been set yet.";
+            } else if (isBoardEffectResolutionInProgress()) {
+                actionButton.title = "This effect cannot be activated while another effect is resolving.";
+            } else {
+                actionButton.title = "This effect cannot be activated right now.";
+            }
+        } else if (gameState.currentPhase !== "main") {
+            actionButton.title = "Activate: Main effects can only be used during the Main Phase.";
         } else if (gameState.currentPlayer !== player) {
-            activateMainButton.title = `It is currently ${gameState.currentPlayer?.name ?? "another player"}'s turn.`;
+            actionButton.title = `It is currently ${gameState.currentPlayer?.name ?? "another player"}'s turn.`;
         } else if (effect.oncePerTurn && CardEffects.hasUsedOncePerTurnEffect(card, effect.id, player.turns)) {
-            activateMainButton.title = "This Once Per Turn effect has already been used this turn.";
+            actionButton.title = "This Once Per Turn effect has already been used this turn.";
         } else if (effect.oncePerGame && CardEffects.hasUsedOncePerGameEffect(card, effect.id)) {
-            activateMainButton.title = "This Once Per Game effect has already been used.";
+            actionButton.title = "This Once Per Game effect has already been used.";
         } else {
-            activateMainButton.title = "This effect cannot be activated right now.";
+            actionButton.title = "This effect cannot be activated right now.";
         }
     }
 
-    activateMainButton.addEventListener("click", async (event) => {
+    actionButton.addEventListener("click", async (event) => {
         event.stopPropagation();
 
-        if (activateMainButton.disabled) return;
+        if (actionButton.disabled) return;
 
-        await activateMainBoardEffect(player, card, effect);
+        await activateBoardEffect(player, card, effect, {
+            activationLabel,
+            canUseEffect
+        });
     });
 
-    return activateMainButton;
+    return actionButton;
 }
 
-async function activateMainBoardEffect(player, card, effect) {
-    if (!canUseActivateMainEffect(player, card, effect)) {
-        addGameLog(`${card.name}'s Activate: Main effect cannot be used right now.`);
+function createActivateMainButton(player, card, effect) {
+    return createBoardEffectButton(player, card, effect, {
+        activationLabel: "Activate: Main",
+        canUseEffect: canUseActivateMainEffect
+    });
+}
+
+function createActivateAnyButton(player, card, effect) {
+    return createBoardEffectButton(player, card, effect, {
+        activationLabel: "Activate: Any",
+        canUseEffect: canUseActivateAnyEffect
+    });
+}
+
+async function activateBoardEffect(player, card, effect, options = {}) {
+    const activationLabel = options.activationLabel || "Activate: Main";
+    const canUseEffect = typeof options.canUseEffect === "function"
+        ? options.canUseEffect
+        : canUseActivateMainEffect;
+
+    if (!canUseEffect(player, card, effect)) {
+        addGameLog(`${card.name}'s ${activationLabel} effect cannot be used right now.`);
         return;
     }
 
@@ -2886,26 +3020,46 @@ async function activateMainBoardEffect(player, card, effect) {
             skipText: "Skip",
             onComplete: async (shouldActivate) => {
                 if (!shouldActivate) {
-                    addGameLog(`${player.name} skipped ${card.name}'s Activate: Main effect.`);
+                    addGameLog(`${player.name} skipped ${card.name}'s ${activationLabel} effect.`);
                     showSelectedBoardActions();
                     return;
                 }
 
-                await resolveActivateMainBoardEffect(player, card, effect);
+                await resolveBoardEffectActivation(player, card, effect, options);
             }
         });
 
         return;
     }
 
-    await resolveActivateMainBoardEffect(player, card, effect);
+    await resolveBoardEffectActivation(player, card, effect, options);
 }
 
-async function resolveActivateMainBoardEffect(player, card, effect) {
-    const result = resolveBoardActionEffect(player, card, effect);
+async function resolveBoardEffectActivation(player, card, effect, options = {}) {
+    const activationLabel = options.activationLabel || "Activate: Main";
+    let result = null;
+
+    if (effect.id === "SUB1-001-checkpoint") {
+        gameState.subaruResetNotice = {
+            message: "Game being reset..."
+        };
+        syncSubaruResetOverlayForCurrentState();
+        queueMultiplayerStateSync();
+        await new Promise(resolve => window.setTimeout(resolve, 3000));
+    }
+
+    try {
+        result = resolveBoardActionEffect(player, card, effect);
+    } finally {
+        if (effect.id === "SUB1-001-checkpoint") {
+            gameState.subaruResetNotice = null;
+            syncSubaruResetOverlayForCurrentState();
+        }
+    }
 
     if (!result.success) {
         addGameLog(result.message);
+        queueMultiplayerStateSync();
         return;
     }
 
@@ -2917,7 +3071,7 @@ async function resolveActivateMainBoardEffect(player, card, effect) {
         CardEffects.markOncePerGameEffectUsed(card, effect.id);
     }
 
-    addGameLog(`${player.name} activated ${card.name}'s Activate: Main effect. ${result.message}`);
+    addGameLog(`${player.name} activated ${card.name}'s ${activationLabel} effect. ${result.message}`);
 
     showSelectedBoardActions();
     queueMultiplayerStateSync();
@@ -3774,6 +3928,26 @@ function promptOnOpponentAttackCharacterEffects(defenderPlayer) {
     }
 
     const entries = [];
+    const targetSlotIndex = currentAttack?.target?.cardType === "character" &&
+        currentAttack?.target?.playerKey === defenderPlayerKey
+        ? currentAttack.target.slotIndex
+        : -1;
+    const attackedCharacter = targetSlotIndex >= 0
+        ? defenderPlayer.characters[targetSlotIndex]
+        : null;
+    const whenAttackedEffect = getWhenAttackedEffect(attackedCharacter);
+
+    if (
+        attackedCharacter &&
+        whenAttackedEffect &&
+        !CardEffects.hasUsedOncePerTurnEffect(attackedCharacter, whenAttackedEffect.id, defenderPlayer.turns)
+    ) {
+        entries.push({
+            cardType: "character",
+            slotIndex: targetSlotIndex,
+            responseType: "whenAttacked"
+        });
+    }
 
     const leaderEffect = getOnOpponentAttackEffect(defenderPlayer.leader);
 
@@ -3832,7 +4006,9 @@ function getCurrentPendingOnOpponentAttackEffect() {
     const currentCard = entry.cardType === "leader"
         ? defenderPlayer.leader
         : defenderPlayer.characters?.[entry.slotIndex];
-    const effect = getOnOpponentAttackEffect(currentCard);
+    const effect = entry.responseType === "whenAttacked"
+        ? getWhenAttackedEffect(currentCard)
+        : getOnOpponentAttackEffect(currentCard);
 
     if (!currentCard || !effect) {
         return null;
@@ -3854,7 +4030,7 @@ function currentAttackHasPendingWhenAttackingEffects() {
     const attackerCard = getBoardCardFromData(currentAttack.attacker);
 
     return Boolean(
-        getCardAllEffects(attackerCard)?.some(effect => effect.type === "whenAttacking")
+        getCardAllEffects(attackerCard)?.some(effect => effect.type === "whenAttacking" || effect.id === "KIL1-007-custom")
     );
 }
 
@@ -3965,6 +4141,19 @@ function showPendingOpponentAttackEffectChoice() {
         gameState.currentPhase = "main";
         queueMultiplayerStateSync();
     };
+
+    if (entry.responseType === "whenAttacked") {
+        const message = resolveKillerCharacterWhenAttacked(defenderPlayer, currentCard, ui, {
+            onComplete: () => advancePendingOnOpponentAttackEffect()
+        });
+
+        if (message) {
+            addGameLog(message);
+        }
+
+        queueMultiplayerStateSync();
+        return;
+    }
 
     chooseEffectActivation({
         player: defenderPlayer,
@@ -4117,8 +4306,11 @@ function resolveWhenAttackingEffectsBeforeBattle(attackerPlayer, attackerData, o
 }
 
 function promptOptionalWhenAttackingEffects(player, sourceCard, onComplete) {
-    const optionalEffects = sourceCard?.effects
-        ?.filter(effect => effect.type === "whenAttacking" && typeof isOptionalEffect === "function" && isOptionalEffect(effect)) ?? [];
+    const optionalEffects = getCardAllEffects(sourceCard)
+        ?.filter(effect => {
+            const isAttackPromptEffect = effect.type === "whenAttacking" || effect.id === "KIL1-007-custom";
+            return isAttackPromptEffect && typeof isOptionalEffect === "function" && isOptionalEffect(effect);
+        }) ?? [];
 
     const promptNext = (index) => {
         const effect = optionalEffects[index];
@@ -5775,6 +5967,7 @@ function getPowerModifier(card, player = null) {
         getYourTurnPowerBonus(card, player) +
         getSubaruRamPowerModifier(card) +
         getImuMaffeyPowerModifier(card) +
+        getKillerGigPowerModifier(card) +
         getSt28MomonosukeLeaderPowerModifier(card, player) +
         getSt28YamatoPowerModifier(card, player) +
         getWanoCountryPowerModifier(card, player) +
@@ -5804,6 +5997,14 @@ function getImuMaffeyPowerModifier(card) {
         !areCardEffectsNegated(card) &&
         Number(card.attachedDon || 0) >= 1
         ? 1000
+        : 0;
+}
+
+function getKillerGigPowerModifier(card) {
+    return card?.cardNumber === "KIL1-008" &&
+        !areCardEffectsNegated(card) &&
+        Number(card.attachedDon || 0) >= 2
+        ? 2000
         : 0;
 }
 
@@ -6296,6 +6497,9 @@ function exportMultiplayerSharedState() {
         currentPlayerSlot: gameState.currentPlayer?.multiplayerSlot || null,
         turnNumber: Number(gameState.turnNumber || 1),
         currentPhase: gameState.currentPhase || "diceRoll",
+        subaruResetNotice: gameState.subaruResetNotice
+            ? cloneSerializableValue(gameState.subaruResetNotice)
+            : null,
         gameOver: gameOverState
             ? cloneSerializableValue(gameOverState)
             : null,
@@ -6357,7 +6561,10 @@ function applyMultiplayerSharedState(snapshot) {
         secondPlayer: null,
         currentPlayer: null,
         turnNumber: Number(snapshot.turnNumber || 1),
-        currentPhase: snapshot.currentPhase || "diceRoll"
+        currentPhase: snapshot.currentPhase || "diceRoll",
+        subaruResetNotice: snapshot.subaruResetNotice
+            ? cloneSerializableValue(snapshot.subaruResetNotice)
+            : null
     };
 
     const localPlayerBySlot = {
@@ -6430,6 +6637,7 @@ function applyMultiplayerSharedState(snapshot) {
 
         renderGameLogMessages(syncedLogMessages);
         renderFullGameState();
+        syncSubaruResetOverlayForCurrentState();
     } finally {
         isApplyingMultiplayerState = false;
     }

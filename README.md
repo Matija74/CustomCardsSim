@@ -6,6 +6,29 @@ interactions, and run self-play games without installing a full game client.
 
 ## Patch Notes
 
+Patch Note 1.18<br>
+[UPDATE]: Subaru Natsuki's checkpoint reset now shows a 3-second "Game being reset..." popup before the reset resolves.<br>
+[UPDATE]: Multiplayer checkpoint resets now show the same reset popup to both players at the same time.<br>
+[FIX]: Players can no longer activate effects during Subaru Natsuki's reset countdown window.<br>
+[Dev Note]: /
+
+Patch Note 1.17<br>
+[UPDATE]: Subaru Natsuki's checkpoint reset now activates manually as an Activate: Any effect instead of triggering automatically on a loss.<br>
+[UPDATE]: Subaru Natsuki's checkpoint reset can now be used during either player's turn after a checkpoint has been set.<br>
+[FIX]: Subaru Natsuki's checkpoint reset can no longer be activated while another effect or card-selection process is still resolving.<br>
+[Dev Note]: /
+
+Patch Note 1.16<br>
+[UPDATE]: RB Killer leader now resolves both its Activate: Main DON!! ramp mode and its On Opponent Attack battle debuff mode in matches.<br>
+[UPDATE]: Bubblegum now resolves its DON!! x2 When Attacking and On K.O. trash-cycle effect in both singleplayer and multiplayer.<br>
+[UPDATE]: Gig now gains Rush and +2000 power while it has DON!! x2.<br>
+[UPDATE]: 8-cost Killer now gains Blocker with a {Kid Pirates} leader and resolves its When Attacked trash-cycle effect.<br>
+[FIX]: Wire's On K.O. effect now checks the DON!! that was attached before it left the field.<br>
+[FIX]: Heat's Blocker lock now stops affected opposing Characters from activating Blocker for the intended duration.<br>
+[ADDITION]: Bubblegum Trigger now only plays the card when your leader has the {Kid Pirates} type.<br>
+[ADDITION]: Sonic Scyther Trigger now activates its Counter effect correctly.<br>
+[Dev Note]: /
+
 Patch Note 1.15<br>
 [UPDATE]: README patch notes now preserve visible line breaks for every tag.<br>
 [FIX]: README patch note tags no longer collapse into a single paragraph on Markdown renderers.<br>

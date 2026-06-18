@@ -97,6 +97,20 @@ window.CardEffects = {
             return true;
         }
 
+        if (card.cardNumber === "KIL1-008" && wantedKeyword === "rush" && Number(card.attachedDon || 0) >= 2) {
+            return true;
+        }
+
+        if (card.cardNumber === "KIL1-012" && wantedKeyword === "blocker") {
+            const owner = typeof getPlayerForBoardCard === "function"
+                ? getPlayerForBoardCard(card)
+                : null;
+
+            if (owner?.leader && typeof hasTypeText === "function" && hasTypeText(owner.leader, "Kid Pirates")) {
+                return true;
+            }
+        }
+
         const allKeywords = [
             ...(Array.isArray(card.keywords) ? card.keywords : []),
             ...(Array.isArray(card.durationKeywords)
@@ -141,6 +155,14 @@ window.CardEffects = {
         if (!card) return false;
 
         if (typeof canCardBeRested === "function" && !canCardBeRested(card)) {
+            return false;
+        }
+
+        if (
+            card.cannotBlockUntil &&
+            typeof isTemporaryStatusEntryActive === "function" &&
+            isTemporaryStatusEntryActive(card.cannotBlockUntil)
+        ) {
             return false;
         }
 
@@ -1306,6 +1328,40 @@ window.CardEffects = {
         };
     },
 
+    resolveBubblegumWhenAttacking(player, attackerData, ui) {
+        const character = attackerData?.cardType === "character"
+            ? player?.characters?.[attackerData.slotIndex]
+            : null;
+
+        if (!character || character.cardNumber !== "KIL1-007") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        const effectId = "KIL1-007-custom";
+
+        if (this.wasEffectSkippedForAttack(character, effectId)) {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        if (typeof resolveKillerBubblegumEffect !== "function") {
+            return {
+                activated: false,
+                message: ""
+            };
+        }
+
+        return {
+            activated: true,
+            message: resolveKillerBubblegumEffect(player, character, ui)
+        };
+    },
+
     // =========================
     // Stage Effects
     // =========================
@@ -1400,7 +1456,8 @@ window.CardEffects = {
             this.resolveYoruichiWhenAttacking(player, attackerData, ui),
             this.resolveUryuWhenAttacking(player, attackerData, ui),
             this.resolveDejanSigmaWhenAttacking(player, attackerData, ui),
-            this.resolveYujiItadoriWhenAttacking(player, attackerData, ui)
+            this.resolveYujiItadoriWhenAttacking(player, attackerData, ui),
+            this.resolveBubblegumWhenAttacking(player, attackerData, ui)
         ];
 
         effectResults.forEach(result => {
