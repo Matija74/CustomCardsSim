@@ -6,6 +6,14 @@ interactions, and run self-play games without installing a full game client.
 
 ## Patch Notes
 
+Patch Note 1.14
+
+[UPDATE]: Count Saint-Germain cards have been removed from the card pool.
+[UPDATE]: Ashura, Vlad, Red Baron, Jack Wisp, Vakappa, Reiko Kashima, and the DD02 event cards have been removed from card data.
+[FIX]: Singleplayer and multiplayer no longer try to resolve Saint-Germain leader actions after the deck's removal.
+
+[Dev Note]: /
+
 Patch Note 1.13
 
 [UPDATE]: Subaru checkpoints now save and restore which player's turn was active when the checkpoint was set.

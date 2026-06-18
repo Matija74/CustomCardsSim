@@ -861,56 +861,6 @@ window.CardEffects = {
         };
     },
 
-    resolveSaintGermainLeaderWhenAttacking(player, attackerData, ui) {
-        const leader = attackerData?.cardType === "leader"
-            ? player?.leader
-            : null;
-
-        if (!leader || leader.cardNumber !== "DD02-001") {
-            return {
-                activated: false,
-                message: ""
-            };
-        }
-
-        const effectId = "DD02-001-when-attacking";
-
-        if (this.wasEffectSkippedForAttack(leader, effectId)) {
-            return {
-                activated: false,
-                message: ""
-            };
-        }
-
-        if (typeof getSaintGermainTrashEffectChoices !== "function" ||
-            getSaintGermainTrashEffectChoices(player).length === 0) {
-            return {
-                activated: false,
-                message: `${leader.name}'s When Attacking effect found no activatable [Curse] or [The Cursed] card effects in trash.`
-            };
-        }
-
-        const returnedDon = returnDonToDeck(player, 1, ui);
-
-        if (returnedDon < 1) {
-            return {
-                activated: false,
-                message: `${leader.name}'s When Attacking effect could not pay DON!! -1.`
-            };
-        }
-
-        const activationMessage = typeof activateSaintGermainTrashEffect === "function"
-            ? activateSaintGermainTrashEffect(player, leader, ui)
-            : "";
-
-        return {
-            activated: true,
-            message: activationMessage
-                ? `${leader.name}'s When Attacking effect returned 1 DON!!. ${activationMessage}`
-                : `${leader.name}'s When Attacking effect returned 1 DON!! and resolved.`
-        };
-    },
-
     resolveImuLeaderWhenAttacking(player, attackerData, ui) {
         const leader = attackerData?.cardType === "leader"
             ? player?.leader
@@ -1442,7 +1392,6 @@ window.CardEffects = {
             this.resolveHanamiLeaderWhenAttacking(player, attackerData, ui),
             this.resolveSubaruLeaderWhenAttacking(player, attackerData, ui),
             this.resolveSubaruElsaWhenAttacking(player, attackerData, ui),
-            this.resolveSaintGermainLeaderWhenAttacking(player, attackerData, ui),
             this.resolveImuLeaderWhenAttacking(player, attackerData, ui),
             this.resolveImuCharacterWhenAttacking(player, attackerData, ui),
             this.resolveJogoWhenAttacking(player, attackerData, ui),

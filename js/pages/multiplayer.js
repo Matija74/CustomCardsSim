@@ -2752,14 +2752,6 @@ function canUseActivateMainEffect(player, card, effect) {
             getAceYamatoLeaderKOTargetChoices(player).length >= 2;
     }
 
-    if (effect.id === "DD02-001-activate-main") {
-        return CardEffects.hasCardName(player.stage, "Ashura") &&
-            (player.stage?.state || "active") === "active" &&
-            typeof canCardBeRested === "function" &&
-            canCardBeRested(player.stage) &&
-            player.trash.some(card => hasTypeText(card, "Curse") || hasTypeText(card, "The Cursed"));
-    }
-
     if (effect.id === "SUB1-007-activate-main-stage-copy") {
         return Boolean(player.life?.length) &&
             Boolean(player.stage) &&
@@ -2938,10 +2930,6 @@ function resolveBoardActionEffect(player, card, effect) {
 
     if (effect.id === "SUB1-001-checkpoint") {
         return resolveSubaruLeaderActivateMain(player, card, ui);
-    }
-
-    if (effect.id === "DD02-001-activate-main") {
-        return resolveSaintGermainLeaderActivateMain(player, card, ui);
     }
 
     if (effect.id === "SUB1-007-activate-main-stage-copy") {

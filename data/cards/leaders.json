@@ -237,34 +237,6 @@
         "text": "When Attacking: You may place one of your life cards other than the top card at the top of your Life area: this Leader gains +1000 power during this turn."
       }
     ]
-  }
-,
-  "DD02-001": {
-    "id": "DD02-001",
-    "cardNumber": "DD02-001",
-    "name": "Count Saint-Germain",
-    "cardType": "leader",
-    "type": "Dandadan/?",
-    "color": "black/purple",
-    "attribute": "slash/special",
-    "power": 6000,
-    "life": 3,
-    "image": "../images/PB Saint-Germain/DD02-001.png",
-    "aliases": [],
-    "keywords": [],
-    "effects": [
-      {
-        "id": "DD02-001-when-attacking",
-        "type": "whenAttacking",
-        "text": "When Attacking: DON!!-1: You may activate up to 1 effect of any card with the type [Curse] or [The Cursed] from your trash."
-      },
-      {
-        "id": "DD02-001-activate-main",
-        "type": "activateMain",
-        "oncePerTurn": true,
-        "text": "Activate: Main Once Per Turn: You may rest your [Ashura]: You may add 1 of your [Curse] or [The Cursed] type card from your trash to your hand."
-      }
-    ]
   },
 
   "KIL1-001": {
