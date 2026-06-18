@@ -158,6 +158,21 @@ const ySubaruDeckText = `
 2xSUB1-014
 `;
 
+const rbNeronaImuDeckText = `
+4xIMU1-009
+2xIMU1-006
+4xIMU1-008
+4xIMU1-007
+4xIMU1-010
+2xIMU1-013
+4xIMU1-002
+4xIMU1-005
+4xIMU1-012
+4xIMU1-011
+2xIMU1-003
+2xIMU1-004
+`;
+
 const availableDecks = [
     {
         id: "okarun-deck",
@@ -212,6 +227,12 @@ const availableDecks = [
         name: "Y Subaru",
         leaderKey: "SUB1-001",
         deckText: ySubaruDeckText
+    },
+    {
+        id: "rb-nerona-imu-deck",
+        name: "RB Nerona Imu",
+        leaderKey: "IMU1-001",
+        deckText: rbNeronaImuDeckText
     }
 ];
 

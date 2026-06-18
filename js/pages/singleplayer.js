@@ -69,13 +69,20 @@ function createInitialPlayerState(playerName, deckDefinition) {
         throw new Error(`Leader not found for deck: ${selectedDeck.name}`);
     }
 
+    const parsedDeck = parseDeckText(selectedDeck.deckText);
+    const deckSizeLimit = window.getLeaderDeckSizeLimit?.(selectedDeck.leaderKey) || 50;
+
+    if (parsedDeck.length > deckSizeLimit) {
+        throw new Error(`${leader.name} can only use ${deckSizeLimit} deck cards.`);
+    }
+
     return {
         name: playerName,
         don: 0,
         restedDon: 0,
         donDeck: 10,
         turns: 0,
-        deck: shuffleDeck(parseDeckText(selectedDeck.deckText)),
+        deck: shuffleDeck(parsedDeck),
         deckName: selectedDeck.name,
         hasMulliganed: false,
         hand: [],

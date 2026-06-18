@@ -6,6 +6,21 @@ interactions, and run self-play games without installing a full game client.
 
 ## Patch Notes
 
+Patch Note 1.11
+
+[UPDATE]: RB Nerona Imu is now available as a preset deck.
+[ADDITION]: Added the RB Nerona Imu preset deck to deck selection.
+
+[Dev Note]: /
+
+Patch Note 1.10
+
+[UPDATE]: Imu decks now use a 40-card deck limit in the deck editor.
+[UPDATE]: Imu decks now use a 40-card deck limit when starting a game.
+[FIX]: Imported or loaded Imu decks that go over 40 cards are now rejected instead of being accepted.
+
+[Dev Note]: /
+
 Patch Note 1.09
 
 [UPDATE]: Subaru leader's When Attacking effect now uses the same Life-card popup style as Roswaal's Life selection.

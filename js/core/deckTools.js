@@ -161,6 +161,33 @@ function validateDeckEntries(entries = []) {
     };
 }
 
+function getLeaderDeckSizeLimit(leaderKey) {
+    return String(leaderKey || "").trim() === "IMU1-001"
+        ? 40
+        : 50;
+}
+
+function getDeckEntryTotal(entries = []) {
+    return normalizeDeckEntries(entries).reduce((total, entry) => {
+        return total + Number(entry.quantity || 0);
+    }, 0);
+}
+
+function validateDeckSizeLimit(entries = [], leaderKey = "") {
+    const maxDeckSize = getLeaderDeckSizeLimit(leaderKey);
+    const totalCards = getDeckEntryTotal(entries);
+    const errors = totalCards > maxDeckSize
+        ? [`${window.leaders?.[leaderKey]?.name || "This leader"} can only use ${maxDeckSize} deck cards.`]
+        : [];
+
+    return {
+        success: errors.length === 0,
+        errors,
+        maxDeckSize,
+        totalCards
+    };
+}
+
 function createDeckDefinition({
     id = `custom-deck-${Date.now()}`,
     name = "Custom Deck",
@@ -306,6 +333,12 @@ function createPasteDeckSelection({ deckName, deckText, fallbackLeaderKey = "" }
 
     if (!window.leaders?.[resolvedLeaderKey]) {
         throw new Error("Paste deck text that includes a valid leader line like 1xJK01-001.");
+    }
+
+    const deckSizeValidation = validateDeckSizeLimit(parsedDeck.entries, resolvedLeaderKey);
+
+    if (!deckSizeValidation.success) {
+        throw new Error(deckSizeValidation.errors[0] || "Deck exceeds the leader's deck size limit.");
     }
 
     return {
@@ -558,6 +591,9 @@ window.getDeckLeaderKey = getDeckLeaderKey;
 window.parseDeckEntriesFromText = parseDeckEntriesFromText;
 window.parseDeckListData = parseDeckListData;
 window.validateDeckEntries = validateDeckEntries;
+window.getLeaderDeckSizeLimit = getLeaderDeckSizeLimit;
+window.getDeckEntryTotal = getDeckEntryTotal;
+window.validateDeckSizeLimit = validateDeckSizeLimit;
 window.createDeckDefinition = createDeckDefinition;
 window.cloneDeckDefinition = cloneDeckDefinition;
 window.getLocalSavedDecks = getLocalSavedDecks;

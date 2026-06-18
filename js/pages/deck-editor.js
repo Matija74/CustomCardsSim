@@ -18,6 +18,7 @@ class DeckEditor {
         this.deckDisplay = document.getElementById("deckDisplay");
         this.cardLibraryGrid = document.getElementById("cardLibraryGrid");
         this.deckCardCount = document.getElementById("deckCardCount");
+        this.deckMaxCount = document.getElementById("deckMaxCount");
         this.deckNameInput = document.getElementById("deckName");
         this.limitCopiesToggle = document.getElementById("limitCopiesToggle");
 
@@ -197,7 +198,7 @@ class DeckEditor {
             button.textContent = "Choose Leader";
             button.addEventListener("click", () => this.chooseLeader(card));
         } else {
-            const isAtLimit = !this.canAddAnotherCopy(card.id);
+            const isAtLimit = !this.canAddAnotherCopy(card.id) || this.isDeckAtSizeLimit();
 
             button.textContent = isAtLimit ? "Max" : "Add";
             button.disabled = isAtLimit;
@@ -488,6 +489,14 @@ class DeckEditor {
         return this.limitCopiesToggle?.checked ?? true;
     }
 
+    getCurrentDeckSizeLimit() {
+        return window.getLeaderDeckSizeLimit?.(this.selectedLeader?.id) || this.maxDeckSize;
+    }
+
+    isDeckAtSizeLimit() {
+        return this.getDeckCardTotal() >= this.getCurrentDeckSizeLimit();
+    }
+
     canAddAnotherCopy(cardId) {
         if (!this.isCopyLimitEnabled()) {
             return true;
@@ -504,6 +513,11 @@ class DeckEditor {
     addCardToDeck(card) {
         if (!this.selectedLeader) {
             alert("You must choose a Leader before adding cards.");
+            return;
+        }
+
+        if (this.isDeckAtSizeLimit()) {
+            alert(`${this.selectedLeader.name} can only use ${this.getCurrentDeckSizeLimit()} deck cards.`);
             return;
         }
 
@@ -531,6 +545,11 @@ class DeckEditor {
         const existingCard = this.deckCards.find(deckCard => deckCard.id === cardId);
 
         if (!existingCard) {
+            return;
+        }
+
+        if (this.isDeckAtSizeLimit()) {
+            alert(`${this.selectedLeader?.name || "This leader"} can only use ${this.getCurrentDeckSizeLimit()} deck cards.`);
             return;
         }
 
@@ -657,6 +676,13 @@ class DeckEditor {
         const entries = Array.isArray(deckDefinition.cards)
             ? deckDefinition.cards
             : window.parseDeckListData?.(deckDefinition.deckText || "").entries || [];
+        const deckSizeValidation = window.validateDeckSizeLimit?.(entries, leaderKey);
+
+        if (deckSizeValidation && !deckSizeValidation.success) {
+            alert(deckSizeValidation.errors[0] || "Deck exceeds the leader's deck size limit.");
+            return;
+        }
+
         const nextDeckCards = [];
 
         for (const entry of entries) {
@@ -688,6 +714,16 @@ class DeckEditor {
 
         if (!deckDefinition) {
             alert("Choose a Leader before saving.");
+            return;
+        }
+
+        const deckSizeValidation = window.validateDeckSizeLimit?.(
+            deckDefinition.cards || this.getCurrentDeckEntries(),
+            this.selectedLeader?.id
+        );
+
+        if (deckSizeValidation && !deckSizeValidation.success) {
+            alert(deckSizeValidation.errors[0] || "Deck exceeds the leader's deck size limit.");
             return;
         }
 
@@ -783,6 +819,12 @@ class DeckEditor {
         }
 
         const leader = this.leaders?.[leaderKey];
+        const deckSizeValidation = window.validateDeckSizeLimit?.(parsedDeck.entries, leaderKey);
+
+        if (deckSizeValidation && !deckSizeValidation.success) {
+            alert(deckSizeValidation.errors[0] || "Deck exceeds the leader's deck size limit.");
+            return;
+        }
 
         this.loadDeckDefinition({
             name: this.deckNameInput?.value?.trim() || `${leader?.name || "Imported"} Deck`,
@@ -895,7 +937,7 @@ class DeckEditor {
         increaseButton.classList.add("quantity-button");
         increaseButton.textContent = "+";
 
-        const isAtLimit = !this.canAddAnotherCopy(card.id);
+        const isAtLimit = !this.canAddAnotherCopy(card.id) || this.isDeckAtSizeLimit();
 
         increaseButton.disabled = isAtLimit;
 
@@ -928,6 +970,10 @@ class DeckEditor {
 
     updateDeckCount() {
         this.deckCardCount.textContent = this.getDeckCardTotal();
+
+        if (this.deckMaxCount) {
+            this.deckMaxCount.textContent = this.getCurrentDeckSizeLimit();
+        }
     }
 
     getCardAmountInDeck(cardId) {
