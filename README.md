@@ -6,6 +6,12 @@ interactions, and run self-play games without installing a full game client.
 
 ## Patch Notes
 
+Patch Note 1.19<br>
+[UPDATE]: Deck Editor leader limiter now filters the library by the selected leader's set instead of the selected leader's type.<br>
+[FIX]: Cards from other sets are now hidden when the leader limiter is enabled in the Deck Editor.<br>
+[FIX]: The old Match Leader Type limiter label has been removed from the Deck Editor.<br>
+[Dev Note]: /
+
 Patch Note 1.18<br>
 [UPDATE]: Subaru Natsuki's checkpoint reset now shows a 3-second "Game being reset..." popup before the reset resolves.<br>
 [UPDATE]: Multiplayer checkpoint resets now show the same reset popup to both players at the same time.<br>

@@ -324,7 +324,7 @@ class DeckEditor {
         const matchLeaderColors = !options.leadersOnly &&
             Boolean(this.selectedLeader) &&
             Boolean(this.leaderColorFilterToggle?.checked);
-        const matchLeaderTypes = !options.leadersOnly &&
+        const matchLeaderSet = !options.leadersOnly &&
             Boolean(this.selectedLeader) &&
             Boolean(this.leaderTypeFilterToggle?.checked);
 
@@ -340,14 +340,13 @@ class DeckEditor {
                 String(card.cardType || "").toLowerCase() === "leader";
 
             const cardColors = this.getCardColors(card);
-            const cardTypes = this.getCardTypeValues(card)
-                .map(type => type.toLowerCase());
             const leaderColors = matchLeaderColors
                 ? this.getCardColors(this.selectedLeader)
                 : [];
-            const leaderTypes = matchLeaderTypes
-                ? this.getCardTypeValues(this.selectedLeader).map(type => type.toLowerCase())
-                : [];
+            const cardSetCode = this.getCardSetCode(card);
+            const leaderSetCode = matchLeaderSet
+                ? this.getCardSetCode(this.selectedLeader)
+                : "";
 
             const matchesSearch =
                 searchValue === "" || cardName.includes(searchValue);
@@ -358,7 +357,9 @@ class DeckEditor {
 
             const matchesType =
                 selectedType === "all" ||
-                cardTypes.includes(selectedType.toLowerCase());
+                this.getCardTypeValues(card)
+                    .map(type => type.toLowerCase())
+                    .includes(selectedType.toLowerCase());
 
             const matchesColor =
                 selectedColor === "all" ||
@@ -382,9 +383,9 @@ class DeckEditor {
             const matchesLeaderColors =
                 !matchLeaderColors ||
                 leaderColors.some(color => cardColors.includes(color));
-            const matchesLeaderTypes =
-                !matchLeaderTypes ||
-                leaderTypes.some(type => cardTypes.includes(type));
+            const matchesLeaderSet =
+                !matchLeaderSet ||
+                (leaderSetCode !== "" && cardSetCode === leaderSetCode);
 
             return !excludesLeadersAfterSelection &&
                 matchesSearch &&
@@ -396,7 +397,7 @@ class DeckEditor {
                 matchesAttribute &&
                 matchesCounter &&
                 matchesLeaderColors &&
-                matchesLeaderTypes;
+                matchesLeaderSet;
         }).sort((firstCard, secondCard) => {
             return this.compareCardsForLibrary(firstCard, secondCard);
         });
@@ -417,6 +418,16 @@ class DeckEditor {
             .split("/")
             .map(type => type.trim())
             .filter(Boolean);
+    }
+
+    getCardSetCode(card) {
+        const cardNumber = String(card?.cardNumber || card?.id || "").trim();
+
+        if (cardNumber === "") {
+            return "";
+        }
+
+        return cardNumber.split("-")[0].toUpperCase();
     }
 
     matchesNumberFilter(cardValue, selectedValue) {
