@@ -6,6 +6,18 @@ interactions, and run self-play games without installing a full game client.
 
 ## Patch Notes
 
+Patch Note 1.22<br>
+[UPDATE]: Match sound effects now follow the Sound Effects and Audio settings directly through a shared in-game audio handler.<br>
+[FIX]: Card draw sounds now stop immediately when sound settings are turned off instead of relying on per-effect audio checks.<br>
+[ADDITION]: Added a reusable game sound-effect registry so future SFX can use the same settings-controlled playback path.<br>
+[Dev Note]: /
+
+Patch Note 1.21<br>
+[UPDATE]: Drawing a card from the main deck now plays the new card-draw sound effect during matches.<br>
+[FIX]: The new draw sound only triggers for the main deck and does not trigger for DON!! deck draws.<br>
+[ADDITION]: Added support for the new `sfx/cardDraw.mp3` asset in the in-game draw flow.<br>
+[Dev Note]: /
+
 Patch Note 1.20<br>
 [UPDATE]: Deck Editor card-library filtering now uses cached card data and batched rendering for faster updates.<br>
 [UPDATE]: Deck Editor search input now delays rerenders slightly to avoid rebuilding the library on every single keystroke.<br>

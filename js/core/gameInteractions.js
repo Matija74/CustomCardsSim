@@ -1315,6 +1315,7 @@ function drawCard(player, uiInstance = ui) {
 
     drawnCard.uiAnimation = "drawn";
     player.hand.push(drawnCard);
+    window.playGameSoundEffect?.("cardDraw");
 
     if (uiInstance) {
         uiInstance.renderHands();
@@ -1437,6 +1438,7 @@ function drawCardFromBottom(player, uiInstance = ui) {
 
     drawnCard.uiAnimation = "drawn";
     player.hand.push(drawnCard);
+    window.playGameSoundEffect?.("cardDraw");
 
     if (uiInstance) {
         uiInstance.renderHands();
