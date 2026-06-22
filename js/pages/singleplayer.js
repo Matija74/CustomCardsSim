@@ -4727,12 +4727,28 @@ function chooseEffectOption({
     options,
     onComplete
 }) {
+    const shouldDeferCombatChoice = Boolean(
+        currentAttack &&
+        gameState?.currentPhase === "attackResolving" &&
+        typeof ui?.beginDeferredCombatResolution === "function" &&
+        typeof ui?.endDeferredCombatResolution === "function"
+    );
     const autoSelectedOption = window.getAutoSelectMaxValueOption?.(options);
 
     if (autoSelectedOption) {
         Promise.resolve().then(async () => {
-            if (typeof onComplete === "function") {
-                await onComplete(autoSelectedOption.value);
+            if (shouldDeferCombatChoice) {
+                ui.beginDeferredCombatResolution();
+            }
+
+            try {
+                if (typeof onComplete === "function") {
+                    await onComplete(autoSelectedOption.value);
+                }
+            } finally {
+                if (shouldDeferCombatChoice) {
+                    ui.endDeferredCombatResolution();
+                }
             }
         });
         return;
@@ -4821,8 +4837,18 @@ function chooseEffectOption({
 
                 removeEffectChoiceOverlay();
 
-                if (typeof onComplete === "function") {
-                    await onComplete(option.value);
+                if (shouldDeferCombatChoice) {
+                    ui.beginDeferredCombatResolution();
+                }
+
+                try {
+                    if (typeof onComplete === "function") {
+                        await onComplete(option.value);
+                    }
+                } finally {
+                    if (shouldDeferCombatChoice) {
+                        ui.endDeferredCombatResolution();
+                    }
                 }
             });
 

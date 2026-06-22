@@ -6,6 +6,13 @@ interactions, and run self-play games without installing a full game client.
 
 ## Patch Notes
 
+Patch Note 1.25<br>
+[UPDATE]: Multiplayer deck selection now validates leader-specific deck-size rules before storing a deck for a room.<br>
+[FIX]: RY Ichigo damage-trigger stage upgrades no longer leave attack resolution stuck when the activation prompt appears during combat.<br>
+[FIX]: Multiplayer room setup now rejects over-limit Imu decks instead of letting them enter match start with an invalid deck size.<br>
+[ADDITION]: Effect activation popups now use the same deferred combat cleanup handling as other combat-time choice popups.<br>
+[Dev Note]: /
+
 Patch Note 1.24<br>
 [UPDATE]: Multiplayer now keeps turn-based effect durations tied to the correct player when temporary buffs and debuffs sync between both clients.<br>
 [FIX]: IMU Holy Knight temporary +1000 and Rush effects now expire at the intended opponent end phase in multiplayer instead of lingering under the wrong synced turn owner.<br>

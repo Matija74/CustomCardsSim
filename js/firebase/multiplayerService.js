@@ -52,8 +52,27 @@ function requireDeckTools() {
     }
 }
 
+function validateSelectedDeckForMatch(selectedDeck) {
+    requireDeckTools();
+
+    if (!selectedDeck?.leaderKey) {
+        throw new Error("A leader must be selected before starting the match.");
+    }
+
+    const parsedDeck = globalThis.parseDeckText(selectedDeck.deckText || "");
+    const maxDeckSize = typeof globalThis.getLeaderDeckSizeLimit === "function"
+        ? globalThis.getLeaderDeckSizeLimit(selectedDeck.leaderKey)
+        : 50;
+
+    if (parsedDeck.length > maxDeckSize) {
+        const leaderName = globalThis.leaders?.[selectedDeck.leaderKey]?.name || "This leader";
+        throw new Error(`${leaderName} can only use ${maxDeckSize} deck cards.`);
+    }
+}
+
 function createInitialPrivateState(selectedDeck) {
     requireDeckTools();
+    validateSelectedDeckForMatch(selectedDeck);
 
     const leaderDefinition = globalThis.leaders[selectedDeck.leaderKey];
 
@@ -431,6 +450,8 @@ export async function updatePrivateState(roomCode, uid, partialState) {
 }
 
 export async function setPlayerDeck(roomCode, uid, deckData) {
+    validateSelectedDeckForMatch(deckData);
+
     await updatePrivateState(roomCode, uid, {
         selectedDeck: deckData
     });
