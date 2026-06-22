@@ -7,21 +7,12 @@ interactions, and run self-play games without installing a full game client.
 ## Patch Notes
 
 Patch Note 1.23<br>
-[UPDATE]: Opening hands and mulligan redraws now stay silent at match start while regular deck draws still use the draw sound effect.<br>
-[FIX]: The card-draw sound no longer plays repeatedly during the initial hand-dealing sequence.<br>
-[ADDITION]: Added a reusable per-draw sound toggle to the deck-draw helpers for future setup or special-case audio control.<br>
-[Dev Note]: /
-
-Patch Note 1.22<br>
-[UPDATE]: Match sound effects now follow the Sound Effects and Audio settings directly through a shared in-game audio handler.<br>
-[FIX]: Card draw sounds now stop immediately when sound settings are turned off instead of relying on per-effect audio checks.<br>
-[ADDITION]: Added a reusable game sound-effect registry so future SFX can use the same settings-controlled playback path.<br>
-[Dev Note]: /
-
-Patch Note 1.21<br>
 [UPDATE]: Drawing a card from the main deck now plays the new card-draw sound effect during matches.<br>
-[FIX]: The new draw sound only triggers for the main deck and does not trigger for DON!! deck draws.<br>
+[UPDATE]: Opening hands and mulligan redraws now stay silent at match start while regular deck draws still use the draw sound effect.<br>
+[FIX]: The card-draw sound now follows the Sound Effects and Audio settings during matches.<br>
+[FIX]: The draw sound only triggers for the main deck and does not trigger for DON!! deck draws.<br>
 [ADDITION]: Added support for the new `sfx/cardDraw.mp3` asset in the in-game draw flow.<br>
+[ADDITION]: Added reusable in-match sound support so future sound effects can follow the same settings-controlled audio path.<br>
 [Dev Note]: /
 
 Patch Note 1.20<br>
