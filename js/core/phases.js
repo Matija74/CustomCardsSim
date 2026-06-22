@@ -290,7 +290,6 @@ function beginTurnFlow(player, phaseButton, phaseInfo) {
         if (davidResult?.pending) {
             gameState.currentPhase = "startOfTurn";
             setPhaseButtonState(phaseButton, "Resolve Start of Turn", true);
-            window.queueMultiplayerStateSync?.();
             return;
         }
     }

@@ -1357,8 +1357,13 @@ function trashTopCardsOfDeck(player, amount, uiInstance = ui) {
     uiInstance?.renderDecks?.();
     uiInstance?.renderTrash?.();
 
+    const deckOutResult = player.deck.length === 0 && trashedCards.length > 0
+        ? loseByDeckOut(player, `${player.name} ran out of cards in deck after trashing cards from the top of the deck.`)
+        : { deckOut: false };
+
     return {
         success: trashedCards.length > 0,
+        deckOut: Boolean(deckOutResult?.deckOut),
         trashedCards,
         message: trashedCards.length > 0
             ? `${player.name} trashed ${trashedCards.length} card${trashedCards.length === 1 ? "" : "s"} from the top of the deck.`

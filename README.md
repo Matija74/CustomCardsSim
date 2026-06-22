@@ -6,6 +6,14 @@ interactions, and run self-play games without installing a full game client.
 
 ## Patch Notes
 
+Patch Note 1.24<br>
+[UPDATE]: Multiplayer now keeps turn-based effect durations tied to the correct player when temporary buffs and debuffs sync between both clients.<br>
+[FIX]: IMU Holy Knight temporary +1000 and Rush effects now expire at the intended opponent end phase in multiplayer instead of lingering under the wrong synced turn owner.<br>
+[FIX]: Players now lose immediately if an effect trashes the last card from their deck, including Nerona Imu end-of-turn deck trash effects.<br>
+[FIX]: Killer's When Attacked effect now triggers correctly when Killer becomes the attack target by blocking.<br>
+[FIX]: Multiplayer matches no longer get stuck on "Resolving Start of Turn" after mulligans when a turn-start search effect opens.<br>
+[Dev Note]: /
+
 Patch Note 1.23<br>
 [UPDATE]: Drawing a card from the main deck now plays the new card-draw sound effect during matches.<br>
 [UPDATE]: Opening hands and mulligan redraws now stay silent at match start while regular deck draws still use the draw sound effect.<br>

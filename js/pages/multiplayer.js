@@ -127,7 +127,7 @@ function serializePlayerState(player) {
         return null;
     }
 
-    const clone = cloneSerializableValue(player);
+    const clone = mapLocalStatusKeysToCanonical(cloneSerializableValue(player));
 
     delete clone.multiplayerSlot;
 
@@ -135,7 +135,7 @@ function serializePlayerState(player) {
 }
 
 function hydratePlayerState(player, multiplayerSlot) {
-    const hydratedPlayer = cloneSerializableValue(player || {
+    const hydratedPlayer = mapCanonicalStatusKeysToLocal(cloneSerializableValue(player || {
         hand: [],
         deck: [],
         life: [],
@@ -149,7 +149,7 @@ function hydratePlayerState(player, multiplayerSlot) {
         stage: null,
         hasMulliganed: false,
         leaderAttacksThisTurn: 0
-    });
+    }));
 
     hydratedPlayer.hand = Array.isArray(hydratedPlayer.hand) ? hydratedPlayer.hand : [];
     hydratedPlayer.deck = Array.isArray(hydratedPlayer.deck) ? hydratedPlayer.deck : [];
@@ -159,6 +159,48 @@ function hydratePlayerState(player, multiplayerSlot) {
     hydratedPlayer.multiplayerSlot = multiplayerSlot;
 
     return hydratedPlayer;
+}
+
+function transformStatusExpiryPlayerKeys(value, mapper, validKeys) {
+    if (Array.isArray(value)) {
+        return value.map(entry => transformStatusExpiryPlayerKeys(entry, mapper, validKeys));
+    }
+
+    if (!value || typeof value !== "object") {
+        return value;
+    }
+
+    return Object.entries(value).reduce((result, [key, entryValue]) => {
+        if (key === "expiresAtPlayerKey" && typeof entryValue === "string" && validKeys.has(entryValue)) {
+            result[key] = mapper(entryValue);
+            return result;
+        }
+
+        result[key] = transformStatusExpiryPlayerKeys(entryValue, mapper, validKeys);
+        return result;
+    }, {});
+}
+
+function mapLocalStatusKeysToCanonical(value) {
+    const localSlot = getMultiplayerLocalSlot();
+
+    return transformStatusExpiryPlayerKeys(
+        value,
+        playerKey => playerKey === "player1"
+            ? localSlot
+            : getOpponentMultiplayerSlot(localSlot),
+        new Set(["player1", "player2"])
+    );
+}
+
+function mapCanonicalStatusKeysToLocal(value) {
+    const localSlot = getMultiplayerLocalSlot();
+
+    return transformStatusExpiryPlayerKeys(
+        value,
+        slot => slot === localSlot ? "player1" : "player2",
+        new Set(["p1", "p2"])
+    );
 }
 
 function renderGameLogMessages(messages) {
@@ -804,6 +846,25 @@ async function handleBlockerSelection(playerKey, slotIndex) {
 
     if (onBlockMessage) {
         addGameLog(onBlockMessage);
+    }
+
+    const whenAttackedEffect = getWhenAttackedEffect(blockerCard);
+
+    if (whenAttackedEffect) {
+        const whenAttackedMessage = resolveKillerCharacterWhenAttacked(defenderPlayer, blockerCard, ui, {
+            onComplete: () => {
+                startCounterPhase(playerKey, () => {
+                    resolveCurrentAttack();
+                });
+            }
+        });
+
+        if (whenAttackedMessage) {
+            addGameLog(whenAttackedMessage);
+        }
+
+        queueMultiplayerStateSync();
+        return;
     }
 
     startCounterPhase(playerKey, () => {

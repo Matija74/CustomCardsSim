@@ -342,6 +342,24 @@ async function handleBlockerSelection(playerKey, slotIndex) {
         addGameLog(onBlockMessage);
     }
 
+    const whenAttackedEffect = getWhenAttackedEffect(blockerCard);
+
+    if (whenAttackedEffect) {
+        const whenAttackedMessage = resolveKillerCharacterWhenAttacked(defenderPlayer, blockerCard, ui, {
+            onComplete: () => {
+                startCounterPhase(playerKey, () => {
+                    resolveCurrentAttack();
+                });
+            }
+        });
+
+        if (whenAttackedMessage) {
+            addGameLog(whenAttackedMessage);
+        }
+
+        return;
+    }
+
     startCounterPhase(playerKey, () => {
         resolveCurrentAttack();
     });
