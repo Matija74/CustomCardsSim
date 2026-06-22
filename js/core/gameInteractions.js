@@ -1303,7 +1303,7 @@ function attachActiveDonToCard(player, targetCard, ui) {
 // Deck / Draw Actions
 // =========================
 
-function drawCard(player, uiInstance = ui) {
+function drawCard(player, uiInstance = ui, options = {}) {
     const card = player.deck.shift();
 
     if (!card) {
@@ -1315,7 +1315,9 @@ function drawCard(player, uiInstance = ui) {
 
     drawnCard.uiAnimation = "drawn";
     player.hand.push(drawnCard);
-    window.playGameSoundEffect?.("cardDraw");
+    if (options.playSound !== false) {
+        window.playGameSoundEffect?.("cardDraw");
+    }
 
     if (uiInstance) {
         uiInstance.renderHands();
@@ -1412,9 +1414,9 @@ function resolveWhenTrashedFromDeckEffects(player, card, ui) {
     return messages;
 }
 
-function drawCards(player, amount, uiInstance = ui) {
+function drawCards(player, amount, uiInstance = ui, options = {}) {
     for (let i = 0; i < amount; i++) {
-        const drawResult = drawCard(player, uiInstance);
+        const drawResult = drawCard(player, uiInstance, options);
 
         if (drawResult?.deckOut) {
             return drawResult;
@@ -1426,7 +1428,7 @@ function drawCards(player, amount, uiInstance = ui) {
     };
 }
 
-function drawCardFromBottom(player, uiInstance = ui) {
+function drawCardFromBottom(player, uiInstance = ui, options = {}) {
     const card = player.deck.pop();
 
     if (!card) {
@@ -1438,7 +1440,9 @@ function drawCardFromBottom(player, uiInstance = ui) {
 
     drawnCard.uiAnimation = "drawn";
     player.hand.push(drawnCard);
-    window.playGameSoundEffect?.("cardDraw");
+    if (options.playSound !== false) {
+        window.playGameSoundEffect?.("cardDraw");
+    }
 
     if (uiInstance) {
         uiInstance.renderHands();

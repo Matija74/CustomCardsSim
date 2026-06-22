@@ -6,6 +6,12 @@ interactions, and run self-play games without installing a full game client.
 
 ## Patch Notes
 
+Patch Note 1.23<br>
+[UPDATE]: Opening hands and mulligan redraws now stay silent at match start while regular deck draws still use the draw sound effect.<br>
+[FIX]: The card-draw sound no longer plays repeatedly during the initial hand-dealing sequence.<br>
+[ADDITION]: Added a reusable per-draw sound toggle to the deck-draw helpers for future setup or special-case audio control.<br>
+[Dev Note]: /
+
 Patch Note 1.22<br>
 [UPDATE]: Match sound effects now follow the Sound Effects and Audio settings directly through a shared in-game audio handler.<br>
 [FIX]: Card draw sounds now stop immediately when sound settings are turned off instead of relying on per-effect audio checks.<br>

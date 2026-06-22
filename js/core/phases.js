@@ -145,7 +145,7 @@ function handleMulliganChoice(player, tookMulligan, phaseButton, phaseInfo) {
 }
 
 function drawStartingHand(player) {
-    drawCards(player, 5, ui);
+    drawCards(player, 5, ui, { playSound: false });
 }
 
 function mulliganHand(player) {
@@ -154,7 +154,7 @@ function mulliganHand(player) {
 
     shuffleDeck(player.deck);
 
-    drawCards(player, 5, ui);
+    drawCards(player, 5, ui, { playSound: false });
 }
 
 function setupLifeCards(player) {
