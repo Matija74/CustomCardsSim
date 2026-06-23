@@ -6,6 +6,11 @@ interactions, and run self-play games without installing a full game client.
 
 ## Patch Notes
 
+Patch Note 1.28<br>
+[FIX]: The sidebar sort icon now uses corrected loop-arrow directions instead of the broken arrow layout from the previous version.<br>
+[Dev Note]: /<br>
+<br>
+
 Patch Note 1.27<br>
 [UPDATE]: Multiplayer surrender confirmation now opens in a themed in-game popup instead of the browser default confirm window.<br>
 [UPDATE]: Sidebar hand sorting now uses a square icon button on match pages.<br>
