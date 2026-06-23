@@ -7,26 +7,18 @@ interactions, and run self-play games without installing a full game client.
 ## Patch Notes
 
 Patch Note 1.28<br>
-[FIX]: The sidebar sort icon now uses corrected loop-arrow directions instead of the broken arrow layout from the previous version.<br>
-[Dev Note]: /<br>
-<br>
-
-Patch Note 1.27<br>
+[UPDATE]: Singleplayer and multiplayer match pages now use sidebar footer controls instead of the old top-left back button.<br>
+[UPDATE]: Match page spacing and preview sizing have been tightened so the full board fits more reliably at normal 100% browser zoom.<br>
 [UPDATE]: Multiplayer surrender confirmation now opens in a themed in-game popup instead of the browser default confirm window.<br>
 [UPDATE]: Sidebar hand sorting now uses a square icon button on match pages.<br>
+[FIX]: Confirmed multiplayer surrender now gives the win to the opponent instead of only leaving the page.<br>
 [FIX]: The new sort control now matches the sidebar action-button layout instead of stretching as a full-width button.<br>
+[FIX]: The sidebar sort icon now uses corrected loop-arrow directions instead of the broken arrow layout from the previous version.<br>
+[ADDITION]: Added a dedicated sidebar Sort button for the local player's hand on both singleplayer and multiplayer pages.<br>
+[ADDITION]: Added a sidebar Back button in singleplayer and a sidebar Surrender button in multiplayer.<br>
 [ADDITION]: Added a custom sort icon to the sidebar hand-sort button.<br>
 [Dev Note]: /<br>
 <br>
-
-Patch Note 1.26<br>
-[UPDATE]: Singleplayer and multiplayer match pages now use sidebar footer controls instead of the old top-left back button.<br>
-[UPDATE]: Match page spacing and preview sizing have been tightened so the full board fits more reliably at normal 100% browser zoom.<br>
-[FIX]: Multiplayer surrender now asks for confirmation before ending the match.<br>
-[FIX]: Confirmed multiplayer surrender now gives the win to the opponent instead of only leaving the page.<br>
-[ADDITION]: Added a dedicated sidebar Sort button for the local player's hand on both singleplayer and multiplayer pages.<br>
-[ADDITION]: Added a sidebar Back button in singleplayer and a sidebar Surrender button in multiplayer.<br>
-[Dev Note]: /
 
 Patch Note 1.25<br>
 [UPDATE]: Multiplayer deck selection now validates leader-specific deck-size rules before storing a deck for a room.<br>
