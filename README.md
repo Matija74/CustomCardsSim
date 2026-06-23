@@ -6,6 +6,14 @@ interactions, and run self-play games without installing a full game client.
 
 ## Patch Notes
 
+Patch Note 1.27<br>
+[UPDATE]: Multiplayer surrender confirmation now opens in a themed in-game popup instead of the browser default confirm window.<br>
+[UPDATE]: Sidebar hand sorting now uses a square icon button on match pages.<br>
+[FIX]: The new sort control now matches the sidebar action-button layout instead of stretching as a full-width button.<br>
+[ADDITION]: Added a custom sort icon to the sidebar hand-sort button.<br>
+[Dev Note]: /<br>
+<br>
+
 Patch Note 1.26<br>
 [UPDATE]: Singleplayer and multiplayer match pages now use sidebar footer controls instead of the old top-left back button.<br>
 [UPDATE]: Match page spacing and preview sizing have been tightened so the full board fits more reliably at normal 100% browser zoom.<br>

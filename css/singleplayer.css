@@ -283,13 +283,19 @@ body {
 }
 
 .sidebar-footer-button {
+    width: 64px;
+    min-width: 64px;
     min-height: 56px;
+    padding: 0;
     border: 2px solid rgba(176, 212, 238, 0.4);
     border-radius: 12px;
     color: white;
     font-size: 1rem;
     font-weight: 900;
     text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     transition: 0.2s ease;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24);
@@ -306,19 +312,37 @@ body {
 }
 
 .sidebar-footer-button-sort {
-    flex: 1 1 auto;
+    flex: 0 0 64px;
     border: none;
     background: linear-gradient(135deg, rgba(126, 139, 152, 0.96) 0%, rgba(80, 93, 106, 0.96) 100%);
 }
 
 .sidebar-footer-button-exit {
     flex: 0 0 64px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     background: linear-gradient(135deg, rgba(106, 126, 100, 0.96) 0%, rgba(76, 95, 70, 0.96) 100%);
     font-size: 1.35rem;
     line-height: 1;
+}
+
+.sidebar-footer-icon {
+    width: 34px;
+    height: 34px;
+    overflow: visible;
+}
+
+.sidebar-footer-icon path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.sidebar-footer-icon text {
+    fill: currentColor;
+    font-size: 26px;
+    font-weight: 900;
+    font-family: Arial, sans-serif;
 }
 
 /* =========================

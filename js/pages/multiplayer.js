@@ -969,6 +969,67 @@ function removeGameOverPopup() {
     }
 }
 
+function removeSurrenderConfirmPopup() {
+    const oldOverlay = document.getElementById("surrenderConfirmOverlay");
+
+    if (oldOverlay) {
+        oldOverlay.remove();
+    }
+}
+
+function showSurrenderConfirmPopup() {
+    removeSurrenderConfirmPopup();
+
+    return new Promise((resolve) => {
+        const overlay = document.createElement("div");
+        overlay.className = "look-top-overlay";
+        overlay.id = "surrenderConfirmOverlay";
+
+        const popup = document.createElement("div");
+        popup.className = "look-top-popup effect-choice-popup surrender-confirm-popup";
+
+        const heading = document.createElement("h2");
+        heading.textContent = "Surrender Match";
+
+        const text = document.createElement("p");
+        text.textContent = "Are you sure you want to surrender? Your opponent will win the match.";
+
+        const buttonRow = document.createElement("div");
+        buttonRow.className = "surrender-confirm-actions";
+
+        const cancelButton = document.createElement("button");
+        cancelButton.className = "look-top-action-button secondary";
+        cancelButton.type = "button";
+        cancelButton.textContent = "Cancel";
+
+        const confirmButton = document.createElement("button");
+        confirmButton.className = "look-top-action-button danger";
+        confirmButton.type = "button";
+        confirmButton.textContent = "Surrender";
+
+        const closePopup = (confirmed) => {
+            removeSurrenderConfirmPopup();
+            resolve(confirmed);
+        };
+
+        cancelButton.addEventListener("click", () => closePopup(false));
+        confirmButton.addEventListener("click", () => closePopup(true));
+        overlay.addEventListener("click", (event) => {
+            if (event.target === overlay) {
+                closePopup(false);
+            }
+        });
+
+        buttonRow.appendChild(cancelButton);
+        buttonRow.appendChild(confirmButton);
+        popup.appendChild(heading);
+        popup.appendChild(text);
+        popup.appendChild(buttonRow);
+        overlay.appendChild(popup);
+        document.body.appendChild(overlay);
+    });
+}
+
 function showSubaruResetOverlay(message = "Game being reset...") {
     removeSubaruResetOverlay();
 
@@ -1747,7 +1808,9 @@ function setupSidebarControls() {
             event.preventDefault();
             event.stopPropagation();
 
-            if (!window.confirm("Are you sure you want to surrender?")) {
+            const shouldSurrender = await showSurrenderConfirmPopup();
+
+            if (!shouldSurrender) {
                 return;
             }
 

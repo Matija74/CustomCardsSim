@@ -7,7 +7,7 @@
 
     <link rel="icon" type="image/png" href="../images/a-misc/logo-without-title.png">
     <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="../css/singleplayer.css?v=game-ui-4">
+    <link rel="stylesheet" href="../css/singleplayer.css?v=game-ui-5">
     <link rel="stylesheet" href="../css/galaxy-theme.css?v=galaxy-5">
 </head>
 <body>
@@ -105,7 +105,15 @@
                 </div>
 
                 <div class="sidebar-footer-controls">
-                    <button id="sidebarSortButton" class="sidebar-footer-button sidebar-footer-button-sort" type="button">Sort</button>
+                    <button id="sidebarSortButton" class="sidebar-footer-button sidebar-footer-button-sort" type="button" aria-label="Sort Hand" title="Sort Hand">
+                        <svg class="sidebar-footer-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+                            <path d="M27 14H18a8 8 0 0 0-8 8v6" />
+                            <path d="M14 19 10 13 6 19" />
+                            <path d="M37 50h9a8 8 0 0 0 8-8v-6" />
+                            <path d="m50 45 4 6 4-6" />
+                            <text x="32" y="39" text-anchor="middle">S</text>
+                        </svg>
+                    </button>
                     <a id="sidebarExitButton" class="sidebar-footer-button sidebar-footer-button-exit" href="../index.html" aria-label="Back to Main">&larr;</a>
                 </div>
             </aside>
@@ -126,6 +134,6 @@
     <script src="../js/core/effects.js?v=gameplay-rules-2"></script>
     <script src="../js/core/gameInteractions.js?v=gameplay-rules-4"></script>
 
-    <script src="../js/pages/singleplayer.js?v=game-ui-4"></script>
+    <script src="../js/pages/singleplayer.js?v=game-ui-5"></script>
 </body>
 </html>
