@@ -6,7 +6,7 @@ interactions, and run self-play games without installing a full game client.
 
 ## Patch Notes
 
-Patch Note 1.28<br>
+Patch Note 1.26<br>
 [UPDATE]: Singleplayer and multiplayer match pages now use sidebar footer controls instead of the old top-left back button.<br>
 [UPDATE]: Match page spacing and preview sizing have been tightened so the full board fits more reliably at normal 100% browser zoom.<br>
 [UPDATE]: Multiplayer surrender confirmation now opens in a themed in-game popup instead of the browser default confirm window.<br>
