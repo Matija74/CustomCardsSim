@@ -29,38 +29,13 @@ body {
     width: 100%;
     min-height: 100vh;
     min-height: 100dvh;
-    padding: 88px 20px 20px;
+    padding: 18px 16px 14px;
     box-sizing: border-box;
     overflow: visible;
 }
 
 .btn-back {
-    position: fixed;
-    left: 20px;
-    top: 20px;
-    z-index: 1200;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    pointer-events: auto;
-
-    color: white;
-    text-decoration: none;
-    font-size: 1rem;
-    font-weight: 600;
-
-    padding: 12px 18px;
-    border: 2px solid rgba(176, 212, 238, 0.55);
-    border-radius: 14px;
-
-    background: linear-gradient(135deg, rgba(124, 138, 152, 0.92) 0%, rgba(82, 94, 107, 0.92) 100%);
-    transition: 0.2s ease;
-}
-
-.btn-back:hover {
-    background: linear-gradient(135deg, rgba(143, 156, 168, 0.98) 0%, rgba(96, 110, 123, 0.98) 100%);
-    transform: translateY(-2px);
+    display: none !important;
 }
 
 /* =========================
@@ -75,7 +50,7 @@ body {
     align-items: flex-start;
     justify-content: center;
 
-    gap: 20px;
+    gap: 16px;
 
     margin: 0 auto;
 }
@@ -86,7 +61,7 @@ body {
     align-items: flex-start;
     justify-content: center;
 
-    gap: 16px;
+    gap: 12px;
     width: fit-content;
     max-width: 100%;
     min-width: 0;
@@ -112,7 +87,7 @@ body {
 
 .card-preview {
     width: 100%;
-    height: 700px;
+    height: clamp(360px, 46vh, 560px);
 
     border: 3px solid black;
     border-radius: 12px;
@@ -264,7 +239,7 @@ body {
 
 .game-log {
     width: 100%;
-    height: 180px;
+    min-height: 180px;
 
     border: 3px solid black;
     border-radius: 10px;
@@ -277,6 +252,7 @@ body {
 
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
 }
 
 .game-log h3 {
@@ -296,6 +272,53 @@ body {
 .log-message {
     margin-bottom: 6px;
     opacity: 0.9;
+}
+
+.sidebar-footer-controls {
+    width: 100%;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.sidebar-footer-button {
+    min-height: 56px;
+    border: 2px solid rgba(176, 212, 238, 0.4);
+    border-radius: 12px;
+    color: white;
+    font-size: 1rem;
+    font-weight: 900;
+    text-decoration: none;
+    cursor: pointer;
+    transition: 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24);
+}
+
+.sidebar-footer-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+}
+
+.sidebar-footer-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+    transform: none;
+}
+
+.sidebar-footer-button-sort {
+    flex: 1 1 auto;
+    border: none;
+    background: linear-gradient(135deg, rgba(126, 139, 152, 0.96) 0%, rgba(80, 93, 106, 0.96) 100%);
+}
+
+.sidebar-footer-button-exit {
+    flex: 0 0 64px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(106, 126, 100, 0.96) 0%, rgba(76, 95, 70, 0.96) 100%);
+    font-size: 1.35rem;
+    line-height: 1;
 }
 
 /* =========================
@@ -1084,11 +1107,11 @@ body {
     justify-content: flex-start;
     position: relative;
 
-    gap: 10px;
+    gap: 8px;
 
-    min-height: 115px;
+    min-height: 92px;
 
-    padding: 8px;
+    padding: 6px;
 
     border: 3px solid black;
     border-radius: 8px;
@@ -1278,11 +1301,11 @@ body {
 }
 
 .player-hand {
-    margin-top: 8px;
+    margin-top: 4px;
 }
 
 .opponent-hand {
-    margin-bottom: 8px;
+    margin-bottom: 4px;
 }
 
 /* =========================
@@ -1800,7 +1823,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
 
     padding: 18px;
     box-sizing: border-box;
@@ -2099,9 +2122,9 @@ body {
     }
 }
 
-@media (max-height: 1040px) {
+@media (max-height: 1200px) {
     .singleplayer-page {
-        padding-top: 72px;
+        padding: 12px 12px 10px;
     }
 
     .game-layout {
@@ -2113,7 +2136,7 @@ body {
     }
 
     .card-preview {
-        height: 520px;
+        height: 430px;
     }
 
     .play-area {

@@ -47,6 +47,22 @@ window.__multiplayerRuntime = {
     handlePlayAgainClick: () => runPregameAction("Rematch failed", async () => {
         await requestRematch(roomCode, localSlot);
     }),
+    handleSurrenderClick: () => runPregameAction("Surrender failed", async () => {
+        if (!roomCode || !localSlot) {
+            return;
+        }
+
+        const opponentSlot = getOpponentSlot(localSlot);
+        const surrenderingPlayerName = latestPublicMatch?.players?.[localSlot]?.name || "A player";
+
+        await updatePublicState(roomCode, {
+            sharedState: null,
+            phase: "gameOver",
+            winner: opponentSlot,
+            gameOverReasonTitle: "Surrender",
+            gameOverReasonText: `${surrenderingPlayerName} surrendered the match.`
+        });
+    }),
     scheduleStateSync
 };
 

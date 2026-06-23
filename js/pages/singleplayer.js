@@ -219,6 +219,7 @@ async function initializeGamePage() {
         setupLifeArea("opponentLifeArea", "opponentLifeToggleText");
 
         setupPhaseControls();
+        setupSidebarControls();
 
         updateDonDisplay();
         renderDecks();
@@ -1065,6 +1066,7 @@ function renderDeck(player, deckAreaId) {
 function renderHands() {
     renderPlayerHand(gameState.player1, "player1Hand", false);
     renderPlayerHand(gameState.player2, "player2Hand", false);
+    updateSidebarSortButtonState();
 }
 
 function renderPlayerHand(player, handElementId, hidden) {
@@ -1105,25 +1107,6 @@ function renderPlayerHand(player, handElementId, hidden) {
         handElement.appendChild(cardElement);
     });
 
-    if (!hidden) {
-        const sortButton = document.createElement("button");
-        sortButton.className = "hand-sort-button";
-        sortButton.type = "button";
-        sortButton.textContent = "Sort";
-        sortButton.title = canSortPlayerHand(player)
-            ? "Sort hand by category, cost, then card ID."
-            : "Finish current effect or combat step before sorting this hand.";
-        sortButton.disabled = !canSortPlayerHand(player);
-
-        sortButton.addEventListener("click", async (event) => {
-            event.stopPropagation();
-
-            await sortPlayerHand(player);
-        });
-
-        handElement.appendChild(sortButton);
-    }
-
     const count = document.createElement("div");
 
     count.className = "hand-count";
@@ -1160,6 +1143,37 @@ async function sortPlayerHand(player) {
 
     clearHandSelection();
     renderHands();
+}
+
+function setupSidebarControls() {
+    const sortButton = document.getElementById("sidebarSortButton");
+
+    if (sortButton && sortButton.dataset.listenerAttached !== "true") {
+        sortButton.dataset.listenerAttached = "true";
+        sortButton.addEventListener("click", async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            await sortPlayerHand(gameState?.player1);
+        });
+    }
+
+    updateSidebarSortButtonState();
+}
+
+function updateSidebarSortButtonState() {
+    const sortButton = document.getElementById("sidebarSortButton");
+
+    if (!sortButton) {
+        return;
+    }
+
+    const canSort = canSortPlayerHand(gameState?.player1);
+
+    sortButton.disabled = !canSort;
+    sortButton.title = canSort
+        ? "Sort hand by category, cost, then card ID."
+        : "Finish current effect or combat step before sorting this hand.";
 }
 
 function canSortPlayerHand(player) {

@@ -6,6 +6,15 @@ interactions, and run self-play games without installing a full game client.
 
 ## Patch Notes
 
+Patch Note 1.26<br>
+[UPDATE]: Singleplayer and multiplayer match pages now use sidebar footer controls instead of the old top-left back button.<br>
+[UPDATE]: Match page spacing and preview sizing have been tightened so the full board fits more reliably at normal 100% browser zoom.<br>
+[FIX]: Multiplayer surrender now asks for confirmation before ending the match.<br>
+[FIX]: Confirmed multiplayer surrender now gives the win to the opponent instead of only leaving the page.<br>
+[ADDITION]: Added a dedicated sidebar Sort button for the local player's hand on both singleplayer and multiplayer pages.<br>
+[ADDITION]: Added a sidebar Back button in singleplayer and a sidebar Surrender button in multiplayer.<br>
+[Dev Note]: /
+
 Patch Note 1.25<br>
 [UPDATE]: Multiplayer deck selection now validates leader-specific deck-size rules before storing a deck for a room.<br>
 [FIX]: RY Ichigo damage-trigger stage upgrades no longer leave attack resolution stuck when the activation prompt appears during combat.<br>
