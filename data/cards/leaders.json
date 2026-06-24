@@ -244,7 +244,7 @@
     "cardNumber": "KIL1-001",
     "name": "Killer",
     "cardType": "leader",
-    "type": "Kid Pirates/Supernovas",
+    "type": "Kid Pirates/Supernova",
     "color": "red/black",
     "attribute": "slash",
     "power": 5000,
@@ -254,10 +254,16 @@
     "keywords": [],
     "effects": [
       {
-        "id": "KIL1-001-custom",
-        "type": "custom",
+        "id": "KIL1-001-activate-main",
         "oncePerTurn": true,
-        "text": "DON!! x2 Activate: Main / When Opponent Attacks Once Per Turn: You and your opponent each trash the top 2 cards of your deck: Choose one: Your Turn: Give up to 2 rested DON!! cards to 1 of your Characters. Opponent's Turn: Give up to 1 of your opponent's Leaders or Character cards -2000 power during this battle."
+        "type": "activateMain",
+        "text": "DON!! x1 Activate: Main Once Per Turn: You and your opponent each trash the top 2 cards of your deck: Give up to 2 rested DON!! cards to 1 of your Characters."
+      },
+      {
+        "id": "KIL1-001-on-opponent-attack",
+        "type": "onOpponentAttack",
+        "oncePerTurn": true,
+        "text": "DON!! x1 When Opponent Attacks Once Per Turn: You and your opponent each trash the top 2 cards of your deck: Give your opponent's Leader or 1 of their Characters -2000 power during this battle."
       }
     ]
   },

@@ -7779,9 +7779,9 @@ function canUseOnOpponentAttackEffect(player, card, effect) {
         return false;
     }
 
-    if (effect.id === "KIL1-001-custom") {
+    if (effect.id === "KIL1-001-on-opponent-attack") {
         return card.cardNumber === "KIL1-001" &&
-            Number(card.attachedDon || 0) >= 2 &&
+            Number(card.attachedDon || 0) >= 1 &&
             !CardEffects.hasUsedOncePerTurnEffect(card, effect.id, player.turns);
     }
 
@@ -8895,11 +8895,19 @@ function getSubaruStageEffect(player) {
 function resolveEchidnaStageCopy(player, sourceCard, ui) {
     const stage = player?.stage;
     const stageEffect = getSubaruStageEffect(player);
+    const topLifeCard = player?.life?.[0];
 
     if (!stage || !stageEffect) {
         return {
             success: false,
             message: `${sourceCard.name} found no Stage effect to activate.`
+        };
+    }
+
+    if (!topLifeCard) {
+        return {
+            success: false,
+            message: `${sourceCard.name} found no top life card to flip.`
         };
     }
 
@@ -9394,22 +9402,22 @@ function resolveKillerCharacterWhenAttacked(player, sourceCard, ui, options = {}
 
 function resolveKillerLeaderActivateMain(player, leader, ui) {
     const activeLeader = getKillerLeader(player);
+    const effect = getCardAllEffects(activeLeader)?.find(cardEffect => cardEffect.id === "KIL1-001-activate-main");
 
-    if (!activeLeader || leader?.instanceId !== activeLeader.instanceId) {
+    if (!activeLeader || !effect || leader?.instanceId !== activeLeader.instanceId) {
         return {
             success: false,
             message: "Killer's effect could not be found."
         };
     }
 
-    if (Number(activeLeader.attachedDon || 0) < 2) {
+    if (Number(activeLeader.attachedDon || 0) < 1) {
         return {
             success: false,
-            message: `${leader.name} requires DON!! x2.`
+            message: `${leader.name} requires DON!! x1.`
         };
     }
 
-    CardEffects.markOncePerTurnEffectUsed(activeLeader, "KIL1-001-custom", player.turns);
     const millMessage = resolveKillerLeaderMill(player, leader, ui);
 
     if (!player.characters.some(card => card?.cardType === "character")) {
@@ -9484,7 +9492,7 @@ function resolveKillerLeaderActivateMain(player, leader, ui) {
 
 function resolveKillerLeaderOnOpponentAttack(player, leader, ui, options = {}) {
     const activeLeader = getKillerLeader(player);
-    const effect = getCardAllEffects(activeLeader)?.find(cardEffect => cardEffect.id === "KIL1-001-custom");
+    const effect = getCardAllEffects(activeLeader)?.find(cardEffect => cardEffect.id === "KIL1-001-on-opponent-attack");
 
     if (!activeLeader || !leader || !effect) {
         options.onComplete?.();
@@ -9496,9 +9504,9 @@ function resolveKillerLeaderOnOpponentAttack(player, leader, ui, options = {}) {
         return `${leader.name}'s On Your Opponent's Attack effect has already been used this turn.`;
     }
 
-    if (Number(activeLeader.attachedDon || 0) < 2) {
+    if (Number(activeLeader.attachedDon || 0) < 1) {
         options.onComplete?.();
-        return `${leader.name}'s On Your Opponent's Attack effect requires DON!! x2.`;
+        return `${leader.name}'s On Your Opponent's Attack effect requires DON!! x1.`;
     }
 
     CardEffects.markOncePerTurnEffectUsed(activeLeader, effect.id, player.turns);

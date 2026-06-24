@@ -1825,7 +1825,8 @@
       {
         "id": "SUB1-007-activate-main-stage-copy",
         "type": "activateMain",
-        "text": "Activate: Main: Flip the top card in your Life area; activate effect of the Stage on your field. Then this Character gains +1000 power."
+        "oncePerTurn": true,
+        "text": "Activate: Main Once Per Turn: Flip the top card in your Life area; activate effect of the Stage on your field. Then this Character gains +1000 power."
       }
     ]
   },

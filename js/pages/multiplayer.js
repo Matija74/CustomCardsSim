@@ -2886,8 +2886,7 @@ function getActivateMainEffect(card) {
             return false;
         }
 
-        return effect.type === "activateMain" ||
-            (card?.cardNumber === "KIL1-001" && effect.id === "KIL1-001-custom");
+        return effect.type === "activateMain";
     }) || null;
 }
 
@@ -2898,8 +2897,7 @@ function getActivateAnyEffect(card) {
 function getOnOpponentAttackEffect(card) {
     return getCardAllEffects(card)?.find(effect => {
         return effect.type === "onOpponentAttack" ||
-            effect.type === "onOpponentsAttack" ||
-            effect.id === "KIL1-001-custom";
+            effect.type === "onOpponentsAttack";
     }) || null;
 }
 
@@ -2990,8 +2988,8 @@ function canUseActivateMainEffect(player, card, effect) {
             Boolean(getSubaruStageEffect(player));
     }
 
-    if (effect.id === "KIL1-001-custom") {
-        return Number(card?.attachedDon || 0) >= 2;
+    if (effect.id === "KIL1-001-activate-main") {
+        return Number(card?.attachedDon || 0) >= 1;
     }
 
     if (isWanoCountryAttachDonEffect(card, effect)) {
@@ -3251,7 +3249,7 @@ function resolveBoardActionEffect(player, card, effect) {
         return resolveEchidnaActivateMain(player, card, ui);
     }
 
-    if (effect.id === "KIL1-001-custom") {
+    if (effect.id === "KIL1-001-activate-main") {
         return resolveKillerLeaderActivateMain(player, card, ui);
     }
 
@@ -4344,7 +4342,7 @@ function showPendingOpponentAttackEffectChoice() {
                 return;
             }
 
-            if (effect.id === "KIL1-001-custom") {
+            if (effect.id === "KIL1-001-on-opponent-attack") {
                 const message = resolveKillerLeaderOnOpponentAttack(defenderPlayer, currentCard, ui, {
                     onComplete: () => advancePendingOnOpponentAttackEffect()
                 });
