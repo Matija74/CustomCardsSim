@@ -1307,7 +1307,6 @@ function drawCard(player, uiInstance = ui, options = {}) {
     const card = player.deck.shift();
 
     if (!card) {
-        console.log(`${player.name} has no cards left in deck.`);
         return loseByDeckOut(player, `${player.name} tried to draw from an empty deck.`);
     }
 
@@ -1437,7 +1436,6 @@ function drawCardFromBottom(player, uiInstance = ui, options = {}) {
     const card = player.deck.pop();
 
     if (!card) {
-        console.log(`${player.name} has no cards left in deck.`);
         return loseByDeckOut(player, `${player.name} tried to draw from the bottom of an empty deck.`);
     }
 
@@ -1696,8 +1694,6 @@ function playCard(player, handIndex, ui, options = {}) {
             message: "Selected card could not be found."
         };
     }
-
-    console.log("Playing card:", card.name, card.cardType);
 
     if (card.cardType === "character") {
         return playCharacterCard(

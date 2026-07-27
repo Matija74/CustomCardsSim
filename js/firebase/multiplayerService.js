@@ -281,17 +281,12 @@ async function touchRoom(roomCode, extra = {}) {
 }
 
 export async function createRoom(user) {
-    console.log("createRoom() called with user:", user);
-
     if (!user) {
         throw new Error("No user found. Guest login did not finish.");
     }
 
     const roomCode = generateRoomCode();
-    console.log("Generated room code:", roomCode);
-
     const matchRef = getRoomRef(roomCode);
-    console.log("Firebase match ref created:", matchRef);
 
     await set(matchRef, {
         status: "waiting",
@@ -328,8 +323,6 @@ export async function createRoom(user) {
             }
         }
     });
-
-    console.log("Firebase set() finished.");
 
     return roomCode;
 }
