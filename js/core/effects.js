@@ -1470,3 +1470,243 @@ window.CardEffects = {
     }
 
 };
+
+// =========================
+// Effect State Helpers
+// =========================
+
+function getCardAllEffects(card) {
+    if (areCardEffectsNegated(card)) {
+        return [];
+    }
+
+    return [
+        ...(Array.isArray(card?.effects) ? card.effects : []),
+        ...(Array.isArray(card?.temporaryCopiedEffects) ? card.temporaryCopiedEffects : [])
+    ];
+}
+
+function getCardKeywordEffects(card) {
+    if (!card || !window.CardEffects?.keywords) {
+        return [];
+    }
+
+    const seenKeywords = new Set();
+
+    return Object.entries(window.CardEffects.keywords)
+        .filter(([keywordKey]) => window.CardEffects.hasKeyword(card, keywordKey))
+        .map(([keywordKey, definition]) => {
+            const normalizedKeyword = window.CardEffects.normalizeKeyword(keywordKey);
+
+            if (seenKeywords.has(normalizedKeyword)) {
+                return null;
+            }
+
+            seenKeywords.add(normalizedKeyword);
+
+            return {
+                id: `keyword-${normalizedKeyword}`,
+                type: "keyword",
+                keyword: normalizedKeyword,
+                text: definition?.text || definition?.name || keywordKey,
+                keywordName: definition?.name || keywordKey
+            };
+        })
+        .filter(Boolean);
+}
+
+function isTemporaryStatusEntryActive(entry) {
+    if (!entry) {
+        return false;
+    }
+
+    const expiresAtPlayer = entry.expiresAtPlayerKey
+        ? gameState?.[entry.expiresAtPlayerKey]
+        : null;
+
+    if (!expiresAtPlayer) {
+        return true;
+    }
+
+    return Number(expiresAtPlayer.turns || 0) <= Number(entry.expiresAtEndOfTurns ?? 0);
+}
+
+function areCardEffectsNegated(card) {
+    return Array.isArray(card?.effectNegationEntries) &&
+        card.effectNegationEntries.some(isTemporaryStatusEntryActive);
+}
+
+function addTemporaryEffectNegation(card, expiresAtPlayerKey, expiresAtEndOfTurns) {
+    if (!card) {
+        return;
+    }
+
+    if (!Array.isArray(card.effectNegationEntries)) {
+        card.effectNegationEntries = [];
+    }
+
+    card.effectNegationEntries.push({
+        expiresAtPlayerKey,
+        expiresAtEndOfTurns
+    });
+}
+
+function canCardBeRested(card) {
+    if (!card?.cannotBeRestedUntil) {
+        return true;
+    }
+
+    const owner = getPlayerForBoardCard(card);
+    const ownerKey = owner
+        ? getPlayerKey(owner)
+        : null;
+
+    if (!owner || !ownerKey) {
+        return true;
+    }
+
+    if (card.cannotBeRestedUntil.expiresAtPlayerKey !== ownerKey) {
+        return true;
+    }
+
+    return Number(owner.turns || 0) > Number(card.cannotBeRestedUntil.expiresAtEndOfTurns ?? 0);
+}
+
+function applyCannotBeRestedUntil(card, expiresAtEndOfTurns, expiresAtPlayerKey) {
+    if (!card) {
+        return;
+    }
+
+    card.cannotBeRestedUntil = {
+        expiresAtEndOfTurns: Number(expiresAtEndOfTurns ?? 0),
+        expiresAtPlayerKey
+    };
+}
+
+function addTemporaryKeyword(card, keyword) {
+    if (!card.temporaryKeywords) {
+        card.temporaryKeywords = [];
+    }
+
+    card.temporaryKeywords.push(keyword);
+}
+
+function addDurationKeyword(card, keyword, expiresAtEndOfTurns, expiresAtPlayerKey = null) {
+    if (!card) {
+        return;
+    }
+
+    if (!Array.isArray(card.durationKeywords)) {
+        card.durationKeywords = [];
+    }
+
+    card.durationKeywords.push({
+        keyword,
+        expiresAtEndOfTurns,
+        expiresAtPlayerKey
+    });
+
+    refreshCardStatDisplay(card);
+}
+
+function addBattleKeyword(card, keyword) {
+    if (!card.battleKeywords) {
+        card.battleKeywords = [];
+    }
+
+    card.battleKeywords.push(keyword);
+}
+
+function refreshCardStatDisplay(card) {
+    if (!card) {
+        return;
+    }
+
+    if ((card.cardType === "leader" || card.cardType === "character") && typeof renderLeaders === "function") {
+        renderLeaders();
+    }
+
+    if ((card.cardType === "leader" || card.cardType === "character") && typeof renderCharacters === "function") {
+        renderCharacters();
+    }
+
+    if (card.cardType === "stage" && typeof renderStages === "function") {
+        renderStages();
+    }
+}
+
+function addBattlePowerBonus(card, amount) {
+    card.battlePowerBonus = Number(card.battlePowerBonus || 0) + amount;
+    refreshCardStatDisplay(card);
+}
+
+function addTemporaryPowerBonus(card, amount) {
+    if (!card) {
+        return;
+    }
+
+    card.temporaryPowerBonus = Number(card.temporaryPowerBonus || 0) + Number(amount || 0);
+    refreshCardStatDisplay(card);
+}
+
+function addDurationPowerBonus(card, amount, expiresAtEndOfTurns, expiresAtPlayerKey = null) {
+    if (!card) {
+        return;
+    }
+
+    if (!Array.isArray(card.durationPowerBonuses)) {
+        card.durationPowerBonuses = [];
+    }
+
+    card.durationPowerBonuses.push({
+        amount: Number(amount || 0),
+        expiresAtEndOfTurns,
+        expiresAtPlayerKey
+    });
+
+    refreshCardStatDisplay(card);
+}
+
+function addCostModifier(card, amount) {
+    if (!card) {
+        return;
+    }
+
+    if (!Array.isArray(card.costModifiers)) {
+        card.costModifiers = [];
+    }
+
+    card.costModifiers.push({
+        amount: Number(amount || 0)
+    });
+    refreshCardStatDisplay(card);
+}
+
+function addPersistentPowerBonus(card, amount) {
+    if (!card) {
+        return;
+    }
+
+    card.persistentPowerBonus = Number(card.persistentPowerBonus || 0) + Number(amount || 0);
+    refreshCardStatDisplay(card);
+}
+
+function getPerTurnEffectUseLimit(effect) {
+    const maxUsesPerTurn = Number(effect?.maxUsesPerTurn ?? 0);
+
+    if (Number.isFinite(maxUsesPerTurn) && maxUsesPerTurn > 0) {
+        return maxUsesPerTurn;
+    }
+
+    return effect?.oncePerTurn ? 1 : 0;
+}
+
+function hasReachedPerTurnEffectUseLimit(card, effect, turnNumber) {
+    const limit = getPerTurnEffectUseLimit(effect);
+
+    if (limit <= 0 || !card || !effect?.id) {
+        return false;
+    }
+
+    return CardEffects.getPerTurnEffectUseCount(card, effect.id, turnNumber) >= limit;
+}

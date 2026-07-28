@@ -335,6 +335,131 @@ function startTurnOne(phaseButton, phaseInfo) {
 }
 
 // =========================
+// Turn Status Helpers
+// =========================
+
+function getCurrentTurnStatusKey() {
+    const currentPlayer = gameState?.currentPlayer;
+    const currentPlayerKey = currentPlayer
+        ? getPlayerKey(currentPlayer)
+        : null;
+
+    if (!currentPlayerKey) {
+        return null;
+    }
+
+    return `${Number(gameState?.turnNumber || 0)}:${currentPlayerKey}`;
+}
+
+function markCardCannotAttackThisTurn(card) {
+    if (!card) {
+        return;
+    }
+
+    card.cannotAttackThisTurnKey = getCurrentTurnStatusKey();
+}
+
+function markLifeCardAdded(player) {
+    if (!player) {
+        return;
+    }
+
+    const turnStatusKey = getCurrentTurnStatusKey();
+
+    if (!turnStatusKey) {
+        return;
+    }
+
+    player.lastLifeCardAddedTurnKey = turnStatusKey;
+}
+
+function hasAddedLifeCardThisTurn(player) {
+    if (!player) {
+        return false;
+    }
+
+    const turnStatusKey = getCurrentTurnStatusKey();
+
+    return Boolean(turnStatusKey && player.lastLifeCardAddedTurnKey === turnStatusKey);
+}
+
+function lockCardForNextRefresh(card) {
+    if (!card) {
+        return;
+    }
+
+    card.skipNextRefresh = true;
+}
+
+// =========================
+// Refresh Helpers
+// =========================
+
+function refreshPlayerCards(player, ui) {
+    const refreshedDon = player.restedDon;
+    let returnedAttachedDon = 0;
+    let refreshedLeader = 0;
+    let refreshedCharacters = 0;
+    let refreshedStage = 0;
+    let skippedLeaderRefresh = 0;
+
+    player.don += player.restedDon;
+    player.restedDon = 0;
+    returnedAttachedDon = returnAttachedDonToCostArea(player, ui, { rested: false });
+
+    if (player.leader && player.leader.state === "rested") {
+        if (player.skipLeaderRefresh) {
+            skippedLeaderRefresh = 1;
+        } else {
+            player.leader.state = "active";
+            refreshedLeader = 1;
+        }
+    }
+
+    player.skipLeaderRefresh = false;
+    player.leaderAttacksThisTurn = 0;
+
+    player.characters.forEach(character => {
+        if (character) {
+            if (character.skipNextRefresh) {
+                character.skipNextRefresh = false;
+            } else if (character.state === "rested") {
+                character.state = "active";
+                refreshedCharacters++;
+            }
+        }
+    });
+
+    if (player.stage && player.stage.state === "rested") {
+        player.stage.state = "active";
+        refreshedStage = 1;
+    }
+
+    ui.updateDonDisplay();
+
+    if (ui.renderLeaders) {
+        ui.renderLeaders();
+    }
+
+    if (ui.renderCharacters) {
+        ui.renderCharacters();
+    }
+
+    if (ui.renderStages) {
+        ui.renderStages();
+    }
+
+    return {
+        refreshedDon,
+        returnedAttachedDon,
+        refreshedLeader,
+        refreshedCharacters,
+        refreshedStage,
+        skippedLeaderRefresh
+    };
+}
+
+// =========================
 // Refresh Phase
 // =========================
 
@@ -446,6 +571,239 @@ function passTurn(phaseButton, phaseInfo) {
     `;
 
     beginTurnFlow(gameState.currentPlayer, phaseButton, phaseInfo);
+}
+
+// =========================
+// End Of Turn Helpers
+// =========================
+
+function resolveEndOfTurnEffects(player, ui) {
+    if (!player) {
+        return [];
+    }
+
+    const results = [];
+
+    if (player.loseAtEndOfTurnSource) {
+        const sourceName = player.loseAtEndOfTurnSource;
+        player.loseAtEndOfTurnSource = null;
+        loseByLifeDamage(player, `${player.name} did not win before the end of the turn after resolving ${sourceName}.`);
+        results.push({
+            activated: true,
+            message: `${player.name} lost because they did not win before the end of the turn after resolving ${sourceName}.`
+        });
+        return results;
+    }
+
+    const turboGrannyResult = CardEffects.resolveTurboGrannyFormEndOfTurn(player);
+
+    if (turboGrannyResult?.message) {
+        results.push(turboGrannyResult);
+    }
+
+    player.characters.forEach((character, slotIndex) => {
+        if (!character) {
+            return;
+        }
+
+        getCardAllEffects(character)
+            ?.filter(effect => effect.type === "endOfYourTurn" || effect.type === "endOfTurn")
+            .forEach(effect => {
+                if (effect.id === "IMU1-006-end-of-turn") {
+                    results.push({
+                        activated: true,
+                        message: moveCharacterToBottomOfDeck(player, slotIndex, character, ui)
+                    });
+                    return;
+                }
+
+                if (effect.id === "IMU1-010-end-of-turn") {
+                    results.push({
+                        activated: true,
+                        message: trashTopCardsOfDeck(player, 5, ui).message
+                    });
+                    return;
+                }
+
+                if (effect.id === "POG1-012-end-of-your-turn") {
+                    results.push({
+                        activated: true,
+                        message: resolveBrankoEndOfTurn(player, character, ui)
+                    });
+                    return;
+                }
+
+                if (effect.id === "JK02-017-end-of-turn") {
+                    const otherRestedCharacter = player.characters.some(card => {
+                        return card &&
+                            card.instanceId !== character.instanceId &&
+                            card.cardType === "character" &&
+                            (card.state || "active") === "rested";
+                    });
+
+                    if (!otherRestedCharacter) {
+                        return;
+                    }
+
+                    character.uiAnimation = "readied";
+                    character.state = "active";
+                    results.push({
+                        activated: true,
+                        message: `${character.name}'s End of Turn effect set it as active.`
+                    });
+                    return;
+                }
+
+                if (effect.actionId !== "setThisCardActive") {
+                    return;
+                }
+
+                character.state = "active";
+                results.push({
+                    activated: true,
+                    message: `${character.name}'s End of Your Turn effect set it as active.`
+                });
+            });
+    });
+
+    clearEndOfTurnTemporaryEffects(player);
+
+    const opponent = getOpponentOfPlayer(player);
+
+    if (opponent) {
+        clearEndOfTurnTemporaryEffects(opponent, {
+            preserveDurationPower: true
+        });
+    }
+
+    clearExpiredEndPhaseEffects(player);
+
+    if (ui?.renderLeaders) {
+        ui.renderLeaders();
+    }
+
+    if (ui?.renderCharacters) {
+        ui.renderCharacters();
+    }
+
+    return results;
+}
+
+function clearExpiredEndPhaseEffects(expiringPlayer) {
+    const expiringPlayerKey = getPlayerKey(expiringPlayer);
+
+    if (!expiringPlayerKey) {
+        return;
+    }
+
+    [gameState.player1, gameState.player2].forEach(player => {
+        const cards = [
+            player.leader,
+            ...player.characters.filter(Boolean),
+            player.stage
+        ].filter(Boolean);
+
+        cards.forEach(card => {
+            if (
+                card.cannotBeRestedUntil?.expiresAtPlayerKey === expiringPlayerKey &&
+                Number(card.cannotBeRestedUntil.expiresAtEndOfTurns ?? 0) <= Number(expiringPlayer.turns || 0)
+            ) {
+                card.cannotBeRestedUntil = null;
+            }
+
+            if (
+                card.cannotAttackUntil?.expiresAtPlayerKey === expiringPlayerKey &&
+                Number(card.cannotAttackUntil.expiresAtEndOfTurns ?? 0) <= Number(expiringPlayer.turns || 0)
+            ) {
+                card.cannotAttackUntil = null;
+            }
+
+            if (
+                card.temporaryBasePower?.expiresAtPlayerKey === expiringPlayerKey &&
+                Number(card.temporaryBasePower.expiresAtEndOfTurns ?? 0) <= Number(expiringPlayer.turns || 0)
+            ) {
+                card.temporaryBasePower = null;
+                refreshCardStatDisplay(card);
+            }
+
+            if (
+                card.lifeZeroWinCondition?.expiresAtPlayerKey === expiringPlayerKey &&
+                Number(card.lifeZeroWinCondition.expiresAtEndOfTurns ?? 0) <= Number(expiringPlayer.turns || 0)
+            ) {
+                card.lifeZeroWinCondition = null;
+            }
+
+            if (Array.isArray(card.durationKeywords)) {
+                const beforeCount = card.durationKeywords.length;
+
+                card.durationKeywords = card.durationKeywords.filter(entry => {
+                    if (!entry?.expiresAtPlayerKey) {
+                        return true;
+                    }
+
+                    if (entry.expiresAtPlayerKey !== expiringPlayerKey) {
+                        return true;
+                    }
+
+                    return Number(entry.expiresAtEndOfTurns ?? 0) > Number(expiringPlayer.turns || 0);
+                });
+
+                if (card.durationKeywords.length !== beforeCount) {
+                    refreshCardStatDisplay(card);
+                }
+            }
+
+            if (Array.isArray(card.durationPowerBonuses)) {
+                const beforeCount = card.durationPowerBonuses.length;
+
+                card.durationPowerBonuses = card.durationPowerBonuses.filter(entry => {
+                    if (!entry?.expiresAtPlayerKey) {
+                        return true;
+                    }
+
+                    if (entry.expiresAtPlayerKey !== expiringPlayerKey) {
+                        return true;
+                    }
+
+                    return Number(entry.expiresAtEndOfTurns ?? 0) > Number(expiringPlayer.turns || 0);
+                });
+
+                if (card.durationPowerBonuses.length !== beforeCount) {
+                    refreshCardStatDisplay(card);
+                }
+            }
+        });
+    });
+}
+
+function clearEndOfTurnTemporaryEffects(player, options = {}) {
+    const cards = [
+        player.leader,
+        ...player.characters.filter(Boolean),
+        player.stage
+    ].filter(Boolean);
+
+    cards.forEach(card => {
+        card.temporaryKeywords = [];
+        card.temporaryCopiedEffects = [];
+        card.battleKeywords = [];
+        card.battlePowerBonus = 0;
+        card.temporaryPowerBonus = 0;
+        card.costModifiers = [];
+        card.protectedFromOpponentEffects = false;
+
+        if (!options.preserveDurationPower && Array.isArray(card.durationPowerBonuses)) {
+            const expiringPlayerKey = getPlayerKey(player);
+
+            card.durationPowerBonuses = card.durationPowerBonuses.filter(entry => {
+                if (entry.expiresAtPlayerKey && entry.expiresAtPlayerKey !== expiringPlayerKey) {
+                    return true;
+                }
+
+                return Number(entry.expiresAtEndOfTurns ?? 0) > Number(player.turns || 0);
+            });
+        }
+    });
 }
 
 // =========================
