@@ -770,82 +770,6 @@ function resolveSigmaRevealEffect(player, sourceCard, ui) {
     return `${sourceCard.name} revealed ${revealedCard.name}. ${message} Then it was trashed.`;
 }
 
-function resolveSigmaDeckChoiceEffect(player, sourceCard, ui) {
-    const validDeckChoices = (player?.deck || [])
-        .map((card, index) => ({ card, index }))
-        .filter(entry => {
-            return entry.card?.cardNumber === "POG1-008" || entry.card?.cardNumber === "POG1-010";
-        });
-
-    if (validDeckChoices.length === 0) {
-        return `${sourceCard.name} found no valid Klobuk or Manifestirana žoga cards in ${player.name}'s deck.`;
-    }
-
-    const finishSelection = (selectedIndex) => {
-        const choice = validDeckChoices.find(entry => entry.index === Number(selectedIndex));
-
-        if (!choice) {
-            addGameLog(`${player.name} did not choose a valid card for ${sourceCard.name}.`);
-            return;
-        }
-
-        const revealedCard = player.deck.splice(choice.index, 1)[0];
-
-        if (!revealedCard) {
-            addGameLog(`${sourceCard.name} could not find the chosen card in ${player.name}'s deck.`);
-            return;
-        }
-
-        const finishTrash = () => {
-            moveCardToTrash(player, revealedCard, ui);
-            ui?.renderDecks?.();
-            ui?.renderTrash?.();
-            addGameLog(`${sourceCard.name} trashed ${revealedCard.name} after revealing it.`);
-        };
-
-        const powerMessage = chooseOwnBoardCard(player, sourceCard, {
-            prompt: `Choose up to 1 of your leader or characters to give +2000 power this turn after choosing ${revealedCard.name}.`,
-            optional: true,
-            includeLeader: true,
-            filter: card => card.cardType === "leader" || card.cardType === "character",
-            onSelect: ({ card }) => {
-                addTemporaryPowerBonus(card, 2000);
-                ui?.renderLeaders?.();
-                ui?.renderCharacters?.();
-                addGameLog(`${sourceCard.name} chose ${revealedCard.name} and gave ${card.name} +2000 power this turn.`);
-                finishTrash();
-            },
-            onSkip: finishTrash,
-            onEmpty: finishTrash,
-            skipMessage: `${player.name} did not choose a card to power up with ${sourceCard.name}.`,
-            emptyMessage: `${sourceCard.name} found no leader or character to give +2000 power.`
-        });
-
-        if (powerMessage) {
-            addGameLog(powerMessage);
-        }
-    };
-
-    if (ui?.chooseEffectOption) {
-        ui.chooseEffectOption({
-            player,
-            sourceCard,
-            title: sourceCard.name,
-            prompt: "Choose a Klobuk or Manifestirana žoga from your deck.",
-            options: validDeckChoices.map(entry => ({
-                label: entry.card.name,
-                value: entry.index
-            })),
-            onComplete: finishSelection
-        });
-
-        return `${player.name} is choosing a card from the deck for ${sourceCard.name}.`;
-    }
-
-    finishSelection(validDeckChoices[0].index);
-    return `${sourceCard.name}'s effect resolved.`;
-}
-
 function clearParfumControlState(character) {
     if (!character) {
         return;
@@ -6017,12 +5941,6 @@ function isKurosakiIchigoLeader(player) {
     return Boolean(player?.leader && CardEffects.hasCardName(player.leader, "Kurosaki Ichigo"));
 }
 
-function hasKurosakiIchigoCharacter(player) {
-    return player?.characters?.some(card => {
-        return card?.cardType === "character" && CardEffects.hasCardName(card, "Kurosaki Ichigo");
-    });
-}
-
 function isZangetsuStage(card) {
     return card?.cardType === "stage" && (
         CardEffects.hasCardName(card, "Zangetsu: Sealed") ||
@@ -6037,26 +5955,6 @@ function getCurrentZangetsuStageCost(player) {
     return isZangetsuStage(player?.stage)
         ? Number(player.stage.cost ?? 0)
         : 0;
-}
-
-function findZangetsuStageForGameStart(player, targetCost) {
-    const zones = [
-        { name: "deck", cards: player?.deck || [] },
-        { name: "hand", cards: player?.hand || [] },
-        { name: "life", cards: player?.life || [] }
-    ];
-
-    for (const zone of zones) {
-        const index = zone.cards.findIndex(card => {
-            return isZangetsuStage(card) && Number(card.cost ?? 0) === Number(targetCost || 0);
-        });
-
-        if (index !== -1) {
-            return { zone, index };
-        }
-    }
-
-    return null;
 }
 
 function findZangetsuStageInDeck(player, targetCost) {
@@ -6342,18 +6240,6 @@ function hasTypeText(card, typeText) {
     return String(card?.type || "")
         .toLowerCase()
         .includes(String(typeText).toLowerCase());
-}
-
-function isLeaderOrDandadanCharacter(card) {
-    if (!card) {
-        return false;
-    }
-
-    if (card.cardType === "leader") {
-        return true;
-    }
-
-    return card.cardType === "character" && hasTypeText(card, "Dandadan");
 }
 
 function getOwnBoardChoices(player, options = {}) {
@@ -6778,116 +6664,6 @@ function finishCharacterRemovalByOpponentEffect(actingPlayer, targetPlayer, slot
     }
 
     return `${sourceCard.name} K.O.'d ${card.name}. ${result.message}`;
-}
-
-function removeStageByOpponentEffect(actingPlayer, targetPlayer, sourceCard, ui) {
-    const stage = targetPlayer?.stage;
-
-    if (!stage) {
-        return "No stage was found.";
-    }
-
-    const targetPlayerKey = getPlayerKey(targetPlayer);
-    const actingPlayerKey = getPlayerKey(actingPlayer);
-
-    if (!targetPlayerKey || !actingPlayerKey || targetPlayerKey === actingPlayerKey) {
-        return "Stage removal was not caused by an opponent effect.";
-    }
-
-    const replacementEffect = areOpponentReplacementEffectsNegated(targetPlayer, actingPlayer)
-        ? null
-        : stage.effects?.find(effect => {
-        return effect.type === "replacement" && effect.id?.includes("stage-removal-replace");
-    });
-
-    const finishRemoval = () => {
-        const returnMessage = trashStageFromField(targetPlayer, stage, ui);
-
-        return returnMessage
-            ? `${sourceCard.name} removed ${stage.name}. ${returnMessage}`
-            : `${sourceCard.name} removed ${stage.name}.`;
-    };
-
-    if (!replacementEffect || CardEffects.hasUsedOncePerTurnEffect(stage, replacementEffect.id, targetPlayer.turns)) {
-        const imuReplacement = getAvailableImuStageProtectionReplacement(targetPlayer, actingPlayer);
-
-        if (!imuReplacement) {
-            return finishRemoval();
-        }
-
-        const useImuReplacement = () => {
-            const imuSlotIndex = targetPlayer.characters.findIndex(card => {
-                return card?.instanceId === imuReplacement.instanceId;
-            });
-
-            if (imuSlotIndex === -1) {
-                return finishRemoval();
-            }
-
-            const trashResult = trashCharacterFromField(targetPlayer, imuSlotIndex, ui);
-
-            if (typeof queueMultiplayerStateSync === "function") {
-                queueMultiplayerStateSync();
-            }
-
-            return trashResult.linkedStageMessage
-                ? `${imuReplacement.name} was trashed instead, so ${stage.name} stayed in play. ${trashResult.linkedStageMessage}`
-                : `${imuReplacement.name} was trashed instead, so ${stage.name} stayed in play.`;
-        };
-
-        if (ui?.chooseEffectActivation) {
-            ui.chooseEffectActivation({
-                player: targetPlayer,
-                sourceCard: imuReplacement,
-                effect: imuReplacement.effects?.find(cardEffect => cardEffect.id === "IMU1-005-stage-protection") || {
-                    id: "IMU1-005-stage-protection",
-                    type: "replacement",
-                    text: "Trash this Character instead?"
-                },
-                title: imuReplacement.name,
-                prompt: `${stage.name} would be removed by ${sourceCard.name}. Trash ${imuReplacement.name} instead?`,
-                activateText: "Trash Instead",
-                skipText: "Let Remove",
-                onComplete: (shouldActivate) => {
-                    addGameLog(shouldActivate ? useImuReplacement() : finishRemoval());
-                }
-            });
-
-            return `${targetPlayer.name} is choosing whether to use ${imuReplacement.name}'s replacement effect.`;
-        }
-
-        return useImuReplacement();
-    }
-
-    const useReplacement = () => {
-        CardEffects.markOncePerTurnEffectUsed(stage, replacementEffect.id, targetPlayer.turns);
-        addTemporaryPowerBonus(targetPlayer.leader, -1000);
-
-        if (ui?.renderLeaders) {
-            ui.renderLeaders();
-        }
-
-        return `${stage.name} stayed in play; ${targetPlayer.name}'s leader got -1000 power this turn.`;
-    };
-
-    if (ui?.chooseEffectActivation) {
-        ui.chooseEffectActivation({
-            player: targetPlayer,
-            sourceCard: stage,
-            effect: replacementEffect,
-            title: stage.name,
-            prompt: `${stage.name} would be removed by ${sourceCard.name}. Give your leader -1000 power this turn instead?`,
-            activateText: "Protect Stage",
-            skipText: "Let Remove",
-            onComplete: (shouldActivate) => {
-                addGameLog(shouldActivate ? useReplacement() : finishRemoval());
-            }
-        });
-
-        return `${targetPlayer.name} is choosing whether to protect ${stage.name}.`;
-    }
-
-    return useReplacement();
 }
 
 function getAvailableSageRemovalReplacement(targetPlayer, targetCard, actingPlayer) {
@@ -8771,36 +8547,6 @@ function applySubaruCheckpointState(checkpointState, ui) {
     return true;
 }
 
-function tryResolveSubaruCheckpointLoss(player, reasonText = "") {
-    const leader = getSubaruLeader(player);
-    const effectId = "SUB1-001-checkpoint";
-
-    if (!leader ||
-        CardEffects.hasUsedOncePerGameEffect(leader, effectId) ||
-        !gameState?.subaruCheckpointState) {
-        return false;
-    }
-
-    const restored = applySubaruCheckpointState(gameState.subaruCheckpointState, ui);
-
-    if (!restored) {
-        return false;
-    }
-
-    CardEffects.markOncePerGameEffectUsed(leader, effectId);
-    addGameLog(`${leader.name} prevented a loss and reset the saved zones to the last checkpoint.${reasonText ? ` ${reasonText}` : ""}`);
-
-    if (typeof removeGameOverPopup === "function") {
-        removeGameOverPopup();
-    }
-
-    if (typeof queueMultiplayerStateSync === "function") {
-        queueMultiplayerStateSync();
-    }
-
-    return true;
-}
-
 function saveSubaruCheckpointState(player, sourceCard, ui) {
     if (!player || !sourceCard || !gameState) {
         return `${sourceCard?.name || "This effect"} could not save a checkpoint.`;
@@ -9456,21 +9202,6 @@ function getImuLeader(player) {
     }
 
     return leader;
-}
-
-function getAvailableImuStageProtectionReplacement(targetPlayer, actingPlayer) {
-    if (!targetPlayer || !actingPlayer || targetPlayer === actingPlayer) {
-        return null;
-    }
-
-    if (areOpponentReplacementEffectsNegated(targetPlayer, actingPlayer)) {
-        return null;
-    }
-
-    return targetPlayer.characters.find(card => {
-        return card?.cardNumber === "IMU1-005" &&
-            !areCardEffectsNegated(card);
-    }) || null;
 }
 
 function clearCardStateForDeck(card) {

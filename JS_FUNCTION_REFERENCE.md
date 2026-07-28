@@ -1,0 +1,994 @@
+# JavaScript Function Reference
+
+This inventory covers every `.js` file under `js/`. The card data `.json` files are intentionally excluded because they are JSON, not JavaScript.
+
+## `js/cards/cardDatabase.js`
+Loads card JSON data, builds the runtime card registries, and exposes lookup helpers.
+
+- `loadJson`: Loads JSON.
+- `loadCardDatabase`: Loads card database.
+- `cloneCard`: Clones card.
+- `getCardById`: Returns card by ID.
+
+## `js/cards/decks.js`
+Defines preset deck lists and deck selection helpers used by the UI.
+
+- `getAvailableDecks`: Returns available decks.
+- `getDeckById`: Returns deck by ID.
+
+## `js/core/deckParser.js`
+Parses deck text and shuffles deck arrays for match setup.
+
+- `parseDeckText`: Parses deck text.
+- `shuffleDeck`: Provides helper logic for shuffle deck.
+
+## `js/core/deckTools.js`
+Handles saved-deck storage, deck text conversion, validation, and selection helpers.
+
+- `getDefaultPresetDeck`: Returns default preset deck.
+- `normalizeDeckEntries`: Normalizes deck entries.
+- `buildDeckTextFromEntries`: Builds deck text from entries.
+- `buildDeckTextWithLeader`: Builds deck text with leader.
+- `getDeckEntriesFromDefinition`: Returns deck entries from definition.
+- `getDeckLeaderKey`: Returns deck leader key.
+- `parseDeckEntriesFromText`: Parses deck entries from text.
+- `isLeaderCardId`: Checks whether leader card ID.
+- `parseDeckListData`: Parses deck list data.
+- `validateDeckEntries`: Validates deck entries.
+- `getLeaderDeckSizeLimit`: Returns leader deck size limit.
+- `getDeckEntryTotal`: Returns deck entry total.
+- `validateDeckSizeLimit`: Validates deck size limit.
+- `createDeckDefinition`: Creates deck definition.
+- `cloneDeckDefinition`: Clones deck definition.
+- `getLocalSavedDecks`: Returns local saved decks.
+- `getLocalSavedDeckById`: Returns local saved deck by ID.
+- `saveLocalDeck`: Saves local deck.
+- `deleteLocalSavedDeck`: Provides helper logic for delete local saved deck.
+- `getStoredDeckSelection`: Returns stored deck selection.
+- `saveStoredDeckSelection`: Saves stored deck selection.
+- `createPresetSelection`: Creates preset selection.
+- `resolveDeckSelection`: Resolves deck selection.
+- `getDeckSummaryText`: Returns deck summary text.
+- `createPasteDeckSelection`: Creates paste deck selection.
+- `openDeckPickerPopup`: Provides helper logic for open deck picker popup.
+- `createDeckPickerField`: Creates deck picker field.
+- `createDeckPickerHelp`: Creates deck picker help.
+
+## `js/core/effects.js`
+Defines shared card effect logic, keyword rules, and effect-state helpers.
+
+- `getCardAllEffects`: Returns all active effects on a card, including copied temporary effects.
+- `getCardKeywordEffects`: Returns normalized keyword-effect entries for a card.
+- `isTemporaryStatusEntryActive`: Checks whether a temporary status entry is still active.
+- `areCardEffectsNegated`: Checks whether a card currently has an active effect-negation state.
+- `addTemporaryEffectNegation`: Adds a temporary effect-negation state to a card.
+- `canCardBeRested`: Checks whether card be rested.
+- `applyCannotBeRestedUntil`: Applies cannot be rested until.
+- `addTemporaryKeyword`: Adds temporary keyword.
+- `addDurationKeyword`: Adds duration keyword.
+- `addBattleKeyword`: Adds battle keyword.
+- `refreshCardStatDisplay`: Refreshes rendered board stats for the affected card.
+- `addBattlePowerBonus`: Adds battle power bonus.
+- `addTemporaryPowerBonus`: Adds temporary power bonus.
+- `addDurationPowerBonus`: Adds duration power bonus.
+- `addCostModifier`: Adds cost modifier.
+- `addPersistentPowerBonus`: Adds persistent power bonus.
+- `getPerTurnEffectUseLimit`: Returns per turn effect use limit.
+- `hasReachedPerTurnEffectUseLimit`: Checks whether reached per turn effect use limit.
+- `CardEffects.normalizeKeyword`: Normalizes keyword.
+- `CardEffects.hasKeyword`: Checks whether keyword.
+- `CardEffects.if`: Provides CardEffects logic for if.
+- `CardEffects.canAttackOnTurnPlayed`: Checks whether attack on turn played.
+- `CardEffects.canBlock`: Checks whether block.
+- `CardEffects.getAvailableBlockers`: Returns available blockers.
+- `CardEffects.shouldBanishLife`: Checks whether banish life.
+- `CardEffects.getLeaderDamageAmount`: Returns leader damage amount.
+- `CardEffects.isUnblockable`: Checks whether unblockable.
+- `CardEffects.canAttackCharactersOnTurnPlayed`: Checks whether attack characters on turn played.
+- `CardEffects.canAttackTargetOnTurnPlayed`: Checks whether attack target on turn played.
+- `CardEffects.normalizeCardName`: Normalizes card name.
+- `CardEffects.hasCardName`: Checks whether card name.
+- `CardEffects.getCardNameAliases`: Returns card name aliases.
+- `CardEffects.for`: Provides CardEffects logic for for.
+- `CardEffects.hasTurboGrannyFormStage`: Checks whether turbo granny form stage.
+- `CardEffects.getOncePerTurnUsageKey`: Returns once per turn usage key.
+- `CardEffects.hasUsedOncePerTurnEffect`: Checks whether used once per turn effect.
+- `CardEffects.markOncePerTurnEffectUsed`: Marks once per turn effect used.
+- `CardEffects.hasUsedOncePerGameEffect`: Checks whether used once per game effect.
+- `CardEffects.markOncePerGameEffectUsed`: Marks once per game effect used.
+- `CardEffects.getPerTurnEffectUseCount`: Returns per turn effect use count.
+- `CardEffects.markPerTurnEffectUsed`: Marks per turn effect used.
+- `CardEffects.wasEffectSkippedForAttack`: Provides CardEffects logic for was effect skipped for attack.
+- `CardEffects.resolveTakakuraKenLeaderWhenAttacking`: Resolves takakura ken leader when attacking.
+- `CardEffects.resolveTakakuraKenCharacterWhenAttacking`: Resolves takakura ken character when attacking.
+- `CardEffects.resolveRefreshDonWhenAttacking`: Resolves refresh DON when attacking.
+- `CardEffects.resolveEvilEyeWhenAttacking`: Resolves evil eye when attacking.
+- `CardEffects.resolveAiraWhenAttacking`: Resolves aira when attacking.
+- `CardEffects.resolveEggmanLeaderWhenAttacking`: Resolves Eggman leader when attacking.
+- `CardEffects.resolveHanamiLeaderWhenAttacking`: Resolves hanami leader when attacking.
+- `CardEffects.resolveSubaruLeaderWhenAttacking`: Resolves Subaru leader when attacking.
+- `CardEffects.resolveSubaruElsaWhenAttacking`: Resolves Subaru elsa when attacking.
+- `CardEffects.resolveImuLeaderWhenAttacking`: Resolves Imu leader when attacking.
+- `CardEffects.resolveImuCharacterWhenAttacking`: Resolves Imu character when attacking.
+- `CardEffects.resolveJogoWhenAttacking`: Resolves jogo when attacking.
+- `CardEffects.resolveKenjakuWhenAttacking`: Resolves kenjaku when attacking.
+- `CardEffects.resolveKisukeWhenAttacking`: Resolves kisuke when attacking.
+- `CardEffects.resolveYoruichiWhenAttacking`: Resolves yoruichi when attacking.
+- `CardEffects.resolveUryuWhenAttacking`: Resolves uryu when attacking.
+- `CardEffects.resolveDejanSigmaWhenAttacking`: Resolves dejan sigma when attacking.
+- `CardEffects.resolveYujiItadoriWhenAttacking`: Resolves yuji itadori when attacking.
+- `CardEffects.resolveBubblegumWhenAttacking`: Resolves bubblegum when attacking.
+- `CardEffects.resolveWhenOpponentAttacksStageEffects`: Resolves when opponent attacks stage effects.
+- `CardEffects.resolveTurboGrannyFormEndOfTurn`: Resolves turbo granny form end of turn.
+- `CardEffects.resolveWhenAttackingEffects`: Resolves when attacking effects.
+
+## `js/core/gameInteractions.js`
+Implements direct card and board interactions such as play, draw, trash, combat, triggers, and zone changes.
+
+- `createCardInstance`: Creates card instance.
+- `assignCardInstance`: Provides helper logic for assign card instance.
+- `findHandCardIndexByInstanceId`: Finds hand card index by instance ID.
+- `getCardPlayCost`: Returns card play cost.
+- `getCardEffectiveCost`: Returns card effective cost.
+- `canPlayerAffordCard`: Checks whether player afford card.
+- `doesHanamiLeaderPlayCharactersRested`: Checks whether hanami leader play characters rested.
+- `getPlayedCharacterInitialState`: Returns played character initial state.
+- `getMainPhaseEventEffects`: Returns main phase event effects.
+- `canPlayEventInMainPhase`: Checks whether play event in main phase.
+- `getFirstOpenCharacterSlotIndex`: Returns first open character slot index.
+- `isParfumStage`: Checks whether parfum stage.
+- `doesStagePreventLeaderAttacks`: Checks whether stage prevent leader attacks.
+- `canPlayStageToArea`: Checks whether play stage to area.
+- `replaceStageOnFieldIfNeeded`: Provides helper logic for replace stage on field if needed.
+- `chooseTrashCard`: Prompts for trash card.
+- `addCardFromTrashToHand`: Adds card from trash to hand.
+- `chooseLeaderOrCharacterForPower`: Prompts for leader or character for power.
+- `resolveBingoMain`: Resolves bingo main.
+- `chooseHandCard`: Prompts for hand card.
+- `resolveDrawOneTrashOne`: Resolves draw one trash one.
+- `chooseHandCardsToTopOrBottomOfDeck`: Prompts for hand cards to top or bottom of deck.
+- `chooseCardsFromTrashToBottomOfDeck`: Prompts for cards from trash to bottom of deck.
+- `controlsReplacementNegation`: Provides helper logic for controls replacement negation.
+- `areOpponentReplacementEffectsNegated`: Provides helper logic for are opponent replacement effects negated.
+- `playCardFromDeckWithoutCost`: Plays card from deck without cost.
+- `playCharacterFromTrashWithoutCost`: Plays character from trash without cost.
+- `playUpToOneNamedCharacterFromHandOrTrash`: Plays up to one named character from hand or trash.
+- `resolveJeremicOnPlay`: Resolves jeremic on play.
+- `resolveSigmaRevealEffect`: Resolves sigma reveal effect.
+- `resolveSigmaDeckChoiceEffect`: Resolves sigma deck choice effect.
+- `clearParfumControlState`: Clears parfum control state.
+- `getParfumOriginalOwner`: Returns parfum original owner.
+- `getCardZoneDestinationPlayer`: Returns card zone destination player.
+- `getParfumControlledCharacter`: Returns parfum controlled character.
+- `setReturnedParfumCharacterAttackLock`: Sets returned parfum character attack lock.
+- `returnParfumControlledCharacter`: Returns parfum controlled character.
+- `trashStageFromField`: Trashes stage from field.
+- `koStageFromField`: Provides helper logic for K.O. stage from field.
+- `trashLinkedParfumStageForCharacter`: Trashes linked parfum stage for character.
+- `placeOpponentCharacterWithParfum`: Provides helper logic for place opponent character with parfum.
+- `getBoardCardFromData`: Returns board card from data.
+- `addDon`: Adds DON.
+- `addRestedDon`: Adds rested DON.
+- `restDonForCost`: Rests DON for cost.
+- `returnDonToDeck`: Returns DON to deck.
+- `setRestedDonActive`: Sets rested DON active.
+- `attachActiveDonToCard`: Attaches active DON to card.
+- `drawCard`: Draws card.
+- `trashTopCardsOfDeck`: Trashes top cards of deck.
+- `resolveWhenTrashedFromDeckEffects`: Resolves when trashed from deck effects.
+- `drawCards`: Draws cards.
+- `drawCardFromBottom`: Draws card from bottom.
+- `getCardCounterValue`: Returns card counter value.
+- `getCounterPowerForUse`: Returns counter power for use.
+- `getCounterEffectPower`: Returns counter effect power.
+- `canUseCounterEffect`: Checks whether use counter effect.
+- `getCounterEffects`: Returns counter effects.
+- `getEventCounterBonusFromBoard`: Returns event counter bonus from board.
+- `getHandCounterEventCost`: Returns hand counter event cost.
+- `canCardBeUsedAsCounter`: Checks whether card be used as counter.
+- `useCounterFromHand`: Provides helper logic for use counter from hand.
+- `playCard`: Plays card.
+- `playCharacterCard`: Plays character card.
+- `playStageCard`: Plays stage card.
+- `resolveOnPlayEffects`: Resolves on play effects.
+- `isOptionalEffect`: Checks whether optional effect.
+- `shouldPromptEffectActivation`: Checks whether prompt effect activation.
+- `getEffectLabel`: Returns effect label.
+- `getEffectPrompt`: Returns effect prompt.
+- `addCardToLife`: Adds card to life.
+- `setCardRested`: Sets card rested.
+- `isMulticoloredCard`: Checks whether multicolored card.
+- `resolveEffectAction`: Resolves effect action.
+- `giveSmallEggmanCharacterPower`: Provides helper logic for give small Eggman character power.
+- `copyOpponentBoardAbility`: Provides helper logic for copy opponent board ability.
+- `getCopiedEffectChoiceLabel`: Returns copied effect choice label.
+- `resolveCopiedBoardAbility`: Resolves copied board ability.
+- `resolveImmediateCopiedWhenAttackingEffect`: Resolves immediate copied when attacking effect.
+- `resolveImmediateCopiedOnOpponentAttackEffect`: Resolves immediate copied on opponent attack effect.
+- `getCopyableEffects`: Returns copyable effects.
+- `applyCopiedKeywordEffect`: Applies copied keyword effect.
+- `applyTemporaryCopiedBoardEffect`: Applies temporary copied board effect.
+- `resolveCopiedOnKOEffect`: Resolves copied on K.O. effect.
+- `copyOpponentCharacterBasePower`: Provides helper logic for copy opponent character base power.
+- `trashOwnCharacterForMetalSonicPower`: Trashes own character for metal sonic power.
+- `playEggmanCharactersFromTrash`: Plays Eggman characters from trash.
+- `playEggmanCharactersFromTrashByCost`: Plays Eggman characters from trash by cost.
+- `getTrashCharacterChoices`: Returns trash character choices.
+- `getTrashCardChoices`: Returns trash card choices.
+- `chooseCardsFromHandToTrash`: Prompts for cards from hand to trash.
+- `resolveDeathEggOnPlay`: Resolves death egg on play.
+- `lockOpponentCharactersFromAttacking`: Provides helper logic for lock opponent characters from attacking.
+- `lookTopCardsForType`: Provides helper logic for look top cards for type.
+- `lookTopCardsAddOneToHandTrashRest`: Provides helper logic for look top cards add one to hand trash rest.
+- `lookTopCardsForTypeAddUpTo`: Provides helper logic for look top cards for type add up to.
+- `resolveDavidTaglavnovicTurnStartSearch`: Resolves david taglavnovic turn start search.
+- `isKurosakiIchigoLeader`: Checks whether kurosaki ichigo leader.
+- `hasKurosakiIchigoCharacter`: Checks whether kurosaki ichigo character.
+- `isZangetsuStage`: Checks whether zangetsu stage.
+- `getCurrentZangetsuStageCost`: Returns current zangetsu stage cost.
+- `findZangetsuStageForGameStart`: Finds zangetsu stage for game start.
+- `findZangetsuStageInDeck`: Finds zangetsu stage in deck.
+- `playZangetsuStageFromDeck`: Plays zangetsu stage from deck.
+- `resolveKurosakiIchigoGameStart`: Resolves kurosaki ichigo game start.
+- `resolveKurosakiIchigoDamageStageUpgrade`: Resolves kurosaki ichigo damage stage upgrade.
+- `searchGetsugaTenshoFromDeck`: Provides helper logic for search getsuga tensho from deck.
+- `resolveGetsugaTenshoMain`: Resolves getsuga tensho main.
+- `resolveSotenKisshunMain`: Resolves soten kisshun main.
+- `getPlayerKey`: Returns player key.
+- `getOpponentPlayer`: Returns opponent player.
+- `hasTypeText`: Checks whether type text.
+- `isLeaderOrDandadanCharacter`: Checks whether leader or dandadan character.
+- `getOwnBoardChoices`: Returns own board choices.
+- `getOpponentBoardChoices`: Returns opponent board choices.
+- `getOpponentCharacterChoices`: Returns opponent character choices.
+- `chooseBoardCard`: Prompts for board card.
+- `chooseOwnBoardCard`: Prompts for own board card.
+- `chooseOpponentCharacter`: Prompts for opponent character.
+- `giveRestedDonToCard`: Provides helper logic for give rested DON to card.
+- `giveRestedDonToOwnBoardCard`: Provides helper logic for give rested DON to own board card.
+- `chooseOpponentCharacterToKO`: Prompts for opponent character to K.O..
+- `removeCharacterByOpponentEffect`: Removes character by opponent effect.
+- `getAvailableSmallpoxRemovalReplacement`: Returns available smallpox removal replacement.
+- `getAvailableUryuLifeFlipReplacement`: Returns available uryu life flip replacement.
+- `useUryuLifeFlipReplacement`: Provides helper logic for use uryu life flip replacement.
+- `finishCharacterRemovalByOpponentEffect`: Provides helper logic for finish character removal by opponent effect.
+- `removeStageByOpponentEffect`: Removes stage by opponent effect.
+- `getAvailableSageRemovalReplacement`: Returns available sage removal replacement.
+- `chooseSageReplacementTrashCards`: Prompts for sage replacement trash cards.
+- `useSageReplacementWithCards`: Provides helper logic for use sage replacement with cards.
+- `getHandCardChoices`: Returns hand card choices.
+- `takeTopLifeToHand`: Provides helper logic for take top life to hand.
+- `takeLifeCardToHand`: Provides helper logic for take life card to hand.
+- `takeAllLifeToHand`: Provides helper logic for take all life to hand.
+- `takeLifeToHandUntilCount`: Provides helper logic for take life to hand until count.
+- `moveOwnCharacterToLife`: Moves own character to life.
+- `hasJujutsuOrCullingGameLeader`: Checks whether jujutsu or culling game leader.
+- `hasContinuousOpponentEffectProtection`: Checks whether continuous opponent effect protection.
+- `isProtectedFromOpponentEffects`: Checks whether protected from opponent effects.
+- `resolveDrawTwoTrashTwo`: Resolves draw two trash two.
+- `resolveDrawTwoTrashOne`: Resolves draw two trash one.
+- `resolveHajimeKashimoLifeTakenEffects`: Resolves hajime kashimo life taken effects.
+- `resolveGutsLeaderCharacterRemovedBonus`: Resolves guts leader character removed bonus.
+- `setOneNamedOwnCardActive`: Sets one named own card active.
+- `playTurboGrannyFormFromDeck`: Plays turbo granny form from deck.
+- `getPlayerFieldDonCount`: Returns player field DON count.
+- `getTotalAttachedDonCount`: Returns total attached DON count.
+- `getTotalDonInPlay`: Returns total DON in play.
+- `canUseOnOpponentAttackEffect`: Checks whether use on opponent attack effect.
+- `canHigurumaLeaderActivateTrashEvent`: Checks whether Higuruma leader activate trash event.
+- `negateCurrentAttack`: Provides helper logic for negate current attack.
+- `queueAutoResolveNegatedAttack`: Queues auto resolve negated attack.
+- `resolveEvidenceCounterEffect`: Resolves evidence counter effect.
+- `resolveConfiscationCounterEffect`: Resolves confiscation counter effect.
+- `resolveDeathPenaltyCounterEffect`: Resolves death penalty counter effect.
+- `getLifeZeroWinConditionWinner`: Returns life zero win condition winner.
+- `resolveHiromiHigurumaCharacterLeaderDamage`: Resolves hiromi Higuruma character leader damage.
+- `resolveTakakoUroOnOpponentAttack`: Resolves takako uro on opponent attack.
+- `resolveConfessionCounterEffect`: Resolves confession counter effect.
+- `resolveHigurumaTrashCounterEffect`: Resolves Higuruma trash counter effect.
+- `resolveHiromiHigurumaLeaderOnOpponentAttack`: Resolves hiromi Higuruma leader on opponent attack.
+- `cloneGameStateValue`: Clones game state value.
+- `clearTransientStateAfterCheckpointRestore`: Clears transient state after checkpoint restore.
+- `getSubaruLeader`: Returns Subaru leader.
+- `revealSubaruLifeCard`: Provides helper logic for reveal Subaru life card.
+- `trashTopLifeCard`: Trashes top life card.
+- `getSubaruStageEffect`: Returns Subaru stage effect.
+- `resolveEchidnaStageCopy`: Resolves echidna stage copy.
+- `hasRamBoostedRem`: Checks whether ram boosted rem.
+- `buildSubaruCheckpointState`: Builds Subaru checkpoint state.
+- `applySubaruCheckpointState`: Applies Subaru checkpoint state.
+- `tryResolveSubaruCheckpointLoss`: Provides helper logic for try resolve Subaru checkpoint loss.
+- `saveSubaruCheckpointState`: Saves Subaru checkpoint state.
+- `resolveSubaruLeaderActivateMain`: Resolves Subaru leader activate main.
+- `getKillerLeader`: Returns killer leader.
+- `resolveKillerLeaderMill`: Resolves killer leader mill.
+- `moveRandomTrashCardsToBottom`: Moves random trash cards to bottom.
+- `resolveKillerTrashBottomCycle`: Resolves killer trash bottom cycle.
+- `resolveKillerDrawThenTrash`: Resolves killer draw then trash.
+- `resolveKillerKOUpToPower`: Resolves killer K.O. up to power.
+- `resolveKillerBubblegumEffect`: Resolves killer bubblegum effect.
+- `resolveKillerCharacterWhenAttacked`: Resolves killer character when attacked.
+- `resolveKillerLeaderActivateMain`: Resolves killer leader activate main.
+- `resolveKillerLeaderOnOpponentAttack`: Resolves killer leader on opponent attack.
+- `resolveCounterEffects`: Resolves counter effects.
+- `resolveEchidnaActivateMain`: Resolves echidna activate main.
+- `getAceYamatoLeader`: Returns ace yamato leader.
+- `getAceYamatoLeaderKOTargetChoices`: Returns ace yamato leader K.O. target choices.
+- `resolveAceYamatoLeaderOnCharacterPlay`: Resolves ace yamato leader on character play.
+- `resolveAceYamatoLeaderActivateMain`: Resolves ace yamato leader activate main.
+- `getImuLeader`: Returns Imu leader.
+- `getAvailableImuStageProtectionReplacement`: Returns available Imu stage protection replacement.
+- `clearCardStateForDeck`: Clears card state for deck.
+- `moveCharacterToBottomOfDeck`: Moves character to bottom of deck.
+- `resolveImuOnOpponentAttack`: Resolves Imu on opponent attack.
+- `resolveKouzukiOdenTriggerPlay`: Resolves kouzuki oden trigger play.
+- `getHanamiLeader`: Returns hanami leader.
+- `resolveHanamiLeaderActivateMain`: Resolves hanami leader activate main.
+- `resolveRopongiCurseActivateMain`: Resolves ropongi curse activate main.
+- `resolveJogoActivateMain`: Resolves jogo activate main.
+- `resolveGrasshopperCurseActivateMain`: Resolves grasshopper curse activate main.
+- `resolveMahitoActivateMain`: Resolves mahito activate main.
+- `resolveKurourushiActivateMain`: Resolves kurourushi activate main.
+- `resolveKenjakuOnPlay`: Resolves kenjaku on play.
+- `resolveWanoCountryActivateMain`: Resolves wano country activate main.
+- `resolveBlackYamatoActivateMain`: Resolves black yamato activate main.
+- `returnAttachedDonChoice`: Returns attached DON choice.
+- `resolveOtamaActivateMain`: Resolves otama activate main.
+- `resolveSt28MomonosukeActivateMain`: Resolves st28 momonosuke activate main.
+- `resolveOnKOEffects`: Resolves on K.O. effects.
+- `resolveOnBlockEffects`: Resolves on block effects.
+- `resolveMainEffects`: Resolves main effects.
+- `resolveBrankoEndOfTurn`: Resolves branko end of turn.
+- `resolveDavidTaglavnovicCharacterMain`: Resolves david taglavnovic character main.
+- `resolveMagdalenaActivateMain`: Resolves magdalena activate main.
+- `resolveMagdalenaTrigger`: Resolves magdalena trigger.
+- `playEventCard`: Plays event card.
+- `restBoardCard`: Rests board card.
+- `setBoardCardActive`: Sets board card active.
+- `trashCharacterFromField`: Trashes character from field.
+- `KOCharacter`: Provides helper logic for K.O. character.
+- `takeLifeDamage`: Provides helper logic for take life damage.
+- `promptLifeCardTriggerChoice`: Provides helper logic for prompt life card trigger choice.
+- `resolveTriggerEffects`: Resolves trigger effects.
+- `resolveSingleTriggerEffect`: Resolves single trigger effect.
+- `loseByLifeDamage`: Provides helper logic for lose by life damage.
+- `playCardFromTrigger`: Plays card from trigger.
+- `banishLifeDamage`: Provides helper logic for banish life damage.
+- `getOpponentOfPlayer`: Returns opponent of player.
+- `loseByDeckOut`: Provides helper logic for lose by deck out.
+- `checkDeckOut`: Provides helper logic for check deck out.
+- `returnAttachedDonToCostArea`: Returns all attached DON from a player board back to the cost area.
+- `detachAttachedDonToCostArea`: Returns attached DON from one card back to the cost area.
+- `moveCardToTrash`: Moves card to trash.
+
+## `js/core/gameSettings.js`
+Loads and exposes gameplay settings from local storage.
+
+- `loadGameSettings`: Loads game settings.
+- `getGameSetting`: Returns game setting.
+- `isGameSettingEnabled`: Checks whether game setting enabled.
+- `getOptionAutoSelectScore`: Returns option auto select score.
+- `getAutoSelectMaxValueOption`: Returns auto select max value option.
+
+## `js/core/phases.js`
+Controls match turn flow, phase progression, refresh handling, and end-of-turn cleanup.
+
+- `setPhaseButtonUrgency`: Sets phase button urgency.
+- `shouldHighlightManualPhaseButton`: Checks whether highlight manual phase button.
+- `runDiceRollPhase`: Runs dice roll phase.
+- `selectTurnOrder`: Provides helper logic for select turn order.
+- `handleMulliganChoice`: Handles mulligan choice.
+- `drawStartingHand`: Draws starting hand.
+- `mulliganHand`: Provides helper logic for mulligan hand.
+- `setupLifeCards`: Sets up life cards.
+- `shouldSkipCurrentTurnDraw`: Checks whether skip current turn draw.
+- `getCurrentTurnDonAmount`: Returns current turn DON amount.
+- `setPhaseButtonState`: Sets phase button state.
+- `canCurrentClientAdvanceTurnPhases`: Checks whether current client advance turn phases.
+- `maybeAutoAdvanceTurnPhases`: Provides helper logic for maybe auto advance turn phases.
+- `canCurrentClientResolveStartOfTurn`: Checks whether current client resolve start of turn.
+- `beginTurnFlow`: Begins turn flow.
+- `advanceDrawPhase`: Advances draw phase.
+- `advanceDonPhase`: Advances DON phase.
+- `startTurnOne`: Starts turn one.
+- `getCurrentTurnStatusKey`: Builds the current turn status key used for per-turn tracking.
+- `markCardCannotAttackThisTurn`: Marks a card as unable to attack during the current turn.
+- `markLifeCardAdded`: Marks that the player added a life card during the current turn.
+- `hasAddedLifeCardThisTurn`: Checks whether the player added a life card during the current turn.
+- `lockCardForNextRefresh`: Provides helper logic for lock card for next refresh.
+- `refreshPlayerCards`: Refreshes DON, leader, characters, and stage state at turn start.
+- `runRefreshPhase`: Runs refresh phase.
+- `runDrawPhase`: Runs draw phase.
+- `runDonPhase`: Runs DON phase.
+- `runMainPhase`: Runs main phase.
+- `passTurn`: Passes turn.
+- `resolveEndOfTurnEffects`: Resolves end-of-turn effects and clears temporary state.
+- `clearExpiredEndPhaseEffects`: Removes end-phase statuses whose duration has expired.
+- `clearEndOfTurnTemporaryEffects`: Clears temporary turn-based card effects from a player board.
+- `startCounterPhase`: Starts counter phase.
+- `getNextPlayer`: Returns next player.
+- `canPlayerPlayCards`: Checks whether player play cards.
+
+## `js/firebase/firebaseApp.js`
+Initializes Firebase app services and guest authentication helpers.
+
+- `signInGuest`: Provides helper logic for sign in guest.
+- `waitForUser`: Provides helper logic for wait for user.
+
+## `js/firebase/firebaseConfig.js`
+Stores the Firebase project configuration constants.
+
+- No named functions are declared in this file.
+
+## `js/firebase/multiplayerService.js`
+Provides Firebase room, match, state-sync, and presence operations for multiplayer.
+
+- `generateRoomCode`: Provides helper logic for generate room code.
+- `cleanRoomCode`: Provides helper logic for clean room code.
+- `cloneData`: Clones data.
+- `createMultiplayerCard`: Creates multiplayer card.
+- `requireDeckTools`: Provides helper logic for require deck tools.
+- `validateSelectedDeckForMatch`: Validates selected deck for match.
+- `createInitialPrivateState`: Creates initial private state.
+- `applyStartingZangetsuStage`: Applies starting zangetsu stage.
+- `createPublicCardSnapshot`: Creates public card snapshot.
+- `createInitialPublicPlayerState`: Creates initial public player state.
+- `drawStartingHand`: Draws starting hand.
+- `setupLifeCards`: Sets up life cards.
+- `createPublicPlayerState`: Creates public player state.
+- `shuffleCards`: Provides helper logic for shuffle cards.
+- `getRoomRef`: Returns room ref.
+- `normalizePlayerSlot`: Normalizes player slot.
+- `getNumericTimestamp`: Returns numeric timestamp.
+- `getRoomActivityTimestamp`: Returns room activity timestamp.
+- `touchRoom`: Touches room.
+- `createRoom`: Creates room.
+- `joinRoom`: Provides helper logic for join room.
+- `subscribeToMatch`: Subscribes to to match.
+- `startQueuedMatch`: Starts queued match.
+- `subscribeToPublicState`: Subscribes to to public state.
+- `subscribeToPrivateState`: Subscribes to to private state.
+- `getMatch`: Returns match.
+- `updatePublicState`: Updates public state.
+- `updatePrivateState`: Updates private state.
+- `setPlayerDeck`: Sets player deck.
+- `setPlayerReady`: Sets player ready.
+- `initializeMultiplayerGame`: Initializes multiplayer game.
+- `updateCurrentAttack`: Updates current attack.
+- `applyMultiplayerLifeDamage`: Applies multiplayer life damage.
+- `rollMultiplayerDice`: Rolls multiplayer dice.
+- `chooseMultiplayerTurnOrder`: Prompts for multiplayer turn order.
+- `setMultiplayerMulligan`: Sets multiplayer mulligan.
+- `sendMultiplayerAction`: Provides helper logic for send multiplayer action.
+- `applyMultiplayerAction`: Applies multiplayer action.
+- `passTurn`: Passes turn.
+- `startMatch`: Starts match.
+- `requestRematch`: Requests rematch.
+- `deleteRoom`: Provides helper logic for delete room.
+- `registerRoomPresence`: Provides helper logic for register room presence.
+- `createImmediateDisconnectRequest`: Creates immediate disconnect request.
+- `sendImmediateDisconnectRequest`: Provides helper logic for send immediate disconnect request.
+- `cleanupInactiveRooms`: Provides helper logic for cleanup inactive rooms.
+
+## `js/pages/deck-editor.js`
+Runs the deck editor page UI, filtering, previews, import/export, and saved deck actions.
+
+- `DeckEditor.constructor`: Initializes the class instance and caches its starting state or DOM references.
+- `DeckEditor.init`: Initializes this module or class setup sequence.
+- `DeckEditor.setupEvents`: Sets up events.
+- `DeckEditor.buildCardCaches`: Builds card caches.
+- `DeckEditor.buildCardRecord`: Builds card record.
+- `DeckEditor.scheduleLibraryRender`: Schedules library render.
+- `DeckEditor.renderLeaderSelection`: Renders leader selection.
+- `DeckEditor.chooseLeader`: Prompts for leader.
+- `DeckEditor.removeLeader`: Removes leader.
+- `DeckEditor.renderCardLibrary`: Renders card library.
+- `DeckEditor.createLibraryCard`: Creates library card.
+- `DeckEditor.populateFilterOptions`: Provides DeckEditor logic for populate filter options.
+- `DeckEditor.populateSelect`: Provides DeckEditor logic for populate select.
+- `DeckEditor.getUniqueSortedTextValues`: Returns unique sorted text values.
+- `DeckEditor.getUniqueSortedNumberValues`: Returns unique sorted number values.
+- `DeckEditor.getAllCards`: Returns all cards.
+- `DeckEditor.getFilteredCards`: Returns filtered cards.
+- `DeckEditor.getCardColors`: Returns card colors.
+- `DeckEditor.getCardTypeValues`: Returns card type values.
+- `DeckEditor.getCardSetCode`: Returns card set code.
+- `DeckEditor.matchesNumberFilter`: Provides DeckEditor logic for matches number filter.
+- `DeckEditor.compareCardsForLibrary`: Provides DeckEditor logic for compare cards for library.
+- `DeckEditor.compareColorGroups`: Provides DeckEditor logic for compare color groups.
+- `DeckEditor.getCategorySortValue`: Returns category sort value.
+- `DeckEditor.isCopyLimitEnabled`: Checks whether copy limit enabled.
+- `DeckEditor.getCurrentDeckSizeLimit`: Returns current deck size limit.
+- `DeckEditor.isDeckAtSizeLimit`: Checks whether deck at size limit.
+- `DeckEditor.canAddAnotherCopy`: Checks whether add another copy.
+- `DeckEditor.handleCopyLimitToggleChange`: Handles copy limit toggle change.
+- `DeckEditor.addCardToDeck`: Adds card to deck.
+- `DeckEditor.increaseCardAmount`: Provides DeckEditor logic for increase card amount.
+- `DeckEditor.removeCardFromDeck`: Removes card from deck.
+- `DeckEditor.clearDeck`: Clears deck.
+- `DeckEditor.getCurrentDeckEntries`: Returns current deck entries.
+- `DeckEditor.getCurrentDeckDefinition`: Returns current deck definition.
+- `DeckEditor.renderSavedDeckOptions`: Renders saved deck options.
+- `DeckEditor.loadDeckDefinition`: Loads deck definition.
+- `DeckEditor.saveCurrentDeck`: Saves current deck.
+- `DeckEditor.copyDeckCode`: Provides DeckEditor logic for copy deck code.
+- `DeckEditor.loadSelectedSavedDeck`: Loads selected saved deck.
+- `DeckEditor.deleteSelectedSavedDeck`: Provides DeckEditor logic for delete selected saved deck.
+- `DeckEditor.importDeckFromText`: Provides DeckEditor logic for import deck from text.
+- `DeckEditor.renderDeck`: Renders deck.
+- `DeckEditor.createDeckLeaderElement`: Creates deck leader element.
+- `DeckEditor.createDeckCardElement`: Creates deck card element.
+- `DeckEditor.getDeckCardTotal`: Returns deck card total.
+- `DeckEditor.updateDeckCount`: Updates deck count.
+- `DeckEditor.getCardAmountInDeck`: Returns card amount in deck.
+- `DeckEditor.getDeckCardAmountMap`: Returns deck card amount map.
+- `DeckEditor.openCardPreview`: Provides DeckEditor logic for open card preview.
+- `DeckEditor.closeCardPreview`: Provides DeckEditor logic for close card preview.
+- `DeckEditor.getCardDetails`: Returns card details.
+
+## `js/pages/galaxy-theme.js`
+Renders the animated galaxy background used on non-match pages.
+
+- No named functions are declared in this file.
+
+## `js/pages/matchShared.js`
+Holds shared singleplayer and multiplayer match-page helpers and render utilities.
+
+- `getSelectedDeckDefinitions`: Returns selected deck definitions.
+- `createInitialPlayerState`: Creates initial player state.
+- `createInitialGameState`: Creates initial game state.
+- `takeCardAnimationClass`: Provides helper logic for take card animation class.
+- `getBoardCardRenderKey`: Returns board card render key.
+- `getBoardStateAnimationClass`: Returns board state animation class.
+- `applyCardAnimationClass`: Applies card animation class.
+- `setupLifeArea`: Sets up life area.
+- `createTurnOrderButtons`: Creates turn order buttons.
+- `showDiceRollAnimation`: Provides helper logic for show dice roll animation.
+- `createD20Die`: Creates D20 die.
+- `animateD20`: Provides helper logic for animate D20.
+- `removeDiceRollDisplay`: Removes dice roll display.
+- `createMulliganButtons`: Creates mulligan buttons.
+- `removeChoiceButtons`: Removes choice buttons.
+- `createPhaseLogProxy`: Creates phase log proxy.
+- `normalizeLogMessage`: Normalizes log message.
+- `getBoardActionButtonContainer`: Returns board action button container.
+- `getOpponentPlayerKey`: Returns opponent player key.
+- `isCharacterPlayedThisTurn`: Checks whether character played this turn.
+- `getCardBattlePower`: Returns card battle power.
+- `getPrintedPower`: Returns printed power.
+- `getZangetsuLeaderBasePower`: Returns zangetsu leader base power.
+- `isTemporaryBasePowerExpired`: Checks whether temporary base power expired.
+- `getPowerModifier`: Returns power modifier.
+- `getSubaruRamPowerModifier`: Returns Subaru ram power modifier.
+- `getImuMaffeyPowerModifier`: Returns Imu maffey power modifier.
+- `getKillerGigPowerModifier`: Returns killer gig power modifier.
+- `getPlayerForBoardCard`: Returns player for board card.
+- `getYourTurnPowerBonus`: Returns your turn power bonus.
+- `getWanoCountryPowerModifier`: Returns wano country power modifier.
+- `getSt28MomonosukeLeaderPowerModifier`: Returns st28 momonosuke leader power modifier.
+- `getSt28YamatoPowerModifier`: Returns st28 yamato power modifier.
+- `getTurboGrannyFormPowerModifier`: Returns turbo granny form power modifier.
+- `getOpponentTurnPowerModifier`: Returns opponent turn power modifier.
+- `getDonAttachedPowerModifier`: Returns DON attached power modifier.
+- `getSerpicoFarnesePowerModifier`: Returns serpico farnese power modifier.
+- `getGutsLeaderPowerModifier`: Returns guts leader power modifier.
+- `getHigurumaLeaderPowerModifier`: Returns Higuruma leader power modifier.
+- `getJujutsuProtectionPowerModifier`: Returns jujutsu protection power modifier.
+- `getKurosakiIchigoPowerModifier`: Returns kurosaki ichigo power modifier.
+- `getAttachedDonPowerModifier`: Returns attached DON power modifier.
+- `getPersistentPowerModifier`: Returns persistent power modifier.
+- `getTemporaryPowerModifier`: Returns temporary power modifier.
+- `getDurationPowerModifier`: Returns duration power modifier.
+- `isDurationPowerBonusExpired`: Checks whether duration power bonus expired.
+- `getBattlePowerModifier`: Returns battle power modifier.
+- `getCopiedEffectBasePower`: Returns copied effect base power.
+- `getCopiedEffectPowerModifier`: Returns copied effect power modifier.
+- `copiedEffectTargetsThisCard`: Provides helper logic for copied effect targets this card.
+- `getCostModifier`: Returns cost modifier.
+- `renderCostModifierBadge`: Renders cost modifier badge.
+- `renderPowerModifierBadge`: Renders power modifier badge.
+- `renderBasePowerBadge`: Renders base power badge.
+- `renderAttachedDonBadge`: Renders attached DON badge.
+- `getCurrentAttackTargetPowerBonus`: Returns current attack target power bonus.
+- `isSameBoardCard`: Checks whether same board card.
+- `getBoardActionButtonContainerFromData`: Returns board action button container from data.
+- `rollD20`: Rolls D20.
+
+## `js/pages/multiplayer.js`
+Runs the multiplayer match page UI and local synced battle state layer.
+
+- `cloneSerializableValue`: Clones serializable value.
+- `getMultiplayerRuntime`: Returns multiplayer runtime.
+- `getMultiplayerLocalSlot`: Returns multiplayer local slot.
+- `getOpponentMultiplayerSlot`: Returns opponent multiplayer slot.
+- `getCanonicalSlotForLocalPlayerKey`: Returns canonical slot for local player key.
+- `getLocalPlayerKeyForCanonicalSlot`: Returns local player key for canonical slot.
+- `getPlayerKeyForPlayer`: Returns player key for player.
+- `mapBoardCardDataToCanonical`: Maps board card data to canonical.
+- `mapBoardCardDataToLocal`: Maps board card data to local.
+- `queueMultiplayerStateSync`: Queues multiplayer state sync.
+- `serializePlayerState`: Serializes player state.
+- `hydratePlayerState`: Hydrates player state.
+- `transformStatusExpiryPlayerKeys`: Transforms status expiry player keys.
+- `mapLocalStatusKeysToCanonical`: Maps local status keys to canonical.
+- `mapCanonicalStatusKeysToLocal`: Maps canonical status keys to local.
+- `renderGameLogMessages`: Renders game log messages.
+- `syncPhaseButtonForCurrentState`: Syncs phase button for current state.
+- `clearLocalSelectionsAndOverlays`: Clears local selections and overlays.
+- `restoreBattleUiFromSyncedState`: Rests ore battle UI from synced state.
+- `renderFullGameState`: Renders full game state.
+- `maybeAutoAdvancePhaseFromSyncedState`: Provides helper logic for maybe auto advance phase from synced state.
+- `maybeResumeStartOfTurnFromSyncedState`: Provides helper logic for maybe resume start of turn from synced state.
+- `createUiBridge`: Creates UI bridge.
+- `initializeGamePage`: Initializes the match page and performs its startup render flow.
+- `clearBlockerTargets`: Clears blocker targets.
+- `enterBlockerStep`: Provides helper logic for enter blocker step.
+- `handleBlockerSelection`: Handles blocker selection.
+- `skipCurrentBlockStep`: Provides helper logic for skip current block step.
+- `showGameOverPopup`: Provides helper logic for show game over popup.
+- `removeGameOverPopup`: Removes game over popup.
+- `removeSurrenderConfirmPopup`: Removes surrender confirm popup.
+- `showSurrenderConfirmPopup`: Provides helper logic for show surrender confirm popup.
+- `showSubaruResetOverlay`: Provides helper logic for show Subaru reset overlay.
+- `removeSubaruResetOverlay`: Removes Subaru reset overlay.
+- `syncSubaruResetOverlayForCurrentState`: Syncs Subaru reset overlay for current state.
+- `syncGameOverPopupForCurrentState`: Syncs game over popup for current state.
+- `endGame`: Provides helper logic for end game.
+- `clearAttackArrow`: Clears attack arrow.
+- `drawAttackArrow`: Draws attack arrow.
+- `getBoardElementFromData`: Returns board element from data.
+- `setupPhaseControls`: Sets up phase controls.
+- `showEndTurnConfirmation`: Provides helper logic for show end turn confirmation.
+- `shouldAddGameLog`: Checks whether add game log.
+- `addGameLog`: Adds game log.
+- `updateDonDisplay`: Updates DON display.
+- `renderDonArea`: Renders DON area.
+- `renderDonDecks`: Renders DON decks.
+- `renderDonDeck`: Renders DON deck.
+- `renderDecks`: Renders decks.
+- `renderDeck`: Renders deck.
+- `renderHands`: Renders hands.
+- `renderPlayerHand`: Renders player hand.
+- `sortPlayerHand`: Provides helper logic for sort player hand.
+- `setupSidebarControls`: Sets up sidebar controls.
+- `updateSidebarControls`: Updates sidebar controls.
+- `canSortPlayerHand`: Checks whether sort player hand.
+- `getHandSortKey`: Returns hand sort key.
+- `renderLifeCards`: Renders life cards.
+- `renderPlayerLife`: Renders player life.
+- `renderLeaders`: Renders leaders.
+- `renderLeader`: Renders leader.
+- `renderCharacters`: Renders characters.
+- `renderPlayerCharacters`: Renders player characters.
+- `renderStages`: Renders stages.
+- `renderPlayerStage`: Renders player stage.
+- `renderTrash`: Renders trash.
+- `renderPlayerTrash`: Renders player trash.
+- `showTrashViewer`: Provides helper logic for show trash viewer.
+- `removeTrashViewer`: Removes trash viewer.
+- `setupCardPreview`: Sets up card preview.
+- `showCardPreview`: Provides helper logic for show card preview.
+- `clearCardPreview`: Clears card preview.
+- `setupHandCardSelection`: Sets up hand card selection.
+- `showSelectedCardActions`: Provides helper logic for show selected card actions.
+- `showSelectedCounterActions`: Provides helper logic for show selected counter actions.
+- `applyCounterPowerToCurrentAttack`: Applies counter power to current attack.
+- `clearSelectedCardActions`: Clears selected card actions.
+- `setupBoardCharacterSelection`: Sets up board character selection.
+- `setupBoardLeaderSelection`: Sets up board leader selection.
+- `showSelectedBoardActions`: Provides helper logic for show selected board actions.
+- `canAttachDonToBoardCard`: Checks whether attach DON to board card.
+- `createAttachDonButton`: Creates attach DON button.
+- `refreshSelectedBoardCardElement`: Provides helper logic for refresh selected board card element.
+- `getActivateMainEffect`: Returns activate main effect.
+- `getActivateAnyEffect`: Returns activate any effect.
+- `getOnOpponentAttackEffect`: Returns on opponent attack effect.
+- `getWhenAttackedEffect`: Returns when attacked effect.
+- `isWanoCountryAttachDonEffect`: Checks whether wano country attach DON effect.
+- `isBoardEffectResolutionInProgress`: Checks whether board effect resolution in progress.
+- `canUseActivateMainEffect`: Checks whether use activate main effect.
+- `canUseActivateAnyEffect`: Checks whether use activate any effect.
+- `createBoardEffectButton`: Creates board effect button.
+- `createActivateMainButton`: Creates activate main button.
+- `createActivateAnyButton`: Creates activate any button.
+- `activateBoardEffect`: Provides helper logic for activate board effect.
+- `resolveBoardEffectActivation`: Resolves board effect activation.
+- `resolveBoardActionEffect`: Resolves board action effect.
+- `clearSelectedBoardActions`: Clears selected board actions.
+- `clearHandSelection`: Clears hand selection.
+- `clearBoardSelection`: Clears board selection.
+- `clearReplaceTargets`: Clears replace targets.
+- `enterReplaceMode`: Provides helper logic for enter replace mode.
+- `setupCharacterSlotInteractions`: Sets up character slot interactions.
+- `clearBattleControls`: Clears battle controls.
+- `isLocalMultiplayerPlayerKey`: Checks whether local multiplayer player key.
+- `canLocalPlayerControlDefense`: Checks whether local player control defense.
+- `createBattleButton`: Creates battle button.
+- `createSkipBlockButton`: Creates skip block button.
+- `createWaitingDefenseButton`: Creates waiting defense button.
+- `showResolveAttackButton`: Provides helper logic for show resolve attack button.
+- `showCounterPhaseControls`: Provides helper logic for show counter phase controls.
+- `showResolveOnlyButton`: Provides helper logic for show resolve only button.
+- `enterAttackTargetSelection`: Provides helper logic for enter attack target selection.
+- `setupAttackTargetSelection`: Sets up attack target selection.
+- `clearAttackTargets`: Clears attack targets.
+- `beginAttack`: Begins attack.
+- `continueAttackAfterDefenderResponses`: Provides helper logic for continue attack after defender responses.
+- `promptOnOpponentAttackCharacterEffects`: Provides helper logic for prompt on opponent attack character effects.
+- `getCurrentPendingOnOpponentAttackEffect`: Returns current pending on opponent attack effect.
+- `currentAttackHasPendingWhenAttackingEffects`: Provides helper logic for current attack has pending when attacking effects.
+- `finishPendingOnOpponentAttackEffects`: Provides helper logic for finish pending on opponent attack effects.
+- `advancePendingOnOpponentAttackEffect`: Advances pending on opponent attack effect.
+- `showPendingOpponentAttackEffectChoice`: Provides helper logic for show pending opponent attack effect choice.
+- `resolveWhenAttackingEffectsBeforeBattle`: Resolves when attacking effects before battle.
+- `promptOptionalWhenAttackingEffects`: Provides helper logic for prompt optional when attacking effects.
+- `markAttackEffectSkipped`: Marks attack effect skipped.
+- `isAttackEffectSkipped`: Checks whether attack effect skipped.
+- `promptTrashOneCardForAttack`: Provides helper logic for prompt trash one card for attack.
+- `highlightTrashChoiceTargets`: Provides helper logic for highlight trash choice targets.
+- `clearTrashChoiceTargets`: Clears trash choice targets.
+- `handlePendingTrashChoice`: Handles pending trash choice.
+- `resolveCurrentAttack`: Resolves current attack.
+- `clearBattleOnlyEffectsForCurrentAttack`: Clears battle only effects for current attack.
+- `clearCancelAttackButton`: Clears cancel attack button.
+- `showCancelAttackButton`: Provides helper logic for show cancel attack button.
+- `cancelPendingAttack`: Checks whether cel pending attack.
+- `lookTopCardsAddToHand`: Provides helper logic for look top cards add to hand.
+- `renderTopBottomOrderStep`: Renders top bottom order step.
+- `showSearchCardImagePopup`: Provides helper logic for show search card image popup.
+- `removeSearchCardImagePopup`: Removes search card image popup.
+- `removeLookTopOverlay`: Removes look top overlay.
+- `showLifeCardChoice`: Provides helper logic for show life card choice.
+- `removeLifeCardChoiceOverlay`: Removes life card choice overlay.
+- `showBoardCardChoice`: Provides helper logic for show board card choice.
+- `renderBottomOrderStep`: Renders bottom order step.
+- `removeBoardChoiceOverlay`: Removes board choice overlay.
+- `chooseEffectActivation`: Prompts for effect activation.
+- `chooseEffectOption`: Prompts for effect option.
+- `chooseNumberValue`: Prompts for number value.
+- `removeEffectChoiceOverlay`: Removes effect choice overlay.
+- `getSelectedBoardCardObject`: Returns selected board card object.
+- `canCurrentPlayerAttack`: Checks whether current player attack.
+- `canSelectedBoardCardAttack`: Checks whether selected board card attack.
+- `isCharacterAttackLocked`: Checks whether character attack locked.
+- `exportMultiplayerSharedState`: Exports multiplayer shared state.
+- `applyMultiplayerSharedState`: Applies multiplayer shared state.
+
+## `js/pages/multiplayerPresence.js`
+Registers multiplayer room presence when the match page opens.
+
+- `initializeMultiplayerPresence`: Initializes multiplayer room presence for the active match page.
+
+## `js/pages/multiplayerRuntime.js`
+Coordinates multiplayer page state with Firebase match data and room lifecycle events.
+
+- `cloneValue`: Clones value.
+- `getOpponentSlot`: Returns opponent slot.
+- `clearPendingOpponentDisconnect`: Clears pending opponent disconnect.
+- `sendImmediateDisconnectOnExit`: Provides helper logic for send immediate disconnect on exit.
+- `ensureOwnPresence`: Provides helper logic for ensure own presence.
+- `scheduleOpponentDisconnectCheck`: Schedules opponent disconnect check.
+- `getPageApi`: Returns page api.
+- `addRuntimeLog`: Adds runtime log.
+- `reportRuntimeError`: Provides helper logic for report runtime error.
+- `runPregameAction`: Runs pregame action.
+- `getSavedDeckDefinition`: Returns saved deck definition.
+- `createHiddenCards`: Creates hidden cards.
+- `buildPlayerState`: Builds player state.
+- `buildSnapshotFromRoom`: Builds snapshot from room.
+- `buildSharedSnapshotFromFullMatch`: Builds shared snapshot from full match.
+- `syncRematchButtonState`: Syncs rematch button state.
+- `buildPregameLogs`: Builds pregame logs.
+- `removeChoiceButtons`: Removes choice buttons.
+- `getPhaseButton`: Returns phase button.
+- `setPhaseButtonState`: Sets phase button state.
+- `showTurnOrderButtons`: Provides helper logic for show turn order buttons.
+- `showMulliganButtons`: Provides helper logic for show mulligan buttons.
+- `renderPregameControls`: Renders pregame controls.
+- `ensureDeckSelection`: Provides helper logic for ensure deck selection.
+- `maybeInitializeServiceMatch`: Provides helper logic for maybe initialize service match.
+- `maybeCreateSharedState`: Provides helper logic for maybe create shared state.
+- `syncSharedStateNow`: Syncs shared state now.
+- `scheduleStateSync`: Schedules state sync.
+- `applySharedStateIfNeeded`: Applies shared state if needed.
+- `applyPregameSnapshot`: Applies pregame snapshot.
+- `handlePublicMatchUpdate`: Handles public match update.
+- `waitForPageApi`: Provides helper logic for wait for page api.
+- `initializeRuntime`: Initializes runtime.
+- `__multiplayerRuntime.getLocalSlot`: Returns local slot.
+- `__multiplayerRuntime.isActive`: Checks whether active.
+- `__multiplayerRuntime.handlePlayAgainClick`: Handles play again click.
+- `__multiplayerRuntime.handleSurrenderClick`: Handles surrender click.
+
+## `js/pages/play.js`
+Runs the play menu deck selection flow and singleplayer launch link setup.
+
+- `updateDeckButtonLabel`: Updates deck button label.
+- `updateSingleplayerPlayLink`: Updates singleplayer play link.
+- `savePlayDeckSelection`: Saves play deck selection.
+- `initializePlayPage`: Initializes the play page controls and stored deck selections.
+
+## `js/pages/presetDecks.js`
+Renders the preset deck browser, search, and deck preview modal.
+
+- `initializePresetDecksPage`: Initializes the preset decks page and loads the required card data.
+- `getAvailableDecksSafe`: Returns available decks safe.
+- `renderPresetDecks`: Renders preset decks.
+- `createCompactDeckCard`: Creates compact deck card.
+- `createDeckCard`: Creates deck card.
+- `createMetaItem`: Creates meta item.
+- `openDeckImageModal`: Provides helper logic for open deck image modal.
+- `closeDeckImageModal`: Provides helper logic for close deck image modal.
+- `setupModalCloseEvents`: Sets up modal close events.
+- `createImageSection`: Creates image section.
+- `createDeckImageCard`: Creates deck image card.
+- `openDeckCardPreview`: Provides helper logic for open deck card preview.
+- `closeDeckCardPreview`: Provides helper logic for close deck card preview.
+- `setupDeckSearch`: Sets up deck search.
+- `parseDeckLines`: Parses deck lines.
+- `getTotalCardCount`: Returns total card count.
+- `getDeckCardEntries`: Returns deck card entries.
+- `getLeaderCard`: Returns leader card.
+- `getFirstExistingCard`: Returns first existing card.
+- `getCardDataById`: Returns card data by ID.
+- `useDeckInVsSelf`: Provides helper logic for use deck in vs self.
+- `escapeHtml`: Provides helper logic for escape html.
+
+## `js/pages/queue.js`
+Runs the multiplayer lobby, room creation/join flow, deck locking, and ready/start controls.
+
+- `initializeDeckPicker`: Initializes the deck picker controls for the current page.
+- `saveQueueDeckSelection`: Saves queue deck selection.
+- `updateQueueDeckButtonLabel`: Updates queue deck button label.
+- `hasActiveRoom`: Checks whether active room.
+- `isQueueDeckLocked`: Checks whether queue deck locked.
+- `updateQueueDeckHelpText`: Updates queue deck help text.
+- `refreshQueueControlStates`: Provides helper logic for refresh queue control states.
+- `setRoomCode`: Sets room code.
+- `getSelectedQueueDeck`: Returns selected queue deck.
+- `saveCurrentPlayerDeck`: Saves current player deck.
+- `setCurrentPlayerReady`: Sets current player ready.
+- `goToMatchPage`: Provides helper logic for go to match page.
+- `subscribeToCurrentRoom`: Subscribes to to current room.
+- `updateRoomUI`: Updates room UI.
+- `initializeQueuePage`: Initializes queue page.
+
+## `js/pages/settings.js`
+Runs the settings page tabs, persistence, and save feedback UI.
+
+- `SettingsManager.constructor`: Initializes the class instance and caches its starting state or DOM references.
+- `SettingsManager.init`: Initializes this module or class setup sequence.
+- `SettingsManager.loadSettings`: Loads settings.
+- `SettingsManager.getDefaultSettings`: Returns default settings.
+- `SettingsManager.saveSettings`: Saves settings.
+- `SettingsManager.getSettings`: Returns settings.
+- `SettingsManager.getSetting`: Returns setting.
+- `SettingsManager.updateSetting`: Updates setting.
+- `SettingsManager.resetToDefaults`: Provides SettingsManager logic for reset to defaults.
+- `SettingsManager.setupTabNavigation`: Sets up tab navigation.
+- `SettingsManager.loadCheckboxStates`: Loads checkbox states.
+- `SettingsManager.setupEventListeners`: Sets up event listeners.
+- `SettingsManager.showSaveNotification`: Provides SettingsManager logic for show save notification.
+
+## `js/pages/singleplayer.js`
+Runs the singleplayer match page UI and local battle state layer.
+
+- `createUiBridge`: Creates UI bridge.
+- `initializeGamePage`: Initializes the match page and performs its startup render flow.
+- `clearBlockerTargets`: Clears blocker targets.
+- `enterBlockerStep`: Provides helper logic for enter blocker step.
+- `handleBlockerSelection`: Handles blocker selection.
+- `skipCurrentBlockStep`: Provides helper logic for skip current block step.
+- `showGameOverPopup`: Provides helper logic for show game over popup.
+- `removeGameOverPopup`: Removes game over popup.
+- `showSubaruResetOverlay`: Provides helper logic for show Subaru reset overlay.
+- `removeSubaruResetOverlay`: Removes Subaru reset overlay.
+- `endGame`: Provides helper logic for end game.
+- `clearAttackArrow`: Clears attack arrow.
+- `drawAttackArrow`: Draws attack arrow.
+- `getBoardElementFromData`: Returns board element from data.
+- `setupPhaseControls`: Sets up phase controls.
+- `showEndTurnConfirmation`: Provides helper logic for show end turn confirmation.
+- `shouldAddGameLog`: Checks whether add game log.
+- `addGameLog`: Adds game log.
+- `updateDonDisplay`: Updates DON display.
+- `renderDonArea`: Renders DON area.
+- `renderDonDecks`: Renders DON decks.
+- `renderDonDeck`: Renders DON deck.
+- `renderDecks`: Renders decks.
+- `renderDeck`: Renders deck.
+- `renderHands`: Renders hands.
+- `renderPlayerHand`: Renders player hand.
+- `sortPlayerHand`: Provides helper logic for sort player hand.
+- `setupSidebarControls`: Sets up sidebar controls.
+- `updateSidebarSortButtonState`: Updates sidebar sort button state.
+- `canSortPlayerHand`: Checks whether sort player hand.
+- `getHandSortKey`: Returns hand sort key.
+- `renderLifeCards`: Renders life cards.
+- `renderPlayerLife`: Renders player life.
+- `renderLeaders`: Renders leaders.
+- `renderLeader`: Renders leader.
+- `renderCharacters`: Renders characters.
+- `renderPlayerCharacters`: Renders player characters.
+- `renderStages`: Renders stages.
+- `renderPlayerStage`: Renders player stage.
+- `renderTrash`: Renders trash.
+- `renderPlayerTrash`: Renders player trash.
+- `showTrashViewer`: Provides helper logic for show trash viewer.
+- `removeTrashViewer`: Removes trash viewer.
+- `setupCardPreview`: Sets up card preview.
+- `showCardPreview`: Provides helper logic for show card preview.
+- `clearCardPreview`: Clears card preview.
+- `setupHandCardSelection`: Sets up hand card selection.
+- `showSelectedCardActions`: Provides helper logic for show selected card actions.
+- `showSelectedCounterActions`: Provides helper logic for show selected counter actions.
+- `applyCounterPowerToCurrentAttack`: Applies counter power to current attack.
+- `clearSelectedCardActions`: Clears selected card actions.
+- `setupBoardCharacterSelection`: Sets up board character selection.
+- `setupBoardLeaderSelection`: Sets up board leader selection.
+- `showSelectedBoardActions`: Provides helper logic for show selected board actions.
+- `canAttachDonToBoardCard`: Checks whether attach DON to board card.
+- `createAttachDonButton`: Creates attach DON button.
+- `refreshSelectedBoardCardElement`: Provides helper logic for refresh selected board card element.
+- `getActivateMainEffect`: Returns activate main effect.
+- `getActivateAnyEffect`: Returns activate any effect.
+- `getOnOpponentAttackEffect`: Returns on opponent attack effect.
+- `getWhenAttackedEffect`: Returns when attacked effect.
+- `isWanoCountryAttachDonEffect`: Checks whether wano country attach DON effect.
+- `isBoardEffectResolutionInProgress`: Checks whether board effect resolution in progress.
+- `canUseActivateMainEffect`: Checks whether use activate main effect.
+- `canUseActivateAnyEffect`: Checks whether use activate any effect.
+- `createBoardEffectButton`: Creates board effect button.
+- `createActivateMainButton`: Creates activate main button.
+- `createActivateAnyButton`: Creates activate any button.
+- `activateBoardEffect`: Provides helper logic for activate board effect.
+- `resolveBoardEffectActivation`: Resolves board effect activation.
+- `resolveBoardActionEffect`: Resolves board action effect.
+- `clearSelectedBoardActions`: Clears selected board actions.
+- `clearHandSelection`: Clears hand selection.
+- `clearBoardSelection`: Clears board selection.
+- `clearReplaceTargets`: Clears replace targets.
+- `enterReplaceMode`: Provides helper logic for enter replace mode.
+- `setupCharacterSlotInteractions`: Sets up character slot interactions.
+- `clearBattleControls`: Clears battle controls.
+- `createBattleButton`: Creates battle button.
+- `createSkipBlockButton`: Creates skip block button.
+- `showResolveAttackButton`: Provides helper logic for show resolve attack button.
+- `showCounterPhaseControls`: Provides helper logic for show counter phase controls.
+- `showResolveOnlyButton`: Provides helper logic for show resolve only button.
+- `enterAttackTargetSelection`: Provides helper logic for enter attack target selection.
+- `setupAttackTargetSelection`: Sets up attack target selection.
+- `clearAttackTargets`: Clears attack targets.
+- `beginAttack`: Begins attack.
+- `promptOnOpponentAttackCharacterEffects`: Provides helper logic for prompt on opponent attack character effects.
+- `resolveWhenAttackingEffectsBeforeBattle`: Resolves when attacking effects before battle.
+- `promptOptionalWhenAttackingEffects`: Provides helper logic for prompt optional when attacking effects.
+- `markAttackEffectSkipped`: Marks attack effect skipped.
+- `isAttackEffectSkipped`: Checks whether attack effect skipped.
+- `promptTrashOneCardForAttack`: Provides helper logic for prompt trash one card for attack.
+- `highlightTrashChoiceTargets`: Provides helper logic for highlight trash choice targets.
+- `clearTrashChoiceTargets`: Clears trash choice targets.
+- `handlePendingTrashChoice`: Handles pending trash choice.
+- `resolveCurrentAttack`: Resolves current attack.
+- `clearBattleOnlyEffectsForCurrentAttack`: Clears battle only effects for current attack.
+- `clearCancelAttackButton`: Clears cancel attack button.
+- `showCancelAttackButton`: Provides helper logic for show cancel attack button.
+- `cancelPendingAttack`: Checks whether cel pending attack.
+- `lookTopCardsAddToHand`: Provides helper logic for look top cards add to hand.
+- `renderTopBottomOrderStep`: Renders top bottom order step.
+- `showSearchCardImagePopup`: Provides helper logic for show search card image popup.
+- `removeSearchCardImagePopup`: Removes search card image popup.
+- `removeLookTopOverlay`: Removes look top overlay.
+- `showLifeCardChoice`: Provides helper logic for show life card choice.
+- `removeLifeCardChoiceOverlay`: Removes life card choice overlay.
+- `showBoardCardChoice`: Provides helper logic for show board card choice.
+- `renderBottomOrderStep`: Renders bottom order step.
+- `removeBoardChoiceOverlay`: Removes board choice overlay.
+- `chooseEffectActivation`: Prompts for effect activation.
+- `chooseEffectOption`: Prompts for effect option.
+- `chooseNumberValue`: Prompts for number value.
+- `removeEffectChoiceOverlay`: Removes effect choice overlay.
+- `getSelectedBoardCardObject`: Returns selected board card object.
+- `canCurrentPlayerAttack`: Checks whether current player attack.
+- `canSelectedBoardCardAttack`: Checks whether selected board card attack.
+- `isCharacterAttackLocked`: Checks whether character attack locked.

@@ -62,36 +62,6 @@ class SettingsManager {
         this.showSaveNotification();
     }
 
-    // Get current settings
-    getSettings() {
-        return this.settings;
-    }
-
-    // Get specific setting
-    getSetting(key) {
-        return this.settings[key] || null;
-    }
-
-    // Update specific setting
-    updateSetting(key, value) {
-        if (this.settings.hasOwnProperty(key)) {
-            this.settings[key] = value;
-            const checkbox = document.getElementById(key);
-            if (checkbox) {
-                checkbox.checked = value;
-            }
-        }
-    }
-
-    // Reset all settings to default
-    resetToDefaults() {
-        if (confirm('Are you sure you want to reset all settings to default?')) {
-            this.settings = this.getDefaultSettings();
-            this.loadCheckboxStates();
-            this.saveSettings();
-        }
-    }
-
     // =========================
     // Tab Navigation
     // =========================

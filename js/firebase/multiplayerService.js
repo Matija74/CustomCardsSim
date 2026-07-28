@@ -6,7 +6,6 @@ import {
     onValue,
     runTransaction,
     serverTimestamp,
-    remove,
     onDisconnect
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -265,14 +264,6 @@ function normalizePlayerSlot(playerSlot) {
     return playerSlot;
 }
 
-function getNumericTimestamp(value) {
-    return typeof value === "number" ? value : 0;
-}
-
-function getRoomActivityTimestamp(match) {
-    return getNumericTimestamp(match?.updatedAt) || getNumericTimestamp(match?.createdAt);
-}
-
 async function touchRoom(roomCode, extra = {}) {
     await update(getRoomRef(roomCode), {
         updatedAt: serverTimestamp(),
@@ -381,35 +372,6 @@ export function subscribeToMatch(roomCode, callback) {
         const { private: _private, ...publicMatch } = match;
 
         callback(publicMatch);
-    });
-}
-
-export async function startQueuedMatch(roomCode) {
-    const matchRef = getRoomRef(roomCode);
-    const snapshot = await get(matchRef);
-
-    if (!snapshot.exists()) {
-        throw new Error("Room does not exist.");
-    }
-
-    const match = snapshot.val();
-
-    if (!match.players?.p1 || !match.players?.p2) {
-        throw new Error("Both players must be connected.");
-    }
-
-    await update(matchRef, {
-        status: "started",
-        updatedAt: serverTimestamp(),
-        "public/phase": "starting"
-    });
-}
-
-export function subscribeToPublicState(roomCode, callback) {
-    const publicRef = ref(database, `matches/${cleanRoomCode(roomCode)}/public`);
-
-    return onValue(publicRef, (snapshot) => {
-        callback(snapshot.val());
     });
 }
 
@@ -547,89 +509,6 @@ export async function initializeMultiplayerGame(roomCode) {
         [`private/${player1.uid}`]: p1Private,
         [`private/${player2.uid}`]: p2Private
     });
-}
-
-export async function updateCurrentAttack(roomCode, attackState) {
-    await updatePublicState(roomCode, attackState
-        ? {
-            currentAttack: attackState,
-            phase: "attackResolving"
-        }
-        : {
-            currentAttack: null
-        });
-}
-
-export async function applyMultiplayerLifeDamage(roomCode, defenderSlot, attackerSlot, amount, options = {}) {
-    if (defenderSlot !== "p1" && defenderSlot !== "p2") {
-        throw new Error("Invalid defender slot.");
-    }
-
-    const matchRef = ref(database, `matches/${cleanRoomCode(roomCode)}`);
-    const snapshot = await get(matchRef);
-
-    if (!snapshot.exists()) {
-        throw new Error("Room does not exist.");
-    }
-
-    const match = snapshot.val();
-    const defender = match.players?.[defenderSlot];
-
-    if (!defender?.uid) {
-        throw new Error("Defender was not found.");
-    }
-
-    const privateState = match.private?.[defender.uid] || {};
-    const publicKey = defenderSlot === "p1" ? "player1" : "player2";
-    const life = [...(privateState.life || [])];
-    const hand = [...(privateState.hand || [])];
-    const publicPlayer = match.public?.[publicKey] || {};
-    const trash = [...(publicPlayer.trash || [])];
-    let moved = 0;
-
-    for (let i = 0; i < Number(amount || 0); i++) {
-        const lifeCard = life.shift();
-
-        if (!lifeCard) break;
-
-        if (options.banish) {
-            trash.push(lifeCard);
-        } else {
-            hand.push(lifeCard);
-        }
-
-        moved++;
-    }
-
-    const updates = {
-        updatedAt: serverTimestamp(),
-        [`private/${defender.uid}/life`]: life,
-        [`private/${defender.uid}/hand`]: hand,
-        [`public/${publicKey}/lifeCount`]: life.length,
-        [`public/${publicKey}/faceUpLifeCards`]: life
-            .map((card, index) => card?.faceUp ? { index, card: createPublicCardSnapshot(card) } : null)
-            .filter(Boolean),
-        [`public/${publicKey}/handCount`]: hand.length,
-        "public/currentAttack": null
-    };
-
-    if (options.banish) {
-        updates[`public/${publicKey}/trash`] = trash;
-    }
-
-    if (moved === 0 && attackerSlot) {
-        updates["public/winner"] = attackerSlot;
-        updates["public/phase"] = "gameOver";
-        updates["public/gameOverReasonTitle"] = "Final Attack";
-        updates["public/gameOverReasonText"] = "A player had no life cards left and took a successful leader attack.";
-    }
-
-    await update(matchRef, updates);
-
-    return {
-        moved,
-        remainingLife: life.length
-    };
 }
 
 export async function rollMultiplayerDice(roomCode, playerSlot) {
@@ -825,72 +704,6 @@ export async function setMultiplayerMulligan(roomCode, user, playerSlot, tookMul
     await update(matchRef, updates);
 }
 
-export async function sendMultiplayerAction(roomCode, user, actionType, payload) {
-    if (!user?.uid) {
-        throw new Error("User is required for multiplayer actions.");
-    }
-
-    return applyMultiplayerAction(roomCode, user, actionType, payload);
-}
-
-export async function applyMultiplayerAction(roomCode, user, actionType, payload) {
-    if (!user?.uid) {
-        throw new Error("User is required for multiplayer actions.");
-    }
-
-    if (actionType === "updateState") {
-        await Promise.all([
-            updatePublicState(roomCode, payload.publicState),
-            updatePrivateState(roomCode, user.uid, payload.privateState)
-        ]);
-
-        return;
-    }
-
-    if (actionType === "passTurn") {
-        return passTurn(roomCode, payload.currentPlayer);
-    }
-
-    throw new Error(`Unsupported multiplayer action: ${actionType}`);
-}
-
-export async function passTurn(roomCode, currentPlayer) {
-    if (currentPlayer !== "p1" && currentPlayer !== "p2") {
-        throw new Error("Invalid current player.");
-    }
-
-    const publicRef = ref(database, `matches/${cleanRoomCode(roomCode)}/public`);
-
-    return runTransaction(publicRef, (publicState) => {
-        if (
-            !publicState ||
-            publicState.currentPlayer !== currentPlayer ||
-            publicState.phase !== "main" ||
-            publicState.currentAttack
-        ) {
-            return;
-        }
-
-        const nextPlayer = currentPlayer === "p1" ? "p2" : "p1";
-        const currentTurnNumber = Number(publicState.turnNumber || 1);
-        const secondPlayer = publicState.secondPlayer || "p2";
-        const nextTurnNumber = currentPlayer === secondPlayer
-            ? currentTurnNumber + 1
-            : currentTurnNumber;
-
-        return {
-            ...publicState,
-            currentPlayer: nextPlayer,
-            phase: "main",
-            currentAttack: null,
-            turnNumber: nextTurnNumber,
-            playerTurns: {
-                ...(publicState.playerTurns || {})
-            }
-        };
-    });
-}
-
 export async function startMatch(roomCode) {
     await initializeMultiplayerGame(roomCode);
 }
@@ -919,10 +732,6 @@ export async function requestRematch(roomCode, playerSlot) {
     if (rematch.p1 && rematch.p2) {
         await initializeMultiplayerGame(roomCode);
     }
-}
-
-export async function deleteRoom(roomCode) {
-    await remove(getRoomRef(roomCode));
 }
 
 export async function registerRoomPresence(roomCode, playerSlot, user) {
@@ -1005,50 +814,3 @@ export function sendImmediateDisconnectRequest(request) {
     });
 }
 
-export async function cleanupInactiveRooms(options = {}) {
-    const {
-        emptyGraceMs = 5 * 60 * 1000,
-        abandonedLobbyMs = 60 * 60 * 1000,
-        startedRoomMs = 6 * 60 * 60 * 1000
-    } = options;
-
-    const matchesRef = ref(database, "matches");
-    const snapshot = await get(matchesRef);
-
-    if (!snapshot.exists()) {
-        return 0;
-    }
-
-    const now = Date.now();
-    const matches = snapshot.val() || {};
-    const deleteTasks = [];
-
-    for (const [roomCode, match] of Object.entries(matches)) {
-        const players = match?.players || {};
-        const p1 = players.p1 || null;
-        const p2 = players.p2 || null;
-        const status = String(match?.status || "waiting");
-        const activityTimestamp = getRoomActivityTimestamp(match);
-        const ageMs = activityTimestamp ? now - activityTimestamp : Number.POSITIVE_INFINITY;
-        const isLegacyRoom = !getNumericTimestamp(match?.updatedAt);
-        const p1Connected = Boolean(p1?.connected);
-        const p2Connected = Boolean(p2?.connected);
-        const hasHost = Boolean(p1);
-        const bothDisconnected = hasHost && !p1Connected && !p2Connected;
-
-        const shouldDelete =
-            !hasHost ||
-            ((status === "waiting" || status === "ready") && !p1Connected && ageMs >= emptyGraceMs) ||
-            ((status === "waiting" || status === "ready") && ageMs >= abandonedLobbyMs) ||
-            (bothDisconnected && ageMs >= emptyGraceMs) ||
-            (status === "started" && ageMs >= startedRoomMs && (bothDisconnected || isLegacyRoom));
-
-        if (shouldDelete) {
-            deleteTasks.push(remove(ref(database, `matches/${roomCode}`)));
-        }
-    }
-
-    await Promise.all(deleteTasks);
-
-    return deleteTasks.length;
-}

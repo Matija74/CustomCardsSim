@@ -138,81 +138,6 @@ function createCompactDeckCard(deck) {
     return card;
 }
 
-function createDeckCard(deck) {
-    const card = document.createElement("article");
-    card.className = "preset-deck-card";
-
-    const parsedDeckLines = parseDeckLines(deck.deckText);
-    const totalCards = getTotalCardCount(parsedDeckLines);
-    const leaderCard = getLeaderCard(deck.leaderKey);
-    const coverCard = leaderCard || getFirstExistingCard(parsedDeckLines);
-
-    const header = document.createElement("div");
-    header.className = "deck-card-header";
-
-    const title = document.createElement("h3");
-    title.textContent = deck.name;
-
-    header.appendChild(title);
-
-    const coverRow = document.createElement("div");
-    coverRow.className = "deck-cover-row";
-
-    if (coverCard?.image) {
-        const coverImage = document.createElement("img");
-        coverImage.className = "deck-cover-image";
-        coverImage.src = coverCard.image;
-        coverImage.alt = coverCard.name;
-        coverRow.appendChild(coverImage);
-    }
-
-    const coverInfo = document.createElement("div");
-    coverInfo.className = "deck-cover-info";
-    coverInfo.innerHTML = `
-        <strong>${escapeHtml(leaderCard?.name || deck.leaderKey || "Unknown Leader")}</strong>
-        <span>Click “View Cards” to open the deck image gallery.</span>
-    `;
-
-    coverRow.appendChild(coverInfo);
-
-    const meta = document.createElement("div");
-    meta.className = "deck-meta";
-
-    meta.appendChild(createMetaItem("Leader", leaderCard?.name || deck.leaderKey));
-    meta.appendChild(createMetaItem("Cards", `${totalCards} total`));
-
-    const deckList = document.createElement("div");
-    deckList.className = "deck-list-preview";
-    deckList.innerHTML = parsedDeckLines.length > 0
-        ? parsedDeckLines.map(line => `<div>${escapeHtml(line.raw)}</div>`).join("")
-        : `<div>No cards listed.</div>`;
-
-    const actions = document.createElement("div");
-    actions.className = "deck-actions";
-
-    const viewButton = document.createElement("button");
-    viewButton.className = "deck-action-button primary";
-    viewButton.textContent = "View Cards";
-
-    viewButton.addEventListener("click", () => {
-        openDeckImageModal(deck);
-    });
-
-    actions.appendChild(viewButton);
-
-    card.appendChild(header);
-    card.appendChild(coverRow);
-    card.appendChild(meta);
-    card.appendChild(deckList);
-    card.appendChild(actions);
-
-    card.addEventListener("dblclick", () => {
-        openDeckImageModal(deck);
-    });
-
-    return card;
-}
-
 function createMetaItem(label, value) {
     const item = document.createElement("div");
     item.className = "deck-meta-item";
@@ -533,18 +458,3 @@ function getCardDataById(cardId) {
     return null;
 }
 
-function useDeckInVsSelf(deckId) {
-    localStorage.setItem("player1SelectedDeck", deckId);
-    localStorage.setItem("player2SelectedDeck", deckId);
-
-    window.location.href = "singleplayer.html";
-}
-
-function escapeHtml(value) {
-    return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-}
