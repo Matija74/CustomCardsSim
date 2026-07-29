@@ -93,8 +93,12 @@
       },
       {
         "id": "DD01-008-on-ko-draw",
-        "type": "onKO",
-        "text": "On K.O.: Draw 1 card.",
+      "type": "onKO",
+      "trigger": "onKO",
+      "actions": [
+        { "action": "drawCard", "player": "self", "quantity": 1 }
+      ],
+      "text": "On K.O.: Draw 1 card.",
         "actionId": "drawOneCard"
       }
     ]
@@ -302,8 +306,12 @@
     "effects": [
       {
         "id": "EGG1-003-on-play-draw",
-        "type": "onPlay",
-        "text": "On Play: Draw 1.",
+      "type": "onPlay",
+      "trigger": "onPlay",
+      "actions": [
+        { "action": "drawCard", "player": "self", "quantity": 1 }
+      ],
+      "text": "On Play: Draw 1.",
         "actionId": "drawOneCard"
       }
     ]
@@ -426,8 +434,12 @@
     "effects": [
       {
         "id": "EGG1-011-on-play-draw",
-        "type": "onPlay",
-        "text": "On Play: Draw 1.",
+      "type": "onPlay",
+      "trigger": "onPlay",
+      "actions": [
+        { "action": "drawCard", "player": "self", "quantity": 1 }
+      ],
+      "text": "On Play: Draw 1.",
         "actionId": "drawOneCard"
       }
     ]
@@ -978,15 +990,23 @@
     "keywords": ["blocker"],
     "effects": [
       {
-        "id": "BL01-015-on-play-draw",
-        "type": "onPlay",
-        "text": "On Play: Draw 1 card.",
+      "id": "BL01-015-on-play-draw",
+      "type": "onPlay",
+      "trigger": "onPlay",
+      "actions": [
+        { "action": "drawCard", "player": "self", "quantity": 1 }
+      ],
+      "text": "On Play: Draw 1 card.",
         "actionId": "drawOneCard"
       },
       {
-        "id": "BL01-015-trigger",
-        "type": "trigger",
-        "text": "Trigger: Play this card.",
+      "id": "BL01-015-trigger",
+      "type": "trigger",
+      "trigger": "trigger",
+      "actions": [
+        { "action": "playCard", "target": "source", "destination": "characterArea", "cardState": "active", "cause": "trigger" }
+      ],
+      "text": "Trigger: Play this card.",
         "actionId": "playThisCardFromTrigger"
       }
     ]

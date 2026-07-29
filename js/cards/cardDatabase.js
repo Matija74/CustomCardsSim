@@ -27,13 +27,17 @@ async function loadCardDatabase() {
     }
 
     cardDatabaseLoadPromise = (async () => {
-        const [characters, stages, events, leaderCards, onePieceCards] = await Promise.all([
+        const [characters, stages, events, leaderCards, onePieceCards, effectModule, compilerModule] = await Promise.all([
             loadJson("../js/cards/data/characters.json"),
             loadJson("../js/cards/data/stages.json"),
             loadJson("../js/cards/data/events.json"),
             loadJson("../js/cards/data/leaders.json"),
-            loadJson("../js/cards/data/onepiece.json")
+            loadJson("../js/cards/data/onepiece.json"),
+            import("./effects/cardEffectDefinitions.js"),
+            import("./effects/effectCompiler.js")
         ]);
+        const effectDefinitions = effectModule.cardEffectDefinitions;
+        const compileCardCollection = compilerModule.compileCardCollection;
 
         const onePieceLeaders = {};
         const onePieceMainDeckCards = {};
@@ -47,17 +51,17 @@ async function loadCardDatabase() {
             onePieceMainDeckCards[cardId] = card;
         });
 
-        cardDatabase = {
+        cardDatabase = compileCardCollection({
             ...characters,
             ...stages,
             ...events,
             ...onePieceMainDeckCards
-        };
+        }, effectDefinitions);
 
-        leaders = {
+        leaders = compileCardCollection({
             ...leaderCards,
             ...onePieceLeaders
-        };
+        }, effectDefinitions);
 
         window.cardDatabase = cardDatabase;
         window.leaders = leaders;

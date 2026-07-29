@@ -239,7 +239,8 @@ body {
 
 .game-log {
     width: 100%;
-    min-height: 180px;
+    height: clamp(180px, 24vh, 280px);
+    min-height: 0;
 
     border: 3px solid black;
     border-radius: 10px;
@@ -252,7 +253,8 @@ body {
 
     display: flex;
     flex-direction: column;
-    flex: 1 1 auto;
+    flex: 0 0 auto;
+    overflow: hidden;
 }
 
 .game-log h3 {
@@ -262,6 +264,7 @@ body {
 
 .game-log-messages {
     flex: 1;
+    min-height: 0;
 
     overflow-y: auto;
 

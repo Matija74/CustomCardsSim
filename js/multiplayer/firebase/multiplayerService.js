@@ -133,6 +133,43 @@ export function subscribeToMatch(roomCode, callback) {
     });
 }
 
+export function subscribeToFullMatch(roomCode, callback) {
+    return onValue(getRoomRef(roomCode), snapshot => callback(snapshot.val() || null));
+}
+
+export function subscribeToPrivateGameState(roomCode, uid, callback) {
+    return onValue(ref(database, `matches/${cleanRoomCode(roomCode)}/private/${uid}/gameState`), snapshot => callback(snapshot.val() || null));
+}
+
+export async function submitGameplayCommand(roomCode, user, playerSlot, command) {
+    normalizePlayerSlot(playerSlot);
+    if (!user?.uid || command?.playerId !== playerSlot || !/^[A-Za-z0-9_-]{1,100}$/.test(command?.id || "") || !command?.type) throw new Error("Invalid gameplay command.");
+    const match = await getMatch(roomCode);
+    if (match?.players?.[playerSlot]?.uid !== user.uid) throw new Error("This player slot belongs to another user.");
+    await set(ref(database, `matches/${cleanRoomCode(roomCode)}/commands/${command.id}`), {
+        uid: user.uid,
+        playerId: playerSlot,
+        createdAt: serverTimestamp(),
+        command: cloneData(command)
+    });
+}
+
+export async function publishGameplayState(roomCode, hostUid, playerUids, authoritativeState, stateByPlayer, publicSummary, processedCommandIds) {
+    const match = await getMatch(roomCode);
+    if (match?.hostUid !== hostUid) throw new Error("Only the room host can publish gameplay state.");
+    const updates = {
+        status: publicSummary.phase === "gameOver" ? "finished" : "started",
+        updatedAt: serverTimestamp(),
+        "public/game": cloneData(publicSummary),
+        [`private/${hostUid}/authoritativeGame`]: cloneData(authoritativeState),
+        [`private/${playerUids.p1}/gameState`]: cloneData(stateByPlayer.p1),
+        [`private/${playerUids.p2}/gameState`]: cloneData(stateByPlayer.p2),
+        "processedCommands": Object.fromEntries(processedCommandIds.map(id => [id, true]))
+    };
+    for (const id of processedCommandIds) updates[`commands/${id}`] = null;
+    await update(getRoomRef(roomCode), updates);
+}
+
 export async function getMatch(roomCode) {
     const snapshot = await get(getRoomRef(roomCode));
     return snapshot.val();
@@ -188,9 +225,9 @@ export async function openPlayArea(roomCode) {
     }
 
     await update(matchRef, {
-        status: "viewing",
+        status: "started",
         updatedAt: serverTimestamp(),
-        "public/phase": "viewOnly"
+        "public/phase": "diceRoll"
     });
 }
 

@@ -104,9 +104,14 @@
     "keywords": [],
     "effects": [
       {
-        "id": "OP14-089-on-ko-draw-trash",
-        "type": "onKO",
-        "text": "On K.O.: Draw 2 cards and trash 2 cards from your hand."
+      "id": "OP14-089-on-ko-draw-trash",
+      "type": "onKO",
+      "trigger": "onKO",
+      "actions": [
+        { "action": "drawCard", "player": "self", "quantity": 2 },
+        { "action": "trashCard", "actingPlayer": "self", "selection": { "controller": "self", "area": "hand", "amount": 2 } }
+      ],
+      "text": "On K.O.: Draw 2 cards and trash 2 cards from your hand."
       },
       {
         "id": "OP14-089-trigger-play",
@@ -198,9 +203,14 @@
     "keywords": [],
     "effects": [
       {
-        "id": "OP16-098-on-play-draw-trash",
-        "type": "onPlay",
-        "text": "On Play: Draw 1 card and trash 1 card from your hand."
+      "id": "OP16-098-on-play-draw-trash",
+      "type": "onPlay",
+      "trigger": "onPlay",
+      "actions": [
+        { "action": "drawCard", "player": "self", "quantity": 1 },
+        { "action": "trashCard", "actingPlayer": "self", "selection": { "controller": "self", "area": "hand", "amount": 1 } }
+      ],
+      "text": "On Play: Draw 1 card and trash 1 card from your hand."
       },
       {
         "id": "OP16-098-activate-main-play-yamato",

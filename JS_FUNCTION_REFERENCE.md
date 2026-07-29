@@ -1,6 +1,18 @@
 # JavaScript Function Reference
 
-This inventory covers the JavaScript that remains after removing the playable match runtime. Card JSON is intentionally excluded because it is data, not JavaScript.
+This inventory covers the card, gameplay, multiplayer, and page JavaScript. Card JSON is intentionally excluded because it is data, not JavaScript.
+
+## `js/game/`
+The rebuilt gameplay modules create card instances and centralized state, validate selections and permissions, execute registered action staples sequentially, manage phases and turns, resolve attacks/Blockers/Counters/Life Triggers, and expose the authoritative command processor. The browser UI only renders state and sends commands.
+
+- `engine/gameEngine.js`: Creates the engine, processes stable command IDs, rejects invalid ownership/timing, and redacts private zones.
+- `effects/actionRegistry.js`: Maps declarative action names to handlers.
+- `effects/effectResolver.js`: Queues triggers, resolves actions in order, pauses for selections, and prevents repeated steps.
+- `battle/battleSystem.js`: Resolves attack targets, Blocker and Counter windows, K.O., Life damage, and Trigger choices.
+- `phases/turnSystem.js`: Advances Refresh, Draw, DON!!, Main, and End phases and expires turn modifiers.
+- `actions/`: Implements card, DON!!, state, Life, search, power, and cost staples.
+- `checks/`: Validates quantities, instances, filters, permissions, and selections.
+- `state/`: Creates game/player/card-instance state and moves cards between zones.
 
 ## `js/cards/cardDatabase.js`
 Loads the complete card JSON datasets and exposes card lookup helpers.
@@ -66,7 +78,7 @@ Stores the Firebase project configuration constants.
 - No named functions are declared in this file.
 
 ## `js/multiplayer/firebase/multiplayerService.js`
-Provides Firebase room, deck-selection, ready-state, presence, and disconnect operations without match gameplay state.
+Provides Firebase room, deck-selection, ready-state, presence, gameplay-command, private-state, and disconnect operations.
 
 - `generateRoomCode`: Creates room code.
 - `cleanRoomCode`: Normalizes room code.
@@ -77,6 +89,10 @@ Provides Firebase room, deck-selection, ready-state, presence, and disconnect op
 - `createRoom`: Creates room.
 - `joinRoom`: Joins room.
 - `subscribeToMatch`: Subscribes to match.
+- `subscribeToFullMatch`: Subscribes the host to authoritative room data.
+- `subscribeToPrivateGameState`: Subscribes a player to their redacted game view.
+- `submitGameplayCommand`: Authenticates and submits a stable gameplay command.
+- `publishGameplayState`: Publishes host-authoritative and player-redacted state.
 - `getMatch`: Returns match.
 - `setPlayerDeck`: Updates player deck.
 - `setPlayerReady`: Updates player ready.
@@ -147,7 +163,7 @@ Renders the animated galaxy background used on non-match pages.
 - No named functions are declared in this file.
 
 ## `js/multiplayer/sync/multiplayerRuntime.js`
-Maintains connection and presence while the multiplayer play area remains view-only.
+Maintains presence, initializes the host engine, processes authenticated commands once, and renders each player's private synchronized view.
 
 - `setConnectionState`: Updates connection state.
 - `sendImmediateDisconnectOnExit`: Sends immediate disconnect on exit.
@@ -189,7 +205,7 @@ Renders the preset deck browser, search, and deck preview modal.
 - `escapeHtml`: Provides helper logic for escape html.
 
 ## `js/ui/pages/queue.js`
-Controls room creation, joining, deck selection, ready state, and opening the view-only multiplayer play area.
+Controls room creation, joining, deck selection, ready state, and opening the multiplayer match.
 
 - `initializeDeckPicker`: Loads deck picker.
 - `saveQueueDeckSelection`: Saves queue deck selection.

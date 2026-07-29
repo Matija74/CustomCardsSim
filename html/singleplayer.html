@@ -96,7 +96,7 @@
                 </div>
 
                 <div class="phase-controls">
-                    <button id="phaseButton" class="phase-button" disabled>Gameplay Disabled</button>
+                    <button id="phaseButton" class="phase-button">Loading Game...</button>
                 </div>
 
                 <div class="game-log">
@@ -105,7 +105,7 @@
                 </div>
 
                 <div class="sidebar-footer-controls">
-                    <button id="sidebarSortButton" class="sidebar-footer-button sidebar-footer-button-sort" type="button" aria-label="Sort Hand" title="Gameplay Disabled" disabled>
+                    <button id="sidebarSortButton" class="sidebar-footer-button sidebar-footer-button-sort" type="button" aria-label="Sort Hand" title="Sort hand">
                         <svg class="sidebar-footer-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
                             <path d="M18 24a16 16 0 0 1 26-6l4 4" />
                             <path d="M40 16h10v10" />
@@ -122,5 +122,9 @@
     </main>
 
     <script src="../js/ui/shared/galaxy-theme.js?v=galaxy-4"></script>
+    <script src="../js/cards/cardDatabase.js?v=game-2"></script>
+    <script src="../js/cards/decks.js?v=game-1"></script>
+    <script src="../js/decks/deckParser.js?v=game-1"></script>
+    <script type="module" src="../js/ui/match/singleplayerRuntime.js?v=game-1"></script>
 </body>
 </html>
