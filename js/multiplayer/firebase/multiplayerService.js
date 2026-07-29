@@ -32,8 +32,8 @@ function createMultiplayerCard(card) {
     return {
         ...cloneData(card),
         aliases: card.aliases ? [...card.aliases] : [],
-        keywords: card.keywords ? [...card.keywords] : [],
-        effects: card.effects ? cloneData(card.effects) : [],
+        keywords: [],
+        effects: [],
         instanceId: crypto.randomUUID(),
         state: card.state || "active",
         attachedDon: Number(card.attachedDon || 0)

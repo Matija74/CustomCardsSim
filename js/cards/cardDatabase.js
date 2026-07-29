@@ -21,6 +21,19 @@ async function loadJson(path) {
     return jsonLoadCache.get(path);
 }
 
+function createVanillaCardDatabase(cards) {
+    return Object.fromEntries(
+        Object.entries(cards || {}).map(([cardId, card]) => [
+            cardId,
+            {
+                ...card,
+                effects: [],
+                keywords: []
+            }
+        ])
+    );
+}
+
 async function loadCardDatabase() {
     if (cardDatabaseLoadPromise) {
         return cardDatabaseLoadPromise;
@@ -28,17 +41,22 @@ async function loadCardDatabase() {
 
     cardDatabaseLoadPromise = (async () => {
         const [characters, stages, events, leaderCards, onePieceCards] = await Promise.all([
-            loadJson("../data/cards/characters.json"),
-            loadJson("../data/cards/stages.json"),
-            loadJson("../data/cards/events.json"),
-            loadJson("../data/cards/leaders.json"),
-            loadJson("../data/cards/onepiece.json")
+            loadJson("../js/cards/data/characters.json"),
+            loadJson("../js/cards/data/stages.json"),
+            loadJson("../js/cards/data/events.json"),
+            loadJson("../js/cards/data/leaders.json"),
+            loadJson("../js/cards/data/onepiece.json")
         ]);
 
+        const vanillaCharacters = createVanillaCardDatabase(characters);
+        const vanillaStages = createVanillaCardDatabase(stages);
+        const vanillaEvents = createVanillaCardDatabase(events);
+        const vanillaLeaders = createVanillaCardDatabase(leaderCards);
+        const vanillaOnePieceCards = createVanillaCardDatabase(onePieceCards);
         const onePieceLeaders = {};
         const onePieceMainDeckCards = {};
 
-        Object.entries(onePieceCards || {}).forEach(([cardId, card]) => {
+        Object.entries(vanillaOnePieceCards).forEach(([cardId, card]) => {
             if (String(card?.cardType || "").toLowerCase() === "leader") {
                 onePieceLeaders[cardId] = card;
                 return;
@@ -48,14 +66,14 @@ async function loadCardDatabase() {
         });
 
         cardDatabase = {
-            ...characters,
-            ...stages,
-            ...events,
+            ...vanillaCharacters,
+            ...vanillaStages,
+            ...vanillaEvents,
             ...onePieceMainDeckCards
         };
 
         leaders = {
-            ...leaderCards,
+            ...vanillaLeaders,
             ...onePieceLeaders
         };
 

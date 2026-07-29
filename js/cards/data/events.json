@@ -1,0 +1,784 @@
+{
+  "DD01-004": {
+    "id": "DD01-004",
+    "cardNumber": "DD01-004",
+    "name": "If you lose the race against Turbo Granny...",
+    "cardType": "event",
+    "type": "Dandadan",
+    "color": "purple",
+    "cost": 3,
+    "image": "../images/GP Okarun/DD01-004.png",
+    "effects": [
+      {
+        "id": "DD01-004-main",
+        "type": "main",
+        "text": "Main: If you have 5 or more DON!! cards on your field, play up to one [Turbo Granny Form] stage card from your deck. Then, shuffle your deck."
+      },
+      {
+        "id": "DD01-004-trigger",
+        "type": "trigger",
+        "text": "Trigger: Activate this card's Main effect.",
+        "actionId": "activateMainEffect"
+      }
+    ]
+  },
+
+  "DD01-005": {
+    "id": "DD01-005",
+    "cardNumber": "DD01-005",
+    "name": "We'll kill all of ya.",
+    "cardType": "event",
+    "type": "Dandadan/Curse",
+    "color": "green",
+    "cost": 1,
+    "image": "../images/GP Okarun/DD01-005.png",
+    "effects": [
+      {
+        "id": "DD01-005-main",
+        "type": "main",
+        "text": "Main: Look at 5 cards from the top of your deck; reveal up to 1 {Dandadan} type card and add it to your hand. Then, place the rest on the bottom of your deck in any order.",
+        "actionId": "lookTopFiveDandadan"
+      },
+      {
+        "id": "DD01-005-trigger",
+        "type": "trigger",
+        "text": "Trigger: Activate this card's Main effect.",
+        "actionId": "activateMainEffect"
+      }
+    ]
+  },
+
+  "DD01-011": {
+    "id": "DD01-011",
+    "cardNumber": "DD01-011",
+    "name": "If its for Momo-chan, I can go All-out!",
+    "cardType": "event",
+    "type": "Dandadan/The Cursed",
+    "color": "green",
+    "cost": 3,
+    "image": "../images/GP Okarun/DD01-011.png",
+    "effects": [
+      {
+        "id": "DD01-011-main",
+        "type": "main",
+        "text": "Main: Take 1 damage: Set 1 of your [Okarun] cards as active."
+      },
+      {
+        "id": "DD01-011-trigger",
+        "type": "trigger",
+        "text": "Trigger: Set 1 of your [Okarun] cards as active."
+      }
+    ]
+  },
+
+  "DD01-013": {
+    "id": "DD01-013",
+    "cardNumber": "DD01-013",
+    "name": "The Power of Words!",
+    "cardType": "event",
+    "type": "Dandadan",
+    "color": "green",
+    "cost": 1,
+    "image": "../images/GP Okarun/DD01-013.png",
+    "effects": [
+      {
+        "id": "DD01-013-main",
+        "type": "main",
+        "text": "Main: You may rest 3 of your DON!! cards: give up to one of your {Dandadan} type characters +4000 power for 1 battle. That character also gains Unblockable for that battle."
+      },
+      {
+        "id": "DD01-013-counter",
+        "type": "counter",
+        "text": "Counter: If your leader is rested, give your leader or 1 of your {Dandadan} type characters +3000 power during this battle.",
+        "powerModifier": 3000
+      }
+    ]
+  },
+
+  "EGG1-007": {
+    "id": "EGG1-007",
+    "cardNumber": "EGG1-007",
+    "name": "Im Pissing On The Moon!!!",
+    "cardType": "event",
+    "type": "Eggman Empire",
+    "color": "red",
+    "cost": 1,
+    "image": "../images/R Eggman/EGG1-007.png",
+    "effects": [
+      {
+        "id": "EGG1-007-counter",
+        "type": "counter",
+        "text": "Counter: Up to 1 of your {Eggman Empire} cards gets +4000 power during this battle.",
+        "actionId": "eggmanCounterPower",
+        "powerModifier": 4000
+      }
+    ]
+  },
+
+  "EGG1-012": {
+    "id": "EGG1-012",
+    "cardNumber": "EGG1-012",
+    "name": "Get A Load Of This!",
+    "cardType": "event",
+    "type": "Eggman Empire",
+    "color": "red",
+    "cost": 0,
+    "image": "../images/R Eggman/EGG1-012.png",
+    "effects": [
+      {
+        "id": "EGG1-012-main",
+        "type": "main",
+        "text": "Main: You may give your leader -5000 power during this turn: Activate your leader's When Attacking ability."
+      },
+      {
+        "id": "EGG1-012-counter",
+        "type": "counter",
+        "text": "Counter: One of your Leader or Character cards gains +2000 power during this battle.",
+        "actionId": "leaderOrCharacterCounterPower",
+        "powerModifier": 2000
+      }
+    ]
+  },
+
+  "BK01-002": {
+    "id": "BK01-002",
+    "cardNumber": "BK01-002",
+    "name": "Get that... to the Black Swordsman",
+    "cardType": "event",
+    "type": "Black Swordsman Party/Fetish",
+    "color": "red",
+    "cost": 5,
+    "image": "../images/RB Guts/BK01-002.jpg",
+    "effects": [
+      {
+        "id": "BK01-002-main",
+        "type": "main",
+        "text": "Main: Give up to 1 of your [Guts] or [Skull Knight] Characters +5000 power for this turn. When that Character attacks, your opponent cannot activate Blocker during this battle, then add the top of your Life cards to your hand."
+      },
+      {
+        "id": "BK01-002-trigger",
+        "type": "trigger",
+        "text": "Trigger: Give 1 of your leaders +1000 power until the end of the turn."
+      }
+    ]
+  },
+
+  "BK01-011": {
+    "id": "BK01-011",
+    "cardNumber": "BK01-011",
+    "name": "...Indeed It Was Like a Heap of Raw Iron.",
+    "cardType": "event",
+    "type": "Black Swordsman Party",
+    "color": "black",
+    "cost": 6,
+    "image": "../images/RB Guts/BK01-011.jpg",
+    "effects": [
+      {
+        "id": "BK01-011-main",
+        "type": "main",
+        "text": "Main: Give up to 1 of your opponent's characters -2 cost until the end of this turn. Then, K.O. up to 1 of your opponent's Characters with a cost of 5 or less."
+      }
+    ]
+  },
+
+  "BK01-015": {
+    "id": "BK01-015",
+    "cardNumber": "BK01-015",
+    "name": "Artificial Arm Huh? It's Groovy.",
+    "cardType": "event",
+    "type": "Black Swordsman Party",
+    "color": "black",
+    "cost": 3,
+    "image": "../images/RB Guts/BK01-015.jpg",
+    "effects": [
+      {
+        "id": "BK01-015-main",
+        "type": "main",
+        "text": "Main: If your leader is [Guts], give your leader up to 1 rested DON!! Then, K.O. one of your opponent's Characters with a cost of 3 or less."
+      }
+    ]
+  },
+
+  "BL01-006": {
+    "id": "BL01-006",
+    "cardNumber": "BL01-006",
+    "name": "Getsuga Tensho",
+    "cardType": "event",
+    "type": "Zanpakto/Soul Reaper",
+    "color": "red",
+    "cost": 10,
+    "image": "../images/RY Ichigo/BL01-006.png",
+    "effects": [
+      {
+        "id": "BL01-006-main",
+        "type": "main",
+        "text": "Main: If your leader is [Kurosaki Ichigo], give all of your Characters and up to one of your Leader +5000 power. Then, your Leader gains Unblockable during this turn. If you do not win the game until the end of this turn, you lose the game."
+      }
+    ]
+  },
+
+  "BL01-016": {
+    "id": "BL01-016",
+    "cardNumber": "BL01-016",
+    "name": "Santen Kesshun",
+    "cardType": "event",
+    "type": "Human",
+    "color": "yellow",
+    "cost": 1,
+    "image": "../images/RY Ichigo/BL01-016.png",
+    "effects": [
+      {
+        "id": "BL01-016-counter",
+        "type": "counter",
+        "text": "Counter: Up to 1 of your Leader or Character cards gains +2000 power during this battle. Then, if you have 2 or less Life cards, that card gains an additional +2000 power.",
+        "actionId": "santenKesshunCounterPower"
+      },
+      {
+        "id": "BL01-016-trigger",
+        "type": "trigger",
+        "text": "Trigger: Up to 1 of your Leader or Character cards gains +1000 power during this turn.",
+        "actionId": "leaderOrCharacterTriggerPower",
+        "powerModifier": 1000
+      }
+    ]
+  },
+
+  "BL01-017": {
+    "id": "BL01-017",
+    "cardNumber": "BL01-017",
+    "name": "Soten Kisshun",
+    "cardType": "event",
+    "type": "Human",
+    "color": "yellow",
+    "cost": 1,
+    "image": "../images/RY Ichigo/BL01-017.png",
+    "effects": [
+      {
+        "id": "BL01-017-main",
+        "type": "main",
+        "text": "Main: You may rest 7 of your DON!! cards: If your Leader is [Kurosaki Ichigo], place up to 1 card from the top of your deck to the top of your life cards."
+      },
+      {
+        "id": "BL01-017-counter",
+        "type": "counter",
+        "text": "Counter: Your Leader gains +3000 power during this battle.",
+        "actionId": "leaderCounterPower",
+        "powerModifier": 3000
+      }
+    ]
+  },
+
+  "POG1-004": {
+    "id": "POG1-004",
+    "cardNumber": "POG1-004",
+    "name": "Pogajanje",
+    "cardType": "event",
+    "type": "Film",
+    "color": "blue",
+    "cost": 1,
+    "image": "../images/U Taglavnovič/POG1-004.jpg",
+    "effects": [
+      {
+        "id": "POG1-004-main",
+        "type": "main",
+        "text": "Main: Look at 4 cards from the top of your deck; reveal up to 1 [Film] type card and add it to your hand. Then place the rest at the bottom of your deck in any order."
+      },
+      {
+        "id": "POG1-004-trigger",
+        "type": "trigger",
+        "text": "Trigger: Draw 1 card."
+      }
+    ]
+  },
+
+  "POG1-008": {
+    "id": "POG1-008",
+    "cardNumber": "POG1-008",
+    "name": "Klobuk",
+    "cardType": "event",
+    "type": "Film",
+    "color": "blue",
+    "cost": 0,
+    "image": "../images/U Taglavnovič/POG1-008.jpg",
+    "effects": [
+      {
+        "id": "POG1-008-main",
+        "type": "main",
+        "text": "Main: You may give 1 active DON!! card to 1 of your Leader: Your Leader or up to 1 of your Characters gains +1000 power during this turn."
+      },
+      {
+        "id": "POG1-008-counter",
+        "type": "counter",
+        "text": "Counter: Your Leader or up to one of your Characters gains +2000 power during this battle."
+      }
+    ]
+  },
+
+  "POG1-009": {
+    "id": "POG1-009",
+    "cardNumber": "POG1-009",
+    "name": "Bingo",
+    "cardType": "event",
+    "type": "Film",
+    "color": "blue",
+    "cost": 0,
+    "image": "../images/U Taglavnovič/POG1-009.jpg",
+    "effects": [
+      {
+        "id": "POG1-009-main",
+        "type": "main",
+        "text": "Main: You may rest 2 of your DON!! cards: Declare a cost and reveal 1 card from the top of your deck. If the revealed cost is the same as the declared cost, draw 2 cards."
+      },
+      {
+        "id": "POG1-009-counter",
+        "type": "counter",
+        "text": "Counter: Your Leader or up to one of your Characters gains +2000 power during this battle."
+      }
+    ]
+  },
+
+  "POG1-010": {
+    "id": "POG1-010",
+    "cardNumber": "POG1-010",
+    "name": "Manifestirana ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¾oga",
+    "cardType": "event",
+    "type": "Film",
+    "color": "blue",
+    "cost": 0,
+    "image": "../images/U Taglavnovič/POG1-010.jpg",
+    "effects": [
+      {
+        "id": "POG1-010-main",
+        "type": "main",
+        "text": "Main: You may rest 3 of your DON!! cards: Up to 1 of your opponent's rested Character does not become active during next refresh phase."
+      },
+      {
+        "id": "POG1-010-counter",
+        "type": "counter",
+        "text": "Counter: Your Leader or up to one of your Characters gains +2000 power during this battle."
+      }
+    ]
+  },
+
+  "POG1-011": {
+    "id": "POG1-011",
+    "cardNumber": "POG1-011",
+    "name": "Banana Onemoglosti",
+    "cardType": "event",
+    "type": "Film",
+    "color": "blue",
+    "cost": 0,
+    "image": "../images/U Taglavnovič/POG1-011.jpg",
+    "effects": [
+      {
+        "id": "POG1-011-main",
+        "type": "main",
+        "text": "Main: You may rest 3 of your DON!! cards: Negate the effects of up to 1 of opponents Leader or Characters until the end of this turn."
+      },
+      {
+        "id": "POG1-011-counter",
+        "type": "counter",
+        "text": "Counter: Your Leader or up to one of your Characters gains +2000 power during this battle."
+      }
+    ]
+  },
+
+  "POG1-014": {
+    "id": "POG1-014",
+    "cardNumber": "POG1-014",
+    "name": "Hvala hvala hvala",
+    "cardType": "event",
+    "type": "Film",
+    "color": "blue",
+    "cost": 1,
+    "image": "../images/U Taglavnovič/POG1-014.jpg",
+    "effects": [
+      {
+        "id": "POG1-014-counter",
+        "type": "counter",
+        "text": "Counter: Your leader or up to one of your Characters gains +2000 power. Then add up to 1 [Film] type card from your Trash to your hand."
+      },
+      {
+        "id": "POG1-014-trigger",
+        "type": "trigger",
+        "text": "Trigger: Add 1 card from your Trash to your hand."
+      }
+    ]
+  },
+
+  "JK01-002": {
+    "id": "JK01-002",
+    "cardNumber": "JK01-002",
+    "name": "Evidence",
+    "cardType": "event",
+    "type": "Deadly Sentencing",
+    "color": "blue",
+    "cost": 3,
+    "image": "../images/UB Higuruma/JK01-002.png",
+    "effects": [
+      {
+        "id": "JK01-002-counter",
+        "type": "counter",
+        "text": "Counter: If your opponent's attack is 7000 power or lower, you may negate it. If you did, reveal the top card of your life, if it is either \"Culling Game Participant\" or \"Deadly Sentencing\" type, you may either add it to your hand, or draw 1 from the top or bottom of your deck. Then, flip the top card of your life down."
+      }
+    ]
+  },
+
+  "JK01-003": {
+    "id": "JK01-003",
+    "cardNumber": "JK01-003",
+    "name": "Guilty, Confiscation",
+    "cardType": "event",
+    "type": "Deadly Sentencing",
+    "color": "black",
+    "cost": 4,
+    "image": "../images/UB Higuruma/JK01-003.png",
+    "effects": [
+      {
+        "id": "JK01-003-counter",
+        "type": "counter",
+        "text": "Counter: If your opponent's attack is 7000 power or lower, you may negate it. If you did, K.O your own stage card, then negate one of your opponent character's effect."
+      }
+    ]
+  },
+
+  "JK01-004": {
+    "id": "JK01-004",
+    "cardNumber": "JK01-004",
+    "name": "Guilty, Confiscation, Death Penalty!!!",
+    "cardType": "event",
+    "type": "Deadly Sentencing",
+    "color": "black",
+    "cost": 7,
+    "image": "../images/UB Higuruma/JK01-004.png",
+    "effects": [
+      {
+        "id": "JK01-004-counter",
+        "type": "counter",
+        "text": "Counter: If your opponent's attack is 10000 power or lower, you may negate it. If you did, If you have 3 or less life cards in your life area, your leader's base power becomes 9000 and gains Double Attack until the end of your next turn."
+      }
+    ]
+  },
+
+  "JK01-005": {
+    "id": "JK01-005",
+    "cardNumber": "JK01-005",
+    "name": "Yeah, I did that, I'm not lying, and I won't deny it",
+    "cardType": "event",
+    "type": "Deadly Sentencing",
+    "color": "black",
+    "cost": 10,
+    "image": "../images/UB Higuruma/JK01-005.jpg",
+    "effects": [
+      {
+        "id": "JK01-005-counter",
+        "type": "counter",
+        "text": "Counter: If your opponent's attack is 12000 power or lower, you may negate it. If you did, you may rest 10 of your DON!! cards. If you have 2 or less life cards in your life area, your leader's base power becomes 9000, and gains Double Attack and Banish. Additionally, if your opponent's life hits 0 during this turn, you win the game."
+      }
+    ]
+  },
+
+  "YAM1-003": {
+    "id": "YAM1-003",
+    "cardNumber": "YAM1-003",
+    "name": "I Want To Live As Free As Oden Did!!!",
+    "cardType": "event",
+    "type": "Land of Wano",
+    "color": "yellow",
+    "cost": 1,
+    "image": "../images/BY AceYamato/YAM1-003.png",
+    "effects": [
+      {
+        "id": "YAM1-003-main",
+        "type": "main",
+        "text": "Main: Add 1 card from the top of your Life cards to your hand. Then, up to 1 of your {Land of Wano} Characters gets +2000 power and Rush until end of turn."
+      },
+      {
+        "id": "YAM1-003-counter",
+        "type": "counter",
+        "text": "Counter: You may turn 1 card from the top of your Life cards face-up: Up to 1 of your Characters or Leader gets +3000 power until end of turn.",
+        "powerModifier": 3000
+      }
+    ]
+  },
+
+  "JK02-002": {
+    "id": "JK02-002",
+    "cardNumber": "JK02-002",
+    "name": "Domain amplification",
+    "cardType": "event",
+    "type": "Curse technique",
+    "color": "green",
+    "cost": 1,
+    "image": "../images/GB Hanami/JK02-002.jpg",
+    "effects": [
+      {
+        "id": "JK02-002-on-play",
+        "type": "onPlay",
+        "text": "On Play: You may rest 2 of your DON!! cards: Set up to 1 [Hanami] card as active and give it +1000 power."
+      },
+      {
+        "id": "JK02-002-counter",
+        "type": "counter",
+        "text": "Counter: Give your Leader +3000 power for this battle.",
+        "powerModifier": 3000
+      }
+    ]
+  },
+
+  "JK02-003": {
+    "id": "JK02-003",
+    "cardNumber": "JK02-003",
+    "name": "Cursed energy absorption",
+    "cardType": "event",
+    "type": "Curse technique",
+    "color": "black",
+    "cost": 2,
+    "image": "../images/GB Hanami/JK02-003.jpg",
+    "effects": [
+      {
+        "id": "JK02-003-on-play",
+        "type": "onPlay",
+        "text": "On Play: Give up to 1 of your opponent's Characters -2000 power until the end of this turn. If it has a cost of 5 or less and has 0 or less power, K.O. it."
+      }
+    ]
+  },
+
+  "JK02-004": {
+    "id": "JK02-004",
+    "cardNumber": "JK02-004",
+    "name": "Wooden Ball",
+    "cardType": "event",
+    "type": "Curse technique",
+    "color": "black",
+    "cost": 3,
+    "image": "../images/GB Hanami/JK02-004.jpg",
+    "effects": [
+      {
+        "id": "JK02-004-main",
+        "type": "main",
+        "text": "Main: Choose one: K.O. up to 1 of your opponent's rested Characters with a cost of 5 or less; or up to 1 of your opponent's Characters with a cost of 7 or less cannot attack this turn."
+      }
+    ]
+  },
+
+  "JK02-005": {
+    "id": "JK02-005",
+    "cardNumber": "JK02-005",
+    "name": "Cursed Buds",
+    "cardType": "event",
+    "type": "Curse technique",
+    "color": "green",
+    "cost": 2,
+    "image": "../images/GB Hanami/JK02-005.jpg",
+    "effects": [
+      {
+        "id": "JK02-005-main",
+        "type": "main",
+        "text": "Main: If you have 2 or more rested Characters, set 1 of your Characters with a cost of 5 or less as active and give it Rush."
+      }
+    ]
+  },
+
+  "JK02-006": {
+    "id": "JK02-006",
+    "cardNumber": "JK02-006",
+    "name": "Domain Expansion!!",
+    "cardType": "event",
+    "type": "Curse technique",
+    "color": "green",
+    "cost": 6,
+    "image": "../images/GB Hanami/JK02-006.jpg",
+    "effects": [
+      {
+        "id": "JK02-006-main",
+        "type": "main",
+        "text": "Main: You may set up to 3 of your rested Characters as active and give all of them +2000 power."
+      }
+    ]
+  },
+
+  "JK02-007": {
+    "id": "JK02-007",
+    "cardNumber": "JK02-007",
+    "name": "Flower Field",
+    "cardType": "event",
+    "type": "Curse technique",
+    "color": "black",
+    "cost": 3,
+    "image": "../images/GB Hanami/JK02-007.jpg",
+    "effects": [
+      {
+        "id": "JK02-007-main",
+        "type": "main",
+        "text": "Main: If your Leader is {Hanami}, negate the effect of up to 1 of your opponent's Characters with a cost of 8 or less during this turn. Then, give 1 of your opponent's Characters -2 cost for this turn."
+      }
+    ]
+  },
+
+  "JK02-009": {
+    "id": "JK02-009",
+    "cardNumber": "JK02-009",
+    "name": "Cursed Roots",
+    "cardType": "event",
+    "type": "Curse technique",
+    "color": "black",
+    "cost": 2,
+    "image": "../images/GB Hanami/JK02-009.jpg",
+    "effects": [
+      {
+        "id": "JK02-009-main",
+        "type": "main",
+        "text": "Main: If you have 4 rested Characters, you may K.O. 2 of your opponent's Characters with a cost of 5 or less."
+      },
+      {
+        "id": "JK02-009-counter",
+        "type": "counter",
+        "text": "Counter: Give your Leader or 1 of your Characters +2000 power for this battle.",
+        "powerModifier": 2000
+      }
+    ]
+  },
+
+  "SUB1-011": {
+    "id": "SUB1-011",
+    "cardNumber": "SUB1-011",
+    "name": "I will definitely save you",
+    "cardType": "event",
+    "type": "RE:ZERO",
+    "color": "yellow",
+    "cost": 0,
+    "image": "../images/Y Subaru/SUB1-012.jpg",
+    "effects": [
+      {
+        "id": "SUB1-011-counter",
+        "type": "counter",
+        "text": "Counter: You may trash 1 card from your hand: Up to 1 of your Leader or Character cards gains +3000 power during this battle.",
+        "powerModifier": 3000
+      },
+      {
+        "id": "SUB1-011-trigger",
+        "type": "trigger",
+        "text": "Trigger: If you have 0 Life cards, you may add up to 1 card from the top of your deck to the top of your Life cards. Then, trash 1 card from your hand."
+      }
+    ]
+  },
+
+  "KIL1-013": {
+    "id": "KIL1-013",
+    "cardNumber": "KIL1-013",
+    "name": "Sonic Scyther",
+    "cardType": "event",
+    "type": "Kid Pirates/Supernovas",
+    "color": "red",
+    "cost": 3,
+    "image": "../images/RB Killer/KIL1-013.png",
+    "effects": [
+      {
+        "id": "KIL1-013-counter",
+        "type": "counter",
+        "text": "Counter: K.O. up to 1 of your opponent's Characters with 6000 power or less."
+      },
+      {
+        "id": "KIL1-013-trigger",
+        "type": "trigger",
+        "text": "Trigger: Activate this card's Counter effect."
+      }
+    ]
+  },
+
+  "KIL1-014": {
+    "id": "KIL1-014",
+    "cardNumber": "KIL1-014",
+    "name": "Kid Has No Left Arm!!!",
+    "cardType": "event",
+    "type": "Kid Pirates/Supernovas",
+    "color": "black",
+    "cost": 1,
+    "image": "../images/RB Killer/KIL1-014.png",
+    "effects": [
+      {
+        "id": "KIL1-014-main",
+        "type": "main",
+        "text": "Main: You may rest 1 DON!!: You and your opponent each trash the top 3 cards of your deck."
+      },
+      {
+        "id": "KIL1-014-counter",
+        "type": "counter",
+        "text": "Counter: If your Leader is [Killer] or you control a Character with 8000 power or more, up to 1 of your Leader or Characters gets +4000 during this battle.",
+        "powerModifier": 4000
+      }
+    ]
+  },
+
+  "IMU1-011": {
+    "id": "IMU1-011",
+    "cardNumber": "IMU1-011",
+    "name": "Omen",
+    "cardType": "event",
+    "type": "Celestial Dragon/Holy Knight",
+    "color": "red",
+    "cost": 2,
+    "image": "../images/RB Nerona Imu/IMU1-011.png",
+    "effects": [
+      {
+        "id": "IMU1-011-main",
+        "type": "main",
+        "text": "Main: You may rest 2 of your DON!! cards: Trash up to 1 of your opponent's Characters with 5000 power or less."
+      },
+      {
+        "id": "IMU1-011-counter",
+        "type": "counter",
+        "text": "Counter: You may trash 1 card from the top of your deck: If your Leader is [Imu], up to 1 of your Leader or Character cards gains +2000 power until the end of your next End Phase.",
+        "powerModifier": 2000
+      }
+    ]
+  },
+
+  "IMU1-012": {
+    "id": "IMU1-012",
+    "cardNumber": "IMU1-012",
+    "name": "There is Little Time",
+    "cardType": "event",
+    "type": "Holy Knight",
+    "color": "black",
+    "cost": 2,
+    "image": "../images/RB Nerona Imu/IMU1-012.png",
+    "effects": [
+      {
+        "id": "IMU1-012-main",
+        "type": "main",
+        "text": "Main: You may trash 1 card from the top of your deck: Up to 1 of your [IMU] Leaders or {Holy Knight} type Characters gains Banish during this turn. Then, draw 1 card."
+      },
+      {
+        "id": "IMU1-012-trigger",
+        "type": "trigger",
+        "text": "Trigger: Up to 1 of your Leader or Character cards gains +1000 power until the end of your next turn.",
+        "powerModifier": 1000
+      }
+    ]
+  },
+
+  "IMU1-013": {
+    "id": "IMU1-013",
+    "cardNumber": "IMU1-013",
+    "name": "A Magic Circle?!!",
+    "cardType": "event",
+    "type": "Celestial Dragon/Holy Knight",
+    "color": "black",
+    "cost": 4,
+    "image": "../images/RB Nerona Imu/IMU1-013.png",
+    "effects": [
+      {
+        "id": "IMU1-013-main",
+        "type": "main",
+        "text": "Main: You may trash 2 cards from the top of your deck: Play up to 1 {Holy Knight} type Character with a cost of 6 or less from your trash. Then, draw 1 card."
+      },
+      {
+        "id": "IMU1-013-trigger",
+        "type": "trigger",
+        "text": "Trigger: Add up to 1 {Holy Knight} type card from your trash to your hand."
+      }
+    ]
+  }
+}

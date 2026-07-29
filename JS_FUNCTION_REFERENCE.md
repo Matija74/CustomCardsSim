@@ -3,12 +3,13 @@
 This inventory covers every `.js` file under `js/`. The card data `.json` files are intentionally excluded because they are JSON, not JavaScript.
 
 ## `js/cards/cardDatabase.js`
-Loads card JSON data, builds the runtime card registries, and exposes lookup helpers.
+Loads card JSON, creates effectless runtime copies, and exposes card lookup helpers.
 
-- `loadJson`: Loads JSON.
-- `loadCardDatabase`: Loads card database.
-- `cloneCard`: Clones card.
-- `getCardById`: Returns card by ID.
+- `loadJson`: Loads Json.
+- `createVanillaCardDatabase`: Creates Vanilla Card Database.
+- `loadCardDatabase`: Loads Card Database.
+- `cloneCard`: Handles clone card.
+- `getCardById`: Returns Card By Id.
 
 ## `js/cards/decks.js`
 Defines preset deck lists and deck selection helpers used by the UI.
@@ -16,13 +17,13 @@ Defines preset deck lists and deck selection helpers used by the UI.
 - `getAvailableDecks`: Returns available decks.
 - `getDeckById`: Returns deck by ID.
 
-## `js/core/deckParser.js`
+## `js/decks/deckParser.js`
 Parses deck text and shuffles deck arrays for match setup.
 
 - `parseDeckText`: Parses deck text.
 - `shuffleDeck`: Provides helper logic for shuffle deck.
 
-## `js/core/deckTools.js`
+## `js/decks/deckTools.js`
 Handles saved-deck storage, deck text conversion, validation, and selection helpers.
 
 - `getDefaultPresetDeck`: Returns default preset deck.
@@ -54,314 +55,52 @@ Handles saved-deck storage, deck text conversion, validation, and selection help
 - `createDeckPickerField`: Creates deck picker field.
 - `createDeckPickerHelp`: Creates deck picker help.
 
-## `js/core/effects.js`
-Defines shared card effect logic, keyword rules, and effect-state helpers.
+## `js/game/actions/gameInteractions.js`
+Implements base card and match actions without card effects or keyword behavior.
 
-- `getCardAllEffects`: Returns all active effects on a card, including copied temporary effects.
-- `getCardKeywordEffects`: Returns normalized keyword-effect entries for a card.
-- `isTemporaryStatusEntryActive`: Checks whether a temporary status entry is still active.
-- `areCardEffectsNegated`: Checks whether a card currently has an active effect-negation state.
-- `addTemporaryEffectNegation`: Adds a temporary effect-negation state to a card.
-- `canCardBeRested`: Checks whether card be rested.
-- `applyCannotBeRestedUntil`: Applies cannot be rested until.
-- `addTemporaryKeyword`: Adds temporary keyword.
-- `addDurationKeyword`: Adds duration keyword.
-- `addBattleKeyword`: Adds battle keyword.
-- `refreshCardStatDisplay`: Refreshes rendered board stats for the affected card.
-- `addBattlePowerBonus`: Adds battle power bonus.
-- `addTemporaryPowerBonus`: Adds temporary power bonus.
-- `addDurationPowerBonus`: Adds duration power bonus.
-- `addCostModifier`: Adds cost modifier.
-- `addPersistentPowerBonus`: Adds persistent power bonus.
-- `getPerTurnEffectUseLimit`: Returns per turn effect use limit.
-- `hasReachedPerTurnEffectUseLimit`: Checks whether reached per turn effect use limit.
-- `CardEffects.normalizeKeyword`: Normalizes keyword.
-- `CardEffects.hasKeyword`: Checks whether keyword.
-- `CardEffects.if`: Provides CardEffects logic for if.
-- `CardEffects.canAttackOnTurnPlayed`: Checks whether attack on turn played.
-- `CardEffects.canBlock`: Checks whether block.
-- `CardEffects.getAvailableBlockers`: Returns available blockers.
-- `CardEffects.shouldBanishLife`: Checks whether banish life.
-- `CardEffects.getLeaderDamageAmount`: Returns leader damage amount.
-- `CardEffects.isUnblockable`: Checks whether unblockable.
-- `CardEffects.canAttackCharactersOnTurnPlayed`: Checks whether attack characters on turn played.
-- `CardEffects.canAttackTargetOnTurnPlayed`: Checks whether attack target on turn played.
-- `CardEffects.normalizeCardName`: Normalizes card name.
-- `CardEffects.hasCardName`: Checks whether card name.
-- `CardEffects.getCardNameAliases`: Returns card name aliases.
-- `CardEffects.for`: Provides CardEffects logic for for.
-- `CardEffects.hasTurboGrannyFormStage`: Checks whether turbo granny form stage.
-- `CardEffects.getOncePerTurnUsageKey`: Returns once per turn usage key.
-- `CardEffects.hasUsedOncePerTurnEffect`: Checks whether used once per turn effect.
-- `CardEffects.markOncePerTurnEffectUsed`: Marks once per turn effect used.
-- `CardEffects.hasUsedOncePerGameEffect`: Checks whether used once per game effect.
-- `CardEffects.markOncePerGameEffectUsed`: Marks once per game effect used.
-- `CardEffects.getPerTurnEffectUseCount`: Returns per turn effect use count.
-- `CardEffects.markPerTurnEffectUsed`: Marks per turn effect used.
-- `CardEffects.wasEffectSkippedForAttack`: Provides CardEffects logic for was effect skipped for attack.
-- `CardEffects.resolveTakakuraKenLeaderWhenAttacking`: Resolves takakura ken leader when attacking.
-- `CardEffects.resolveTakakuraKenCharacterWhenAttacking`: Resolves takakura ken character when attacking.
-- `CardEffects.resolveRefreshDonWhenAttacking`: Resolves refresh DON when attacking.
-- `CardEffects.resolveEvilEyeWhenAttacking`: Resolves evil eye when attacking.
-- `CardEffects.resolveAiraWhenAttacking`: Resolves aira when attacking.
-- `CardEffects.resolveEggmanLeaderWhenAttacking`: Resolves Eggman leader when attacking.
-- `CardEffects.resolveHanamiLeaderWhenAttacking`: Resolves hanami leader when attacking.
-- `CardEffects.resolveSubaruLeaderWhenAttacking`: Resolves Subaru leader when attacking.
-- `CardEffects.resolveSubaruElsaWhenAttacking`: Resolves Subaru elsa when attacking.
-- `CardEffects.resolveImuLeaderWhenAttacking`: Resolves Imu leader when attacking.
-- `CardEffects.resolveImuCharacterWhenAttacking`: Resolves Imu character when attacking.
-- `CardEffects.resolveJogoWhenAttacking`: Resolves jogo when attacking.
-- `CardEffects.resolveKenjakuWhenAttacking`: Resolves kenjaku when attacking.
-- `CardEffects.resolveKisukeWhenAttacking`: Resolves kisuke when attacking.
-- `CardEffects.resolveYoruichiWhenAttacking`: Resolves yoruichi when attacking.
-- `CardEffects.resolveUryuWhenAttacking`: Resolves uryu when attacking.
-- `CardEffects.resolveDejanSigmaWhenAttacking`: Resolves dejan sigma when attacking.
-- `CardEffects.resolveYujiItadoriWhenAttacking`: Resolves yuji itadori when attacking.
-- `CardEffects.resolveBubblegumWhenAttacking`: Resolves bubblegum when attacking.
-- `CardEffects.resolveWhenOpponentAttacksStageEffects`: Resolves when opponent attacks stage effects.
-- `CardEffects.resolveTurboGrannyFormEndOfTurn`: Resolves turbo granny form end of turn.
-- `CardEffects.resolveWhenAttackingEffects`: Resolves when attacking effects.
+- `createCardInstance`: Creates Card Instance.
+- `assignCardInstance`: Assigns Card Instance.
+- `findHandCardIndexByInstanceId`: Finds Hand Card Index By Instance Id.
+- `getCardPlayCost`: Returns Card Play Cost.
+- `canPlayerAffordCard`: Checks Player Afford Card.
+- `getFirstOpenCharacterSlotIndex`: Returns First Open Character Slot Index.
+- `getBoardCardFromData`: Returns Board Card From Data.
+- `getPlayerKey`: Returns Player Key.
+- `getOpponentOfPlayer`: Returns Opponent Of Player.
+- `getPlayedCharacterInitialState`: Returns Played Character Initial State.
+- `addDon`: Adds DON!!.
+- `addRestedDon`: Adds Rested DON!!.
+- `restDonForCost`: Rests DON!! For Cost.
+- `setRestedDonActive`: Sets Rested DON!! Active.
+- `returnDonToDeck`: Returns DON!! To Deck.
+- `attachActiveDonToCard`: Attaches Active DON!! To Card.
+- `getTotalAttachedDonCount`: Returns Total Attached DON!! Count.
+- `returnAttachedDonToCostArea`: Returns Attached DON!! To Cost Area.
+- `detachAttachedDonToCostArea`: Detaches Attached DON!! To Cost Area.
+- `drawCard`: Draws Card.
+- `drawCards`: Draws Cards.
+- `getCardCounterValue`: Returns Card Counter Value.
+- `getCounterPowerForUse`: Returns Counter Power For Use.
+- `getHandCounterEventCost`: Returns Hand Counter Event Cost.
+- `canCardBeUsedAsCounter`: Checks Card Be Used As Counter.
+- `useCounterFromHand`: Handles use counter from hand.
+- `playCard`: Plays Card.
+- `playCharacterCard`: Plays Character Card.
+- `replaceStageOnFieldIfNeeded`: Handles replace stage on field if needed.
+- `playStageCard`: Plays Stage Card.
+- `setCardRested`: Sets Card Rested.
+- `restBoardCard`: Rests Board Card.
+- `setBoardCardActive`: Sets Board Card Active.
+- `trashCharacterFromField`: Handles trash character from field.
+- `KOCharacter`: K.O.s Character.
+- `takeLifeDamage`: Takes Life Damage.
+- `banishLifeDamage`: Handles banish life damage.
+- `loseByLifeDamage`: Handles By Life Damage.
+- `loseByDeckOut`: Handles By Deck Out.
+- `checkDeckOut`: Checks Deck Out.
+- `moveCardToTrash`: Moves Card To Trash.
 
-## `js/core/gameInteractions.js`
-Implements direct card and board interactions such as play, draw, trash, combat, triggers, and zone changes.
-
-- `createCardInstance`: Creates card instance.
-- `assignCardInstance`: Provides helper logic for assign card instance.
-- `findHandCardIndexByInstanceId`: Finds hand card index by instance ID.
-- `getCardPlayCost`: Returns card play cost.
-- `getCardEffectiveCost`: Returns card effective cost.
-- `canPlayerAffordCard`: Checks whether player afford card.
-- `doesHanamiLeaderPlayCharactersRested`: Checks whether hanami leader play characters rested.
-- `getPlayedCharacterInitialState`: Returns played character initial state.
-- `getMainPhaseEventEffects`: Returns main phase event effects.
-- `canPlayEventInMainPhase`: Checks whether play event in main phase.
-- `getFirstOpenCharacterSlotIndex`: Returns first open character slot index.
-- `isParfumStage`: Checks whether parfum stage.
-- `doesStagePreventLeaderAttacks`: Checks whether stage prevent leader attacks.
-- `canPlayStageToArea`: Checks whether play stage to area.
-- `replaceStageOnFieldIfNeeded`: Provides helper logic for replace stage on field if needed.
-- `chooseTrashCard`: Prompts for trash card.
-- `addCardFromTrashToHand`: Adds card from trash to hand.
-- `chooseLeaderOrCharacterForPower`: Prompts for leader or character for power.
-- `resolveBingoMain`: Resolves bingo main.
-- `chooseHandCard`: Prompts for hand card.
-- `resolveDrawOneTrashOne`: Resolves draw one trash one.
-- `chooseHandCardsToTopOrBottomOfDeck`: Prompts for hand cards to top or bottom of deck.
-- `chooseCardsFromTrashToBottomOfDeck`: Prompts for cards from trash to bottom of deck.
-- `controlsReplacementNegation`: Provides helper logic for controls replacement negation.
-- `areOpponentReplacementEffectsNegated`: Provides helper logic for are opponent replacement effects negated.
-- `playCardFromDeckWithoutCost`: Plays card from deck without cost.
-- `playCharacterFromTrashWithoutCost`: Plays character from trash without cost.
-- `playUpToOneNamedCharacterFromHandOrTrash`: Plays up to one named character from hand or trash.
-- `resolveJeremicOnPlay`: Resolves jeremic on play.
-- `resolveSigmaRevealEffect`: Resolves sigma reveal effect.
-- `resolveSigmaDeckChoiceEffect`: Resolves sigma deck choice effect.
-- `clearParfumControlState`: Clears parfum control state.
-- `getParfumOriginalOwner`: Returns parfum original owner.
-- `getCardZoneDestinationPlayer`: Returns card zone destination player.
-- `getParfumControlledCharacter`: Returns parfum controlled character.
-- `setReturnedParfumCharacterAttackLock`: Sets returned parfum character attack lock.
-- `returnParfumControlledCharacter`: Returns parfum controlled character.
-- `trashStageFromField`: Trashes stage from field.
-- `koStageFromField`: Provides helper logic for K.O. stage from field.
-- `trashLinkedParfumStageForCharacter`: Trashes linked parfum stage for character.
-- `placeOpponentCharacterWithParfum`: Provides helper logic for place opponent character with parfum.
-- `getBoardCardFromData`: Returns board card from data.
-- `addDon`: Adds DON.
-- `addRestedDon`: Adds rested DON.
-- `restDonForCost`: Rests DON for cost.
-- `returnDonToDeck`: Returns DON to deck.
-- `setRestedDonActive`: Sets rested DON active.
-- `attachActiveDonToCard`: Attaches active DON to card.
-- `drawCard`: Draws card.
-- `trashTopCardsOfDeck`: Trashes top cards of deck.
-- `resolveWhenTrashedFromDeckEffects`: Resolves when trashed from deck effects.
-- `drawCards`: Draws cards.
-- `drawCardFromBottom`: Draws card from bottom.
-- `getCardCounterValue`: Returns card counter value.
-- `getCounterPowerForUse`: Returns counter power for use.
-- `getCounterEffectPower`: Returns counter effect power.
-- `canUseCounterEffect`: Checks whether use counter effect.
-- `getCounterEffects`: Returns counter effects.
-- `getEventCounterBonusFromBoard`: Returns event counter bonus from board.
-- `getHandCounterEventCost`: Returns hand counter event cost.
-- `canCardBeUsedAsCounter`: Checks whether card be used as counter.
-- `useCounterFromHand`: Provides helper logic for use counter from hand.
-- `playCard`: Plays card.
-- `playCharacterCard`: Plays character card.
-- `playStageCard`: Plays stage card.
-- `resolveOnPlayEffects`: Resolves on play effects.
-- `isOptionalEffect`: Checks whether optional effect.
-- `shouldPromptEffectActivation`: Checks whether prompt effect activation.
-- `getEffectLabel`: Returns effect label.
-- `getEffectPrompt`: Returns effect prompt.
-- `addCardToLife`: Adds card to life.
-- `setCardRested`: Sets card rested.
-- `isMulticoloredCard`: Checks whether multicolored card.
-- `resolveEffectAction`: Resolves effect action.
-- `giveSmallEggmanCharacterPower`: Provides helper logic for give small Eggman character power.
-- `copyOpponentBoardAbility`: Provides helper logic for copy opponent board ability.
-- `getCopiedEffectChoiceLabel`: Returns copied effect choice label.
-- `resolveCopiedBoardAbility`: Resolves copied board ability.
-- `resolveImmediateCopiedWhenAttackingEffect`: Resolves immediate copied when attacking effect.
-- `resolveImmediateCopiedOnOpponentAttackEffect`: Resolves immediate copied on opponent attack effect.
-- `getCopyableEffects`: Returns copyable effects.
-- `applyCopiedKeywordEffect`: Applies copied keyword effect.
-- `applyTemporaryCopiedBoardEffect`: Applies temporary copied board effect.
-- `resolveCopiedOnKOEffect`: Resolves copied on K.O. effect.
-- `copyOpponentCharacterBasePower`: Provides helper logic for copy opponent character base power.
-- `trashOwnCharacterForMetalSonicPower`: Trashes own character for metal sonic power.
-- `playEggmanCharactersFromTrash`: Plays Eggman characters from trash.
-- `playEggmanCharactersFromTrashByCost`: Plays Eggman characters from trash by cost.
-- `getTrashCharacterChoices`: Returns trash character choices.
-- `getTrashCardChoices`: Returns trash card choices.
-- `chooseCardsFromHandToTrash`: Prompts for cards from hand to trash.
-- `resolveDeathEggOnPlay`: Resolves death egg on play.
-- `lockOpponentCharactersFromAttacking`: Provides helper logic for lock opponent characters from attacking.
-- `lookTopCardsForType`: Provides helper logic for look top cards for type.
-- `lookTopCardsAddOneToHandTrashRest`: Provides helper logic for look top cards add one to hand trash rest.
-- `lookTopCardsForTypeAddUpTo`: Provides helper logic for look top cards for type add up to.
-- `resolveDavidTaglavnovicTurnStartSearch`: Resolves david taglavnovic turn start search.
-- `isKurosakiIchigoLeader`: Checks whether kurosaki ichigo leader.
-- `hasKurosakiIchigoCharacter`: Checks whether kurosaki ichigo character.
-- `isZangetsuStage`: Checks whether zangetsu stage.
-- `getCurrentZangetsuStageCost`: Returns current zangetsu stage cost.
-- `findZangetsuStageForGameStart`: Finds zangetsu stage for game start.
-- `findZangetsuStageInDeck`: Finds zangetsu stage in deck.
-- `playZangetsuStageFromDeck`: Plays zangetsu stage from deck.
-- `resolveKurosakiIchigoGameStart`: Resolves kurosaki ichigo game start.
-- `resolveKurosakiIchigoDamageStageUpgrade`: Resolves kurosaki ichigo damage stage upgrade.
-- `searchGetsugaTenshoFromDeck`: Provides helper logic for search getsuga tensho from deck.
-- `resolveGetsugaTenshoMain`: Resolves getsuga tensho main.
-- `resolveSotenKisshunMain`: Resolves soten kisshun main.
-- `getPlayerKey`: Returns player key.
-- `getOpponentPlayer`: Returns opponent player.
-- `hasTypeText`: Checks whether type text.
-- `isLeaderOrDandadanCharacter`: Checks whether leader or dandadan character.
-- `getOwnBoardChoices`: Returns own board choices.
-- `getOpponentBoardChoices`: Returns opponent board choices.
-- `getOpponentCharacterChoices`: Returns opponent character choices.
-- `chooseBoardCard`: Prompts for board card.
-- `chooseOwnBoardCard`: Prompts for own board card.
-- `chooseOpponentCharacter`: Prompts for opponent character.
-- `giveRestedDonToCard`: Provides helper logic for give rested DON to card.
-- `giveRestedDonToOwnBoardCard`: Provides helper logic for give rested DON to own board card.
-- `chooseOpponentCharacterToKO`: Prompts for opponent character to K.O..
-- `removeCharacterByOpponentEffect`: Removes character by opponent effect.
-- `getAvailableSmallpoxRemovalReplacement`: Returns available smallpox removal replacement.
-- `getAvailableUryuLifeFlipReplacement`: Returns available uryu life flip replacement.
-- `useUryuLifeFlipReplacement`: Provides helper logic for use uryu life flip replacement.
-- `finishCharacterRemovalByOpponentEffect`: Provides helper logic for finish character removal by opponent effect.
-- `removeStageByOpponentEffect`: Removes stage by opponent effect.
-- `getAvailableSageRemovalReplacement`: Returns available sage removal replacement.
-- `chooseSageReplacementTrashCards`: Prompts for sage replacement trash cards.
-- `useSageReplacementWithCards`: Provides helper logic for use sage replacement with cards.
-- `getHandCardChoices`: Returns hand card choices.
-- `takeTopLifeToHand`: Provides helper logic for take top life to hand.
-- `takeLifeCardToHand`: Provides helper logic for take life card to hand.
-- `takeAllLifeToHand`: Provides helper logic for take all life to hand.
-- `takeLifeToHandUntilCount`: Provides helper logic for take life to hand until count.
-- `moveOwnCharacterToLife`: Moves own character to life.
-- `hasJujutsuOrCullingGameLeader`: Checks whether jujutsu or culling game leader.
-- `hasContinuousOpponentEffectProtection`: Checks whether continuous opponent effect protection.
-- `isProtectedFromOpponentEffects`: Checks whether protected from opponent effects.
-- `resolveDrawTwoTrashTwo`: Resolves draw two trash two.
-- `resolveDrawTwoTrashOne`: Resolves draw two trash one.
-- `resolveHajimeKashimoLifeTakenEffects`: Resolves hajime kashimo life taken effects.
-- `resolveGutsLeaderCharacterRemovedBonus`: Resolves guts leader character removed bonus.
-- `setOneNamedOwnCardActive`: Sets one named own card active.
-- `playTurboGrannyFormFromDeck`: Plays turbo granny form from deck.
-- `getPlayerFieldDonCount`: Returns player field DON count.
-- `getTotalAttachedDonCount`: Returns total attached DON count.
-- `getTotalDonInPlay`: Returns total DON in play.
-- `canUseOnOpponentAttackEffect`: Checks whether use on opponent attack effect.
-- `canHigurumaLeaderActivateTrashEvent`: Checks whether Higuruma leader activate trash event.
-- `negateCurrentAttack`: Provides helper logic for negate current attack.
-- `queueAutoResolveNegatedAttack`: Queues auto resolve negated attack.
-- `resolveEvidenceCounterEffect`: Resolves evidence counter effect.
-- `resolveConfiscationCounterEffect`: Resolves confiscation counter effect.
-- `resolveDeathPenaltyCounterEffect`: Resolves death penalty counter effect.
-- `getLifeZeroWinConditionWinner`: Returns life zero win condition winner.
-- `resolveHiromiHigurumaCharacterLeaderDamage`: Resolves hiromi Higuruma character leader damage.
-- `resolveTakakoUroOnOpponentAttack`: Resolves takako uro on opponent attack.
-- `resolveConfessionCounterEffect`: Resolves confession counter effect.
-- `resolveHigurumaTrashCounterEffect`: Resolves Higuruma trash counter effect.
-- `resolveHiromiHigurumaLeaderOnOpponentAttack`: Resolves hiromi Higuruma leader on opponent attack.
-- `cloneGameStateValue`: Clones game state value.
-- `clearTransientStateAfterCheckpointRestore`: Clears transient state after checkpoint restore.
-- `getSubaruLeader`: Returns Subaru leader.
-- `revealSubaruLifeCard`: Provides helper logic for reveal Subaru life card.
-- `trashTopLifeCard`: Trashes top life card.
-- `getSubaruStageEffect`: Returns Subaru stage effect.
-- `resolveEchidnaStageCopy`: Resolves echidna stage copy.
-- `hasRamBoostedRem`: Checks whether ram boosted rem.
-- `buildSubaruCheckpointState`: Builds Subaru checkpoint state.
-- `applySubaruCheckpointState`: Applies Subaru checkpoint state.
-- `tryResolveSubaruCheckpointLoss`: Provides helper logic for try resolve Subaru checkpoint loss.
-- `saveSubaruCheckpointState`: Saves Subaru checkpoint state.
-- `resolveSubaruLeaderActivateMain`: Resolves Subaru leader activate main.
-- `getKillerLeader`: Returns killer leader.
-- `resolveKillerLeaderMill`: Resolves killer leader mill.
-- `moveRandomTrashCardsToBottom`: Moves random trash cards to bottom.
-- `resolveKillerTrashBottomCycle`: Resolves killer trash bottom cycle.
-- `resolveKillerDrawThenTrash`: Resolves killer draw then trash.
-- `resolveKillerKOUpToPower`: Resolves killer K.O. up to power.
-- `resolveKillerBubblegumEffect`: Resolves killer bubblegum effect.
-- `resolveKillerCharacterWhenAttacked`: Resolves killer character when attacked.
-- `resolveKillerLeaderActivateMain`: Resolves killer leader activate main.
-- `resolveKillerLeaderOnOpponentAttack`: Resolves killer leader on opponent attack.
-- `resolveCounterEffects`: Resolves counter effects.
-- `resolveEchidnaActivateMain`: Resolves echidna activate main.
-- `getAceYamatoLeader`: Returns ace yamato leader.
-- `getAceYamatoLeaderKOTargetChoices`: Returns ace yamato leader K.O. target choices.
-- `resolveAceYamatoLeaderOnCharacterPlay`: Resolves ace yamato leader on character play.
-- `resolveAceYamatoLeaderActivateMain`: Resolves ace yamato leader activate main.
-- `getImuLeader`: Returns Imu leader.
-- `getAvailableImuStageProtectionReplacement`: Returns available Imu stage protection replacement.
-- `clearCardStateForDeck`: Clears card state for deck.
-- `moveCharacterToBottomOfDeck`: Moves character to bottom of deck.
-- `resolveImuOnOpponentAttack`: Resolves Imu on opponent attack.
-- `resolveKouzukiOdenTriggerPlay`: Resolves kouzuki oden trigger play.
-- `getHanamiLeader`: Returns hanami leader.
-- `resolveHanamiLeaderActivateMain`: Resolves hanami leader activate main.
-- `resolveRopongiCurseActivateMain`: Resolves ropongi curse activate main.
-- `resolveJogoActivateMain`: Resolves jogo activate main.
-- `resolveGrasshopperCurseActivateMain`: Resolves grasshopper curse activate main.
-- `resolveMahitoActivateMain`: Resolves mahito activate main.
-- `resolveKurourushiActivateMain`: Resolves kurourushi activate main.
-- `resolveKenjakuOnPlay`: Resolves kenjaku on play.
-- `resolveWanoCountryActivateMain`: Resolves wano country activate main.
-- `resolveBlackYamatoActivateMain`: Resolves black yamato activate main.
-- `returnAttachedDonChoice`: Returns attached DON choice.
-- `resolveOtamaActivateMain`: Resolves otama activate main.
-- `resolveSt28MomonosukeActivateMain`: Resolves st28 momonosuke activate main.
-- `resolveOnKOEffects`: Resolves on K.O. effects.
-- `resolveOnBlockEffects`: Resolves on block effects.
-- `resolveMainEffects`: Resolves main effects.
-- `resolveBrankoEndOfTurn`: Resolves branko end of turn.
-- `resolveDavidTaglavnovicCharacterMain`: Resolves david taglavnovic character main.
-- `resolveMagdalenaActivateMain`: Resolves magdalena activate main.
-- `resolveMagdalenaTrigger`: Resolves magdalena trigger.
-- `playEventCard`: Plays event card.
-- `restBoardCard`: Rests board card.
-- `setBoardCardActive`: Sets board card active.
-- `trashCharacterFromField`: Trashes character from field.
-- `KOCharacter`: Provides helper logic for K.O. character.
-- `takeLifeDamage`: Provides helper logic for take life damage.
-- `promptLifeCardTriggerChoice`: Provides helper logic for prompt life card trigger choice.
-- `resolveTriggerEffects`: Resolves trigger effects.
-- `resolveSingleTriggerEffect`: Resolves single trigger effect.
-- `loseByLifeDamage`: Provides helper logic for lose by life damage.
-- `playCardFromTrigger`: Plays card from trigger.
-- `banishLifeDamage`: Provides helper logic for banish life damage.
-- `getOpponentOfPlayer`: Returns opponent of player.
-- `loseByDeckOut`: Provides helper logic for lose by deck out.
-- `checkDeckOut`: Provides helper logic for check deck out.
-- `returnAttachedDonToCostArea`: Returns all attached DON from a player board back to the cost area.
-- `detachAttachedDonToCostArea`: Returns attached DON from one card back to the cost area.
-- `moveCardToTrash`: Moves card to trash.
-
-## `js/core/gameSettings.js`
+## `js/game/settings/gameSettings.js`
 Loads and exposes gameplay settings from local storage.
 
 - `loadGameSettings`: Loads game settings.
@@ -370,57 +109,54 @@ Loads and exposes gameplay settings from local storage.
 - `getOptionAutoSelectScore`: Returns option auto select score.
 - `getAutoSelectMaxValueOption`: Returns auto select max value option.
 
-## `js/core/phases.js`
-Controls match turn flow, phase progression, refresh handling, and end-of-turn cleanup.
+## `js/game/phases/phases.js`
+Controls mulligan, turn order, phase changes, refresh, draw, DON!!, and counter flow.
 
-- `setPhaseButtonUrgency`: Sets phase button urgency.
-- `shouldHighlightManualPhaseButton`: Checks whether highlight manual phase button.
-- `runDiceRollPhase`: Runs dice roll phase.
-- `selectTurnOrder`: Provides helper logic for select turn order.
-- `handleMulliganChoice`: Handles mulligan choice.
-- `drawStartingHand`: Draws starting hand.
-- `mulliganHand`: Provides helper logic for mulligan hand.
-- `setupLifeCards`: Sets up life cards.
-- `shouldSkipCurrentTurnDraw`: Checks whether skip current turn draw.
-- `getCurrentTurnDonAmount`: Returns current turn DON amount.
-- `setPhaseButtonState`: Sets phase button state.
-- `canCurrentClientAdvanceTurnPhases`: Checks whether current client advance turn phases.
-- `maybeAutoAdvanceTurnPhases`: Provides helper logic for maybe auto advance turn phases.
-- `canCurrentClientResolveStartOfTurn`: Checks whether current client resolve start of turn.
-- `beginTurnFlow`: Begins turn flow.
-- `advanceDrawPhase`: Advances draw phase.
-- `advanceDonPhase`: Advances DON phase.
-- `startTurnOne`: Starts turn one.
-- `getCurrentTurnStatusKey`: Builds the current turn status key used for per-turn tracking.
-- `markCardCannotAttackThisTurn`: Marks a card as unable to attack during the current turn.
-- `markLifeCardAdded`: Marks that the player added a life card during the current turn.
-- `hasAddedLifeCardThisTurn`: Checks whether the player added a life card during the current turn.
-- `lockCardForNextRefresh`: Provides helper logic for lock card for next refresh.
-- `refreshPlayerCards`: Refreshes DON, leader, characters, and stage state at turn start.
-- `runRefreshPhase`: Runs refresh phase.
-- `runDrawPhase`: Runs draw phase.
-- `runDonPhase`: Runs DON phase.
-- `runMainPhase`: Runs main phase.
-- `passTurn`: Passes turn.
-- `resolveEndOfTurnEffects`: Resolves end-of-turn effects and clears temporary state.
-- `clearExpiredEndPhaseEffects`: Removes end-phase statuses whose duration has expired.
-- `clearEndOfTurnTemporaryEffects`: Clears temporary turn-based card effects from a player board.
-- `startCounterPhase`: Starts counter phase.
-- `getNextPlayer`: Returns next player.
-- `canPlayerPlayCards`: Checks whether player play cards.
+- `setPhaseButtonUrgency`: Sets Phase Button Urgency.
+- `shouldHighlightManualPhaseButton`: Checks Highlight Manual Phase Button.
+- `runDiceRollPhase`: Handles run dice roll phase.
+- `selectTurnOrder`: Handles select turn order.
+- `handleMulliganChoice`: Handles Mulligan Choice.
+- `drawStartingHand`: Draws Starting Hand.
+- `mulliganHand`: Handles mulligan hand.
+- `setupLifeCards`: Sets up Life Cards.
+- `shouldSkipCurrentTurnDraw`: Checks Skip Current Turn Draw.
+- `getCurrentTurnDonAmount`: Returns Current Turn DON!! Amount.
+- `setPhaseButtonState`: Sets Phase Button State.
+- `canCurrentClientAdvanceTurnPhases`: Checks Current Client Advance Turn Phases.
+- `maybeAutoAdvanceTurnPhases`: Handles maybe auto advance turn phases.
+- `canCurrentClientResolveStartOfTurn`: Checks Current Client Resolve Start Of Turn.
+- `beginTurnFlow`: Starts Turn Flow.
+- `advanceDrawPhase`: Handles advance draw phase.
+- `advanceDonPhase`: Handles advance don!! phase.
+- `startTurnOne`: Starts Turn One.
+- `getCurrentTurnStatusKey`: Returns Current Turn Status Key.
+- `markCardCannotAttackThisTurn`: Handles mark card cannot attack this turn.
+- `markLifeCardAdded`: Handles mark life card added.
+- `hasAddedLifeCardThisTurn`: Checks Added Life Card This Turn.
+- `lockCardForNextRefresh`: Handles lock card for next refresh.
+- `refreshPlayerCards`: Handles refresh player cards.
+- `runRefreshPhase`: Handles run refresh phase.
+- `runDrawPhase`: Handles run draw phase.
+- `runDonPhase`: Handles run don!! phase.
+- `runMainPhase`: Handles run main phase.
+- `passTurn`: Handles pass turn.
+- `startCounterPhase`: Starts Counter Phase.
+- `getNextPlayer`: Returns Next Player.
+- `canPlayerPlayCards`: Checks Player Play Cards.
 
-## `js/firebase/firebaseApp.js`
+## `js/multiplayer/firebase/firebaseApp.js`
 Initializes Firebase app services and guest authentication helpers.
 
 - `signInGuest`: Provides helper logic for sign in guest.
 - `waitForUser`: Provides helper logic for wait for user.
 
-## `js/firebase/firebaseConfig.js`
+## `js/multiplayer/firebase/firebaseConfig.js`
 Stores the Firebase project configuration constants.
 
 - No named functions are declared in this file.
 
-## `js/firebase/multiplayerService.js`
+## `js/multiplayer/firebase/multiplayerService.js`
 Provides Firebase room, match, state-sync, and presence operations for multiplayer.
 
 - `generateRoomCode`: Provides helper logic for generate room code.
@@ -470,7 +206,7 @@ Provides Firebase room, match, state-sync, and presence operations for multiplay
 - `sendImmediateDisconnectRequest`: Provides helper logic for send immediate disconnect request.
 - `cleanupInactiveRooms`: Provides helper logic for cleanup inactive rooms.
 
-## `js/pages/deck-editor.js`
+## `js/ui/pages/deck-editor.js`
 Runs the deck editor page UI, filtering, previews, import/export, and saved deck actions.
 
 - `DeckEditor.constructor`: Initializes the class instance and caches its starting state or DOM references.
@@ -526,240 +262,162 @@ Runs the deck editor page UI, filtering, previews, import/export, and saved deck
 - `DeckEditor.closeCardPreview`: Provides DeckEditor logic for close card preview.
 - `DeckEditor.getCardDetails`: Returns card details.
 
-## `js/pages/galaxy-theme.js`
+## `js/ui/shared/galaxy-theme.js`
 Renders the animated galaxy background used on non-match pages.
 
 - No named functions are declared in this file.
 
-## `js/pages/matchShared.js`
-Holds shared singleplayer and multiplayer match-page helpers and render utilities.
+## `js/game/shared/matchShared.js`
+Defines shared match state, printed card power calculation, and board rendering helpers.
 
-- `getSelectedDeckDefinitions`: Returns selected deck definitions.
-- `createInitialPlayerState`: Creates initial player state.
-- `createInitialGameState`: Creates initial game state.
-- `takeCardAnimationClass`: Provides helper logic for take card animation class.
-- `getBoardCardRenderKey`: Returns board card render key.
-- `getBoardStateAnimationClass`: Returns board state animation class.
-- `applyCardAnimationClass`: Applies card animation class.
-- `setupLifeArea`: Sets up life area.
-- `createTurnOrderButtons`: Creates turn order buttons.
-- `showDiceRollAnimation`: Provides helper logic for show dice roll animation.
-- `createD20Die`: Creates D20 die.
-- `animateD20`: Provides helper logic for animate D20.
-- `removeDiceRollDisplay`: Removes dice roll display.
-- `createMulliganButtons`: Creates mulligan buttons.
-- `removeChoiceButtons`: Removes choice buttons.
-- `createPhaseLogProxy`: Creates phase log proxy.
-- `normalizeLogMessage`: Normalizes log message.
-- `getBoardActionButtonContainer`: Returns board action button container.
-- `getOpponentPlayerKey`: Returns opponent player key.
-- `isCharacterPlayedThisTurn`: Checks whether character played this turn.
-- `getCardBattlePower`: Returns card battle power.
-- `getPrintedPower`: Returns printed power.
-- `getZangetsuLeaderBasePower`: Returns zangetsu leader base power.
-- `isTemporaryBasePowerExpired`: Checks whether temporary base power expired.
-- `getPowerModifier`: Returns power modifier.
-- `getSubaruRamPowerModifier`: Returns Subaru ram power modifier.
-- `getImuMaffeyPowerModifier`: Returns Imu maffey power modifier.
-- `getKillerGigPowerModifier`: Returns killer gig power modifier.
-- `getPlayerForBoardCard`: Returns player for board card.
-- `getYourTurnPowerBonus`: Returns your turn power bonus.
-- `getWanoCountryPowerModifier`: Returns wano country power modifier.
-- `getSt28MomonosukeLeaderPowerModifier`: Returns st28 momonosuke leader power modifier.
-- `getSt28YamatoPowerModifier`: Returns st28 yamato power modifier.
-- `getTurboGrannyFormPowerModifier`: Returns turbo granny form power modifier.
-- `getOpponentTurnPowerModifier`: Returns opponent turn power modifier.
-- `getDonAttachedPowerModifier`: Returns DON attached power modifier.
-- `getSerpicoFarnesePowerModifier`: Returns serpico farnese power modifier.
-- `getGutsLeaderPowerModifier`: Returns guts leader power modifier.
-- `getHigurumaLeaderPowerModifier`: Returns Higuruma leader power modifier.
-- `getJujutsuProtectionPowerModifier`: Returns jujutsu protection power modifier.
-- `getKurosakiIchigoPowerModifier`: Returns kurosaki ichigo power modifier.
-- `getAttachedDonPowerModifier`: Returns attached DON power modifier.
-- `getPersistentPowerModifier`: Returns persistent power modifier.
-- `getTemporaryPowerModifier`: Returns temporary power modifier.
-- `getDurationPowerModifier`: Returns duration power modifier.
-- `isDurationPowerBonusExpired`: Checks whether duration power bonus expired.
-- `getBattlePowerModifier`: Returns battle power modifier.
-- `getCopiedEffectBasePower`: Returns copied effect base power.
-- `getCopiedEffectPowerModifier`: Returns copied effect power modifier.
-- `copiedEffectTargetsThisCard`: Provides helper logic for copied effect targets this card.
-- `getCostModifier`: Returns cost modifier.
-- `renderCostModifierBadge`: Renders cost modifier badge.
-- `renderPowerModifierBadge`: Renders power modifier badge.
-- `renderBasePowerBadge`: Renders base power badge.
-- `renderAttachedDonBadge`: Renders attached DON badge.
-- `getCurrentAttackTargetPowerBonus`: Returns current attack target power bonus.
-- `isSameBoardCard`: Checks whether same board card.
-- `getBoardActionButtonContainerFromData`: Returns board action button container from data.
-- `rollD20`: Rolls D20.
+- `getSelectedDeckDefinitions`: Returns Selected Deck Definitions.
+- `createInitialPlayerState`: Creates Initial Player State.
+- `createInitialGameState`: Creates Initial Game State.
+- `takeCardAnimationClass`: Takes Card Animation Class.
+- `getBoardCardRenderKey`: Returns Board Card Render Key.
+- `getBoardStateAnimationClass`: Returns Board State Animation Class.
+- `applyCardAnimationClass`: Applies Card Animation Class.
+- `setupLifeArea`: Sets up Life Area.
+- `createTurnOrderButtons`: Creates Turn Order Buttons.
+- `showDiceRollAnimation`: Shows Dice Roll Animation.
+- `createD20Die`: Creates D20 Die.
+- `animateD20`: Handles animate d20.
+- `removeDiceRollDisplay`: Removes Dice Roll Display.
+- `createMulliganButtons`: Creates Mulligan Buttons.
+- `removeChoiceButtons`: Removes Choice Buttons.
+- `createPhaseLogProxy`: Creates Phase Log Proxy.
+- `normalizeLogMessage`: Handles normalize log message.
+- `getBoardActionButtonContainer`: Returns Board Action Button Container.
+- `getOpponentPlayerKey`: Returns Opponent Player Key.
+- `isCharacterPlayedThisTurn`: Checks Character Played This Turn.
+- `getPlayerForBoardCard`: Returns Player For Board Card.
+- `getPrintedPower`: Returns Printed Power.
+- `getPowerModifier`: Returns Power Modifier.
+- `getCardBattlePower`: Returns Card Battle Power.
+- `getCostModifier`: Returns Cost Modifier.
+- `renderCostModifierBadge`: Renders Cost Modifier Badge.
+- `renderPowerModifierBadge`: Renders Power Modifier Badge.
+- `renderBasePowerBadge`: Renders Base Power Badge.
+- `renderAttachedDonBadge`: Renders Attached DON!! Badge.
+- `getCurrentAttackTargetPowerBonus`: Returns Current Attack Target Power Bonus.
+- `isSameBoardCard`: Checks Same Board Card.
+- `getBoardActionButtonContainerFromData`: Returns Board Action Button Container From Data.
+- `rollD20`: Handles roll d20.
 
-## `js/pages/multiplayer.js`
-Runs the multiplayer match page UI and local synced battle state layer.
+## `js/ui/multiplayer/multiplayer.js`
+Runs the effectless multiplayer match interface and synchronizes player-owned actions.
 
-- `cloneSerializableValue`: Clones serializable value.
-- `getMultiplayerRuntime`: Returns multiplayer runtime.
-- `getMultiplayerLocalSlot`: Returns multiplayer local slot.
-- `getOpponentMultiplayerSlot`: Returns opponent multiplayer slot.
-- `getCanonicalSlotForLocalPlayerKey`: Returns canonical slot for local player key.
-- `getLocalPlayerKeyForCanonicalSlot`: Returns local player key for canonical slot.
-- `getPlayerKeyForPlayer`: Returns player key for player.
-- `mapBoardCardDataToCanonical`: Maps board card data to canonical.
-- `mapBoardCardDataToLocal`: Maps board card data to local.
-- `queueMultiplayerStateSync`: Queues multiplayer state sync.
-- `serializePlayerState`: Serializes player state.
-- `hydratePlayerState`: Hydrates player state.
-- `transformStatusExpiryPlayerKeys`: Transforms status expiry player keys.
-- `mapLocalStatusKeysToCanonical`: Maps local status keys to canonical.
-- `mapCanonicalStatusKeysToLocal`: Maps canonical status keys to local.
-- `renderGameLogMessages`: Renders game log messages.
-- `syncPhaseButtonForCurrentState`: Syncs phase button for current state.
-- `clearLocalSelectionsAndOverlays`: Clears local selections and overlays.
-- `restoreBattleUiFromSyncedState`: Rests ore battle UI from synced state.
-- `renderFullGameState`: Renders full game state.
-- `maybeAutoAdvancePhaseFromSyncedState`: Provides helper logic for maybe auto advance phase from synced state.
-- `maybeResumeStartOfTurnFromSyncedState`: Provides helper logic for maybe resume start of turn from synced state.
-- `createUiBridge`: Creates UI bridge.
-- `initializeGamePage`: Initializes the match page and performs its startup render flow.
-- `clearBlockerTargets`: Clears blocker targets.
-- `enterBlockerStep`: Provides helper logic for enter blocker step.
-- `handleBlockerSelection`: Handles blocker selection.
-- `skipCurrentBlockStep`: Provides helper logic for skip current block step.
-- `showGameOverPopup`: Provides helper logic for show game over popup.
-- `removeGameOverPopup`: Removes game over popup.
-- `removeSurrenderConfirmPopup`: Removes surrender confirm popup.
-- `showSurrenderConfirmPopup`: Provides helper logic for show surrender confirm popup.
-- `showSubaruResetOverlay`: Provides helper logic for show Subaru reset overlay.
-- `removeSubaruResetOverlay`: Removes Subaru reset overlay.
-- `syncSubaruResetOverlayForCurrentState`: Syncs Subaru reset overlay for current state.
-- `syncGameOverPopupForCurrentState`: Syncs game over popup for current state.
-- `endGame`: Provides helper logic for end game.
-- `clearAttackArrow`: Clears attack arrow.
-- `drawAttackArrow`: Draws attack arrow.
-- `getBoardElementFromData`: Returns board element from data.
-- `setupPhaseControls`: Sets up phase controls.
-- `showEndTurnConfirmation`: Provides helper logic for show end turn confirmation.
-- `shouldAddGameLog`: Checks whether add game log.
-- `addGameLog`: Adds game log.
-- `updateDonDisplay`: Updates DON display.
-- `renderDonArea`: Renders DON area.
-- `renderDonDecks`: Renders DON decks.
-- `renderDonDeck`: Renders DON deck.
-- `renderDecks`: Renders decks.
-- `renderDeck`: Renders deck.
-- `renderHands`: Renders hands.
-- `renderPlayerHand`: Renders player hand.
-- `sortPlayerHand`: Provides helper logic for sort player hand.
-- `setupSidebarControls`: Sets up sidebar controls.
-- `updateSidebarControls`: Updates sidebar controls.
-- `canSortPlayerHand`: Checks whether sort player hand.
-- `getHandSortKey`: Returns hand sort key.
-- `renderLifeCards`: Renders life cards.
-- `renderPlayerLife`: Renders player life.
-- `renderLeaders`: Renders leaders.
-- `renderLeader`: Renders leader.
-- `renderCharacters`: Renders characters.
-- `renderPlayerCharacters`: Renders player characters.
-- `renderStages`: Renders stages.
-- `renderPlayerStage`: Renders player stage.
-- `renderTrash`: Renders trash.
-- `renderPlayerTrash`: Renders player trash.
-- `showTrashViewer`: Provides helper logic for show trash viewer.
-- `removeTrashViewer`: Removes trash viewer.
-- `setupCardPreview`: Sets up card preview.
-- `showCardPreview`: Provides helper logic for show card preview.
-- `clearCardPreview`: Clears card preview.
-- `setupHandCardSelection`: Sets up hand card selection.
-- `showSelectedCardActions`: Provides helper logic for show selected card actions.
-- `showSelectedCounterActions`: Provides helper logic for show selected counter actions.
-- `applyCounterPowerToCurrentAttack`: Applies counter power to current attack.
-- `clearSelectedCardActions`: Clears selected card actions.
-- `setupBoardCharacterSelection`: Sets up board character selection.
-- `setupBoardLeaderSelection`: Sets up board leader selection.
-- `showSelectedBoardActions`: Provides helper logic for show selected board actions.
-- `canAttachDonToBoardCard`: Checks whether attach DON to board card.
-- `createAttachDonButton`: Creates attach DON button.
-- `refreshSelectedBoardCardElement`: Provides helper logic for refresh selected board card element.
-- `getActivateMainEffect`: Returns activate main effect.
-- `getActivateAnyEffect`: Returns activate any effect.
-- `getOnOpponentAttackEffect`: Returns on opponent attack effect.
-- `getWhenAttackedEffect`: Returns when attacked effect.
-- `isWanoCountryAttachDonEffect`: Checks whether wano country attach DON effect.
-- `isBoardEffectResolutionInProgress`: Checks whether board effect resolution in progress.
-- `canUseActivateMainEffect`: Checks whether use activate main effect.
-- `canUseActivateAnyEffect`: Checks whether use activate any effect.
-- `createBoardEffectButton`: Creates board effect button.
-- `createActivateMainButton`: Creates activate main button.
-- `createActivateAnyButton`: Creates activate any button.
-- `activateBoardEffect`: Provides helper logic for activate board effect.
-- `resolveBoardEffectActivation`: Resolves board effect activation.
-- `resolveBoardActionEffect`: Resolves board action effect.
-- `clearSelectedBoardActions`: Clears selected board actions.
-- `clearHandSelection`: Clears hand selection.
-- `clearBoardSelection`: Clears board selection.
-- `clearReplaceTargets`: Clears replace targets.
-- `enterReplaceMode`: Provides helper logic for enter replace mode.
-- `setupCharacterSlotInteractions`: Sets up character slot interactions.
-- `clearBattleControls`: Clears battle controls.
-- `isLocalMultiplayerPlayerKey`: Checks whether local multiplayer player key.
-- `canLocalPlayerControlDefense`: Checks whether local player control defense.
-- `createBattleButton`: Creates battle button.
-- `createSkipBlockButton`: Creates skip block button.
-- `createWaitingDefenseButton`: Creates waiting defense button.
-- `showResolveAttackButton`: Provides helper logic for show resolve attack button.
-- `showCounterPhaseControls`: Provides helper logic for show counter phase controls.
-- `showResolveOnlyButton`: Provides helper logic for show resolve only button.
-- `enterAttackTargetSelection`: Provides helper logic for enter attack target selection.
-- `setupAttackTargetSelection`: Sets up attack target selection.
-- `clearAttackTargets`: Clears attack targets.
-- `beginAttack`: Begins attack.
-- `continueAttackAfterDefenderResponses`: Provides helper logic for continue attack after defender responses.
-- `promptOnOpponentAttackCharacterEffects`: Provides helper logic for prompt on opponent attack character effects.
-- `getCurrentPendingOnOpponentAttackEffect`: Returns current pending on opponent attack effect.
-- `currentAttackHasPendingWhenAttackingEffects`: Provides helper logic for current attack has pending when attacking effects.
-- `finishPendingOnOpponentAttackEffects`: Provides helper logic for finish pending on opponent attack effects.
-- `advancePendingOnOpponentAttackEffect`: Advances pending on opponent attack effect.
-- `showPendingOpponentAttackEffectChoice`: Provides helper logic for show pending opponent attack effect choice.
-- `resolveWhenAttackingEffectsBeforeBattle`: Resolves when attacking effects before battle.
-- `promptOptionalWhenAttackingEffects`: Provides helper logic for prompt optional when attacking effects.
-- `markAttackEffectSkipped`: Marks attack effect skipped.
-- `isAttackEffectSkipped`: Checks whether attack effect skipped.
-- `promptTrashOneCardForAttack`: Provides helper logic for prompt trash one card for attack.
-- `highlightTrashChoiceTargets`: Provides helper logic for highlight trash choice targets.
-- `clearTrashChoiceTargets`: Clears trash choice targets.
-- `handlePendingTrashChoice`: Handles pending trash choice.
-- `resolveCurrentAttack`: Resolves current attack.
-- `clearBattleOnlyEffectsForCurrentAttack`: Clears battle only effects for current attack.
-- `clearCancelAttackButton`: Clears cancel attack button.
-- `showCancelAttackButton`: Provides helper logic for show cancel attack button.
-- `cancelPendingAttack`: Checks whether cel pending attack.
-- `lookTopCardsAddToHand`: Provides helper logic for look top cards add to hand.
-- `renderTopBottomOrderStep`: Renders top bottom order step.
-- `showSearchCardImagePopup`: Provides helper logic for show search card image popup.
-- `removeSearchCardImagePopup`: Removes search card image popup.
-- `removeLookTopOverlay`: Removes look top overlay.
-- `showLifeCardChoice`: Provides helper logic for show life card choice.
-- `removeLifeCardChoiceOverlay`: Removes life card choice overlay.
-- `showBoardCardChoice`: Provides helper logic for show board card choice.
-- `renderBottomOrderStep`: Renders bottom order step.
-- `removeBoardChoiceOverlay`: Removes board choice overlay.
-- `chooseEffectActivation`: Prompts for effect activation.
-- `chooseEffectOption`: Prompts for effect option.
-- `chooseNumberValue`: Prompts for number value.
-- `removeEffectChoiceOverlay`: Removes effect choice overlay.
-- `getSelectedBoardCardObject`: Returns selected board card object.
-- `canCurrentPlayerAttack`: Checks whether current player attack.
-- `canSelectedBoardCardAttack`: Checks whether selected board card attack.
-- `isCharacterAttackLocked`: Checks whether character attack locked.
-- `exportMultiplayerSharedState`: Exports multiplayer shared state.
-- `applyMultiplayerSharedState`: Applies multiplayer shared state.
+- `cloneSerializableValue`: Handles clone serializable value.
+- `getMultiplayerRuntime`: Returns Multiplayer Runtime.
+- `getMultiplayerLocalSlot`: Returns Multiplayer Local Slot.
+- `getOpponentMultiplayerSlot`: Returns Opponent Multiplayer Slot.
+- `getCanonicalSlotForLocalPlayerKey`: Returns Canonical Slot For Local Player Key.
+- `getLocalPlayerKeyForCanonicalSlot`: Returns Local Player Key For Canonical Slot.
+- `getPlayerKeyForPlayer`: Returns Player Key For Player.
+- `mapBoardCardDataToCanonical`: Maps Board Card Data To Canonical.
+- `mapBoardCardDataToLocal`: Maps Board Card Data To Local.
+- `queueMultiplayerStateSync`: Queues Multiplayer State Sync.
+- `serializePlayerState`: Serializes Player State.
+- `hydratePlayerState`: Hydrates Player State.
+- `transformStatusExpiryPlayerKeys`: Handles transform status expiry player keys.
+- `mapLocalStatusKeysToCanonical`: Maps Local Status Keys To Canonical.
+- `mapCanonicalStatusKeysToLocal`: Maps Canonical Status Keys To Local.
+- `renderGameLogMessages`: Renders Game Log Messages.
+- `syncPhaseButtonForCurrentState`: Synchronizes Phase Button For Current State.
+- `clearLocalSelectionsAndOverlays`: Clears Local Selections And Overlays.
+- `restoreBattleUiFromSyncedState`: Restores Battle UI From Synced State.
+- `renderFullGameState`: Renders Full Game State.
+- `maybeAutoAdvancePhaseFromSyncedState`: Handles maybe auto advance phase from synced state.
+- `maybeResumeStartOfTurnFromSyncedState`: Handles maybe resume start of turn from synced state.
+- `createUiBridge`: Creates UI Bridge.
+- `initializeGamePage`: Initializes Game Page.
+- `createVanillaCardState`: Creates Vanilla Card State.
+- `showGameOverPopup`: Shows Game Over Popup.
+- `removeGameOverPopup`: Removes Game Over Popup.
+- `removeSurrenderConfirmPopup`: Removes Surrender Confirm Popup.
+- `showSurrenderConfirmPopup`: Shows Surrender Confirm Popup.
+- `syncGameOverPopupForCurrentState`: Synchronizes Game Over Popup For Current State.
+- `endGame`: Handles end game.
+- `clearAttackArrow`: Clears Attack Arrow.
+- `drawAttackArrow`: Draws Attack Arrow.
+- `getBoardElementFromData`: Returns Board Element From Data.
+- `setupPhaseControls`: Sets up Phase Controls.
+- `showEndTurnConfirmation`: Shows End Turn Confirmation.
+- `shouldAddGameLog`: Checks Add Game Log.
+- `addGameLog`: Adds Game Log.
+- `updateDonDisplay`: Updates DON!! Display.
+- `renderDonArea`: Renders DON!! Area.
+- `renderDonDecks`: Renders DON!! Decks.
+- `renderDonDeck`: Renders DON!! Deck.
+- `renderDecks`: Renders Decks.
+- `renderDeck`: Renders Deck.
+- `renderHands`: Renders Hands.
+- `renderPlayerHand`: Renders Player Hand.
+- `sortPlayerHand`: Handles sort player hand.
+- `setupSidebarControls`: Sets up Sidebar Controls.
+- `updateSidebarControls`: Updates Sidebar Controls.
+- `canSortPlayerHand`: Checks Sort Player Hand.
+- `getHandSortKey`: Returns Hand Sort Key.
+- `renderLifeCards`: Renders Life Cards.
+- `renderPlayerLife`: Renders Player Life.
+- `renderLeaders`: Renders Leaders.
+- `renderLeader`: Renders Leader.
+- `renderCharacters`: Renders Characters.
+- `renderPlayerCharacters`: Renders Player Characters.
+- `renderStages`: Renders Stages.
+- `renderPlayerStage`: Renders Player Stage.
+- `renderTrash`: Renders Trash.
+- `renderPlayerTrash`: Renders Player Trash.
+- `showTrashViewer`: Shows Trash Viewer.
+- `removeTrashViewer`: Removes Trash Viewer.
+- `setupCardPreview`: Sets up Card Preview.
+- `showCardPreview`: Shows Card Preview.
+- `clearCardPreview`: Clears Card Preview.
+- `setupHandCardSelection`: Sets up Hand Card Selection.
+- `showSelectedCardActions`: Shows Selected Card Actions.
+- `showSelectedCounterActions`: Shows Selected Counter Actions.
+- `applyCounterPowerToCurrentAttack`: Applies Counter Power To Current Attack.
+- `clearSelectedCardActions`: Clears Selected Card Actions.
+- `setupBoardCharacterSelection`: Sets up Board Character Selection.
+- `setupBoardLeaderSelection`: Sets up Board Leader Selection.
+- `showSelectedBoardActions`: Shows Selected Board Actions.
+- `canAttachDonToBoardCard`: Checks Attach DON!! To Board Card.
+- `createAttachDonButton`: Creates Attach DON!! Button.
+- `refreshSelectedBoardCardElement`: Handles refresh selected board card element.
+- `clearSelectedBoardActions`: Clears Selected Board Actions.
+- `clearHandSelection`: Clears Hand Selection.
+- `clearBoardSelection`: Clears Board Selection.
+- `clearReplaceTargets`: Clears Replace Targets.
+- `enterReplaceMode`: Starts Replace Mode.
+- `setupCharacterSlotInteractions`: Sets up Character Slot Interactions.
+- `clearBattleControls`: Clears Battle Controls.
+- `isLocalMultiplayerPlayerKey`: Checks Local Multiplayer Player Key.
+- `canLocalPlayerControlDefense`: Checks Local Player Control Defense.
+- `createBattleButton`: Creates Battle Button.
+- `createWaitingDefenseButton`: Creates Waiting Defense Button.
+- `showResolveAttackButton`: Shows Resolve Attack Button.
+- `showCounterPhaseControls`: Shows Counter Phase Controls.
+- `showResolveOnlyButton`: Shows Resolve Only Button.
+- `enterAttackTargetSelection`: Starts Attack Target Selection.
+- `setupAttackTargetSelection`: Sets up Attack Target Selection.
+- `clearAttackTargets`: Clears Attack Targets.
+- `beginAttack`: Starts Attack.
+- `resolveCurrentAttack`: Resolves Current Attack.
+- `clearCancelAttackButton`: Clears Cancel Attack Button.
+- `showCancelAttackButton`: Shows Cancel Attack Button.
+- `cancelPendingAttack`: Checks Pending Attack.
+- `getSelectedBoardCardObject`: Returns Selected Board Card Object.
+- `canCurrentPlayerAttack`: Checks Current Player Attack.
+- `canSelectedBoardCardAttack`: Checks Selected Board Card Attack.
+- `exportMultiplayerSharedState`: Exports Multiplayer Shared State.
+- `applyMultiplayerSharedState`: Applies Multiplayer Shared State.
 
-## `js/pages/multiplayerPresence.js`
+## `js/multiplayer/sync/multiplayerPresence.js`
 Registers multiplayer room presence when the match page opens.
 
 - `initializeMultiplayerPresence`: Initializes multiplayer room presence for the active match page.
 
-## `js/pages/multiplayerRuntime.js`
+## `js/multiplayer/sync/multiplayerRuntime.js`
 Coordinates multiplayer page state with Firebase match data and room lifecycle events.
 
 - `cloneValue`: Clones value.
@@ -800,7 +458,7 @@ Coordinates multiplayer page state with Firebase match data and room lifecycle e
 - `__multiplayerRuntime.handlePlayAgainClick`: Handles play again click.
 - `__multiplayerRuntime.handleSurrenderClick`: Handles surrender click.
 
-## `js/pages/play.js`
+## `js/ui/pages/play.js`
 Runs the play menu deck selection flow and singleplayer launch link setup.
 
 - `updateDeckButtonLabel`: Updates deck button label.
@@ -808,7 +466,7 @@ Runs the play menu deck selection flow and singleplayer launch link setup.
 - `savePlayDeckSelection`: Saves play deck selection.
 - `initializePlayPage`: Initializes the play page controls and stored deck selections.
 
-## `js/pages/presetDecks.js`
+## `js/ui/pages/presetDecks.js`
 Renders the preset deck browser, search, and deck preview modal.
 
 - `initializePresetDecksPage`: Initializes the preset decks page and loads the required card data.
@@ -834,7 +492,7 @@ Renders the preset deck browser, search, and deck preview modal.
 - `useDeckInVsSelf`: Provides helper logic for use deck in vs self.
 - `escapeHtml`: Provides helper logic for escape html.
 
-## `js/pages/queue.js`
+## `js/ui/pages/queue.js`
 Runs the multiplayer lobby, room creation/join flow, deck locking, and ready/start controls.
 
 - `initializeDeckPicker`: Initializes the deck picker controls for the current page.
@@ -853,7 +511,7 @@ Runs the multiplayer lobby, room creation/join flow, deck locking, and ready/sta
 - `updateRoomUI`: Updates room UI.
 - `initializeQueuePage`: Initializes queue page.
 
-## `js/pages/settings.js`
+## `js/ui/pages/settings.js`
 Runs the settings page tabs, persistence, and save feedback UI.
 
 - `SettingsManager.constructor`: Initializes the class instance and caches its starting state or DOM references.
@@ -870,125 +528,79 @@ Runs the settings page tabs, persistence, and save feedback UI.
 - `SettingsManager.setupEventListeners`: Sets up event listeners.
 - `SettingsManager.showSaveNotification`: Provides SettingsManager logic for show save notification.
 
-## `js/pages/singleplayer.js`
-Runs the singleplayer match page UI and local battle state layer.
+## `js/ui/singleplayer/singleplayer.js`
+Runs the effectless local match interface for both players.
 
-- `createUiBridge`: Creates UI bridge.
-- `initializeGamePage`: Initializes the match page and performs its startup render flow.
-- `clearBlockerTargets`: Clears blocker targets.
-- `enterBlockerStep`: Provides helper logic for enter blocker step.
-- `handleBlockerSelection`: Handles blocker selection.
-- `skipCurrentBlockStep`: Provides helper logic for skip current block step.
-- `showGameOverPopup`: Provides helper logic for show game over popup.
-- `removeGameOverPopup`: Removes game over popup.
-- `showSubaruResetOverlay`: Provides helper logic for show Subaru reset overlay.
-- `removeSubaruResetOverlay`: Removes Subaru reset overlay.
-- `endGame`: Provides helper logic for end game.
-- `clearAttackArrow`: Clears attack arrow.
-- `drawAttackArrow`: Draws attack arrow.
-- `getBoardElementFromData`: Returns board element from data.
-- `setupPhaseControls`: Sets up phase controls.
-- `showEndTurnConfirmation`: Provides helper logic for show end turn confirmation.
-- `shouldAddGameLog`: Checks whether add game log.
-- `addGameLog`: Adds game log.
-- `updateDonDisplay`: Updates DON display.
-- `renderDonArea`: Renders DON area.
-- `renderDonDecks`: Renders DON decks.
-- `renderDonDeck`: Renders DON deck.
-- `renderDecks`: Renders decks.
-- `renderDeck`: Renders deck.
-- `renderHands`: Renders hands.
-- `renderPlayerHand`: Renders player hand.
-- `sortPlayerHand`: Provides helper logic for sort player hand.
-- `setupSidebarControls`: Sets up sidebar controls.
-- `updateSidebarSortButtonState`: Updates sidebar sort button state.
-- `canSortPlayerHand`: Checks whether sort player hand.
-- `getHandSortKey`: Returns hand sort key.
-- `renderLifeCards`: Renders life cards.
-- `renderPlayerLife`: Renders player life.
-- `renderLeaders`: Renders leaders.
-- `renderLeader`: Renders leader.
-- `renderCharacters`: Renders characters.
-- `renderPlayerCharacters`: Renders player characters.
-- `renderStages`: Renders stages.
-- `renderPlayerStage`: Renders player stage.
-- `renderTrash`: Renders trash.
-- `renderPlayerTrash`: Renders player trash.
-- `showTrashViewer`: Provides helper logic for show trash viewer.
-- `removeTrashViewer`: Removes trash viewer.
-- `setupCardPreview`: Sets up card preview.
-- `showCardPreview`: Provides helper logic for show card preview.
-- `clearCardPreview`: Clears card preview.
-- `setupHandCardSelection`: Sets up hand card selection.
-- `showSelectedCardActions`: Provides helper logic for show selected card actions.
-- `showSelectedCounterActions`: Provides helper logic for show selected counter actions.
-- `applyCounterPowerToCurrentAttack`: Applies counter power to current attack.
-- `clearSelectedCardActions`: Clears selected card actions.
-- `setupBoardCharacterSelection`: Sets up board character selection.
-- `setupBoardLeaderSelection`: Sets up board leader selection.
-- `showSelectedBoardActions`: Provides helper logic for show selected board actions.
-- `canAttachDonToBoardCard`: Checks whether attach DON to board card.
-- `createAttachDonButton`: Creates attach DON button.
-- `refreshSelectedBoardCardElement`: Provides helper logic for refresh selected board card element.
-- `getActivateMainEffect`: Returns activate main effect.
-- `getActivateAnyEffect`: Returns activate any effect.
-- `getOnOpponentAttackEffect`: Returns on opponent attack effect.
-- `getWhenAttackedEffect`: Returns when attacked effect.
-- `isWanoCountryAttachDonEffect`: Checks whether wano country attach DON effect.
-- `isBoardEffectResolutionInProgress`: Checks whether board effect resolution in progress.
-- `canUseActivateMainEffect`: Checks whether use activate main effect.
-- `canUseActivateAnyEffect`: Checks whether use activate any effect.
-- `createBoardEffectButton`: Creates board effect button.
-- `createActivateMainButton`: Creates activate main button.
-- `createActivateAnyButton`: Creates activate any button.
-- `activateBoardEffect`: Provides helper logic for activate board effect.
-- `resolveBoardEffectActivation`: Resolves board effect activation.
-- `resolveBoardActionEffect`: Resolves board action effect.
-- `clearSelectedBoardActions`: Clears selected board actions.
-- `clearHandSelection`: Clears hand selection.
-- `clearBoardSelection`: Clears board selection.
-- `clearReplaceTargets`: Clears replace targets.
-- `enterReplaceMode`: Provides helper logic for enter replace mode.
-- `setupCharacterSlotInteractions`: Sets up character slot interactions.
-- `clearBattleControls`: Clears battle controls.
-- `createBattleButton`: Creates battle button.
-- `createSkipBlockButton`: Creates skip block button.
-- `showResolveAttackButton`: Provides helper logic for show resolve attack button.
-- `showCounterPhaseControls`: Provides helper logic for show counter phase controls.
-- `showResolveOnlyButton`: Provides helper logic for show resolve only button.
-- `enterAttackTargetSelection`: Provides helper logic for enter attack target selection.
-- `setupAttackTargetSelection`: Sets up attack target selection.
-- `clearAttackTargets`: Clears attack targets.
-- `beginAttack`: Begins attack.
-- `promptOnOpponentAttackCharacterEffects`: Provides helper logic for prompt on opponent attack character effects.
-- `resolveWhenAttackingEffectsBeforeBattle`: Resolves when attacking effects before battle.
-- `promptOptionalWhenAttackingEffects`: Provides helper logic for prompt optional when attacking effects.
-- `markAttackEffectSkipped`: Marks attack effect skipped.
-- `isAttackEffectSkipped`: Checks whether attack effect skipped.
-- `promptTrashOneCardForAttack`: Provides helper logic for prompt trash one card for attack.
-- `highlightTrashChoiceTargets`: Provides helper logic for highlight trash choice targets.
-- `clearTrashChoiceTargets`: Clears trash choice targets.
-- `handlePendingTrashChoice`: Handles pending trash choice.
-- `resolveCurrentAttack`: Resolves current attack.
-- `clearBattleOnlyEffectsForCurrentAttack`: Clears battle only effects for current attack.
-- `clearCancelAttackButton`: Clears cancel attack button.
-- `showCancelAttackButton`: Provides helper logic for show cancel attack button.
-- `cancelPendingAttack`: Checks whether cel pending attack.
-- `lookTopCardsAddToHand`: Provides helper logic for look top cards add to hand.
-- `renderTopBottomOrderStep`: Renders top bottom order step.
-- `showSearchCardImagePopup`: Provides helper logic for show search card image popup.
-- `removeSearchCardImagePopup`: Removes search card image popup.
-- `removeLookTopOverlay`: Removes look top overlay.
-- `showLifeCardChoice`: Provides helper logic for show life card choice.
-- `removeLifeCardChoiceOverlay`: Removes life card choice overlay.
-- `showBoardCardChoice`: Provides helper logic for show board card choice.
-- `renderBottomOrderStep`: Renders bottom order step.
-- `removeBoardChoiceOverlay`: Removes board choice overlay.
-- `chooseEffectActivation`: Prompts for effect activation.
-- `chooseEffectOption`: Prompts for effect option.
-- `chooseNumberValue`: Prompts for number value.
-- `removeEffectChoiceOverlay`: Removes effect choice overlay.
-- `getSelectedBoardCardObject`: Returns selected board card object.
-- `canCurrentPlayerAttack`: Checks whether current player attack.
-- `canSelectedBoardCardAttack`: Checks whether selected board card attack.
-- `isCharacterAttackLocked`: Checks whether character attack locked.
+- `createUiBridge`: Creates UI Bridge.
+- `initializeGamePage`: Initializes Game Page.
+- `showGameOverPopup`: Shows Game Over Popup.
+- `removeGameOverPopup`: Removes Game Over Popup.
+- `endGame`: Handles end game.
+- `clearAttackArrow`: Clears Attack Arrow.
+- `drawAttackArrow`: Draws Attack Arrow.
+- `getBoardElementFromData`: Returns Board Element From Data.
+- `setupPhaseControls`: Sets up Phase Controls.
+- `showEndTurnConfirmation`: Shows End Turn Confirmation.
+- `shouldAddGameLog`: Checks Add Game Log.
+- `addGameLog`: Adds Game Log.
+- `updateDonDisplay`: Updates DON!! Display.
+- `renderDonArea`: Renders DON!! Area.
+- `renderDonDecks`: Renders DON!! Decks.
+- `renderDonDeck`: Renders DON!! Deck.
+- `renderDecks`: Renders Decks.
+- `renderDeck`: Renders Deck.
+- `renderHands`: Renders Hands.
+- `renderPlayerHand`: Renders Player Hand.
+- `sortPlayerHand`: Handles sort player hand.
+- `setupSidebarControls`: Sets up Sidebar Controls.
+- `updateSidebarSortButtonState`: Updates Sidebar Sort Button State.
+- `canSortPlayerHand`: Checks Sort Player Hand.
+- `getHandSortKey`: Returns Hand Sort Key.
+- `renderLifeCards`: Renders Life Cards.
+- `renderPlayerLife`: Renders Player Life.
+- `renderLeaders`: Renders Leaders.
+- `renderLeader`: Renders Leader.
+- `renderCharacters`: Renders Characters.
+- `renderPlayerCharacters`: Renders Player Characters.
+- `renderStages`: Renders Stages.
+- `renderPlayerStage`: Renders Player Stage.
+- `renderTrash`: Renders Trash.
+- `renderPlayerTrash`: Renders Player Trash.
+- `showTrashViewer`: Shows Trash Viewer.
+- `removeTrashViewer`: Removes Trash Viewer.
+- `setupCardPreview`: Sets up Card Preview.
+- `showCardPreview`: Shows Card Preview.
+- `clearCardPreview`: Clears Card Preview.
+- `setupHandCardSelection`: Sets up Hand Card Selection.
+- `showSelectedCardActions`: Shows Selected Card Actions.
+- `showSelectedCounterActions`: Shows Selected Counter Actions.
+- `applyCounterPowerToCurrentAttack`: Applies Counter Power To Current Attack.
+- `clearSelectedCardActions`: Clears Selected Card Actions.
+- `setupBoardCharacterSelection`: Sets up Board Character Selection.
+- `setupBoardLeaderSelection`: Sets up Board Leader Selection.
+- `showSelectedBoardActions`: Shows Selected Board Actions.
+- `canAttachDonToBoardCard`: Checks Attach DON!! To Board Card.
+- `createAttachDonButton`: Creates Attach DON!! Button.
+- `refreshSelectedBoardCardElement`: Handles refresh selected board card element.
+- `clearSelectedBoardActions`: Clears Selected Board Actions.
+- `clearHandSelection`: Clears Hand Selection.
+- `clearBoardSelection`: Clears Board Selection.
+- `clearReplaceTargets`: Clears Replace Targets.
+- `enterReplaceMode`: Starts Replace Mode.
+- `setupCharacterSlotInteractions`: Sets up Character Slot Interactions.
+- `clearBattleControls`: Clears Battle Controls.
+- `createBattleButton`: Creates Battle Button.
+- `showResolveAttackButton`: Shows Resolve Attack Button.
+- `showCounterPhaseControls`: Shows Counter Phase Controls.
+- `showResolveOnlyButton`: Shows Resolve Only Button.
+- `enterAttackTargetSelection`: Starts Attack Target Selection.
+- `setupAttackTargetSelection`: Sets up Attack Target Selection.
+- `clearAttackTargets`: Clears Attack Targets.
+- `beginAttack`: Starts Attack.
+- `resolveCurrentAttack`: Resolves Current Attack.
+- `clearCancelAttackButton`: Clears Cancel Attack Button.
+- `showCancelAttackButton`: Shows Cancel Attack Button.
+- `cancelPendingAttack`: Checks Pending Attack.
+- `getSelectedBoardCardObject`: Returns Selected Board Card Object.
+- `canCurrentPlayerAttack`: Checks Current Player Attack.
+- `canSelectedBoardCardAttack`: Checks Selected Board Card Attack.

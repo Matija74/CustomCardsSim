@@ -1,7 +1,7 @@
 import {
     signInGuest,
     waitForUser
-} from "../firebase/firebaseApp.js";
+} from "../../multiplayer/firebase/firebaseApp.js";
 
 import {
     createRoom,
@@ -12,7 +12,7 @@ import {
     registerRoomPresence,
     setPlayerDeck,
     setPlayerReady
-} from "../firebase/multiplayerService.js";
+} from "../../multiplayer/firebase/multiplayerService.js";
 
 const connectionStatus = document.getElementById("connectionStatus");
 const createRoomBtn = document.getElementById("createRoomBtn");
