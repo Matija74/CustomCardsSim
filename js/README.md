@@ -1,23 +1,18 @@
 # JavaScript Structure
 
-The JavaScript files are grouped by responsibility so gameplay can be reworked without mixing card data, interface code, and multiplayer synchronization.
+The project currently keeps card/deck data, page controllers, and multiplayer room connectivity. The playable match runtime has been removed so a new game implementation can be built from a clean base.
 
 ## Folders
 
-- `cards/` contains card data loading, preset deck definitions, and JSON datasets.
-- `decks/` contains deck parsing, validation, saved decks, and deck selection tools.
-- `game/` contains the current shared gameplay implementation:
-  - `actions/` contains the base card and match actions used without card effects.
-  - `phases/` contains turn, phase, mulligan, and counter flow.
-  - `settings/` contains runtime game-setting access.
-  - `shared/` contains match state and behavior shared by both match pages.
-- `multiplayer/` contains Firebase access and multiplayer synchronization.
-- `ui/` contains shared presentation behavior and page-specific controllers.
+- `cards/` contains the complete card database loader, preset deck definitions, and all JSON datasets. Card effects and keywords remain stored in the JSON unchanged.
+- `decks/` contains deck parsing, validation, saved-deck, and deck-selection tools.
+- `multiplayer/firebase/` contains Firebase initialization plus room, deck-selection, ready-state, and presence operations.
+- `multiplayer/sync/` contains the connection-only runtime used after players open a multiplayer play area.
+- `ui/pages/` contains controllers for the non-match pages.
+- `ui/shared/` contains presentation behavior shared by pages.
 
-## Current Load Model
+## Match Pages
 
-Most gameplay files are classic browser scripts that share functions through the global scope, so their order in `singleplayer.html` and `multiplayer.html` is significant. Multiplayer synchronization files are JavaScript modules and use explicit imports.
+`singleplayer.html` and `multiplayer.html` retain their existing play-area markup and styling. They do not load a game engine or match controller. Start, sort, surrender, and gameplay actions are disabled, leaving the board as a view-only play area.
 
-Card JSON keeps the printed effect text for the planned rebuild, but the runtime strips effects and keywords from every card. Event activation, triggers, passive effects, blockers, and other keyword behavior are disabled. The current match pages support the base turn, DON!!, play, attack, life, K.O., deck-out, and printed character-counter rules only.
-
-Future effect work belongs in a new focused area under `game/`; page controllers should only display choices and pass them to shared game rules.
+Multiplayer rooms still support guest sign-in, creation, joining, deck selection, ready state, opening the play area, live presence, and disconnect handling. No match state, turn flow, card movement, attacks, counters, effects, or win conditions are created or synchronized.

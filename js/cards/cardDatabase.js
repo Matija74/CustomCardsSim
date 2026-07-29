@@ -21,19 +21,6 @@ async function loadJson(path) {
     return jsonLoadCache.get(path);
 }
 
-function createVanillaCardDatabase(cards) {
-    return Object.fromEntries(
-        Object.entries(cards || {}).map(([cardId, card]) => [
-            cardId,
-            {
-                ...card,
-                effects: [],
-                keywords: []
-            }
-        ])
-    );
-}
-
 async function loadCardDatabase() {
     if (cardDatabaseLoadPromise) {
         return cardDatabaseLoadPromise;
@@ -48,15 +35,10 @@ async function loadCardDatabase() {
             loadJson("../js/cards/data/onepiece.json")
         ]);
 
-        const vanillaCharacters = createVanillaCardDatabase(characters);
-        const vanillaStages = createVanillaCardDatabase(stages);
-        const vanillaEvents = createVanillaCardDatabase(events);
-        const vanillaLeaders = createVanillaCardDatabase(leaderCards);
-        const vanillaOnePieceCards = createVanillaCardDatabase(onePieceCards);
         const onePieceLeaders = {};
         const onePieceMainDeckCards = {};
 
-        Object.entries(vanillaOnePieceCards).forEach(([cardId, card]) => {
+        Object.entries(onePieceCards).forEach(([cardId, card]) => {
             if (String(card?.cardType || "").toLowerCase() === "leader") {
                 onePieceLeaders[cardId] = card;
                 return;
@@ -66,14 +48,14 @@ async function loadCardDatabase() {
         });
 
         cardDatabase = {
-            ...vanillaCharacters,
-            ...vanillaStages,
-            ...vanillaEvents,
+            ...characters,
+            ...stages,
+            ...events,
             ...onePieceMainDeckCards
         };
 
         leaders = {
-            ...vanillaLeaders,
+            ...leaderCards,
             ...onePieceLeaders
         };
 

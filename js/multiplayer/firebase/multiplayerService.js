@@ -4,7 +4,6 @@ import {
     get,
     update,
     onValue,
-    runTransaction,
     serverTimestamp,
     onDisconnect
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
@@ -20,238 +19,6 @@ function cleanRoomCode(roomCode) {
     return String(roomCode || "").trim().toUpperCase();
 }
 
-function cloneData(value) {
-    if (typeof structuredClone === "function") {
-        return structuredClone(value);
-    }
-
-    return JSON.parse(JSON.stringify(value));
-}
-
-function createMultiplayerCard(card) {
-    return {
-        ...cloneData(card),
-        aliases: card.aliases ? [...card.aliases] : [],
-        keywords: [],
-        effects: [],
-        instanceId: crypto.randomUUID(),
-        state: card.state || "active",
-        attachedDon: Number(card.attachedDon || 0)
-    };
-}
-
-function requireDeckTools() {
-    if (
-        typeof globalThis.getCardById !== "function" ||
-        typeof globalThis.parseDeckText !== "function" ||
-        typeof globalThis.shuffleDeck !== "function" ||
-        !globalThis.leaders
-    ) {
-        throw new Error("Card database and deck parser must be loaded before initializing multiplayer.");
-    }
-}
-
-function validateSelectedDeckForMatch(selectedDeck) {
-    requireDeckTools();
-
-    if (!selectedDeck?.leaderKey) {
-        throw new Error("A leader must be selected before starting the match.");
-    }
-
-    const parsedDeck = globalThis.parseDeckText(selectedDeck.deckText || "");
-    const maxDeckSize = typeof globalThis.getLeaderDeckSizeLimit === "function"
-        ? globalThis.getLeaderDeckSizeLimit(selectedDeck.leaderKey)
-        : 50;
-
-    if (parsedDeck.length > maxDeckSize) {
-        const leaderName = globalThis.leaders?.[selectedDeck.leaderKey]?.name || "This leader";
-        throw new Error(`${leaderName} can only use ${maxDeckSize} deck cards.`);
-    }
-}
-
-function createInitialPrivateState(selectedDeck) {
-    requireDeckTools();
-    validateSelectedDeckForMatch(selectedDeck);
-
-    const leaderDefinition = globalThis.leaders[selectedDeck.leaderKey];
-
-    if (!leaderDefinition) {
-        throw new Error(`Leader not found for deck: ${selectedDeck.name}`);
-    }
-
-    const deck = globalThis.shuffleDeck(globalThis.parseDeckText(selectedDeck.deckText))
-        .map(card => createMultiplayerCard(card));
-    const leader = createMultiplayerCard(leaderDefinition);
-
-    const privateState = {
-        selectedDeck,
-        hand: [],
-        deck,
-        life: [],
-        leader,
-        stage: null
-    };
-
-    applyStartingZangetsuStage(privateState);
-
-    return privateState;
-}
-
-function applyStartingZangetsuStage(privateState) {
-    if (privateState?.leader?.cardNumber !== "BL01-001") {
-        return;
-    }
-
-    const zones = [
-        { name: "deck", cards: privateState.deck || [] },
-        { name: "hand", cards: privateState.hand || [] },
-        { name: "life", cards: privateState.life || [] }
-    ];
-    let stageLocation = null;
-
-    for (const zone of zones) {
-        const index = zone.cards.findIndex(card => {
-            return card.cardType === "stage" &&
-                Number(card.cost || 0) === 1 &&
-                (String(card.name || "").includes("Zangetsu") || String(card.type || "").includes("Zanpakto"));
-        });
-
-        if (index !== -1) {
-            stageLocation = { zone, index };
-            break;
-        }
-    }
-
-    if (!stageLocation) {
-        return;
-    }
-
-    const stage = stageLocation.zone.cards.splice(stageLocation.index, 1)[0];
-
-    if (stageLocation.zone.name === "hand" && privateState.deck.length) {
-        privateState.hand.push(privateState.deck.shift());
-    }
-
-    if (stageLocation.zone.name === "life" && privateState.deck.length) {
-        privateState.life.push(privateState.deck.shift());
-    }
-
-    stage.state = "active";
-    privateState.stage = stage;
-}
-
-function createPublicCardSnapshot(card) {
-    if (!card) return null;
-
-    return {
-        name: card.name,
-        image: card.image,
-        cardNumber: card.cardNumber,
-        cardType: card.cardType,
-        type: card.type,
-        color: card.color,
-        cost: card.cost,
-        power: card.power,
-        counter: card.counter,
-        attribute: card.attribute,
-        keywords: card.keywords || [],
-        effects: card.effects || [],
-        instanceId: card.instanceId,
-        state: card.state || "active",
-        faceUp: Boolean(card.faceUp)
-    };
-}
-
-function createInitialPublicPlayerState(privateState) {
-    return {
-        leader: privateState.leader,
-        characters: [],
-        stage: privateState.stage || null,
-        trash: [],
-        handCount: 0,
-        deckCount: privateState.deck.length,
-        lifeCount: 0,
-        faceUpLifeCards: [],
-        activeDon: 0,
-        restedDon: 0,
-        donDeckCount: 10,
-        turns: 0
-    };
-}
-
-function drawStartingHand(privateState) {
-    if (!privateState) {
-        return privateState;
-    }
-
-    const hand = [...(privateState.hand || [])];
-    const deck = [...(privateState.deck || [])];
-
-    while (hand.length < 5 && deck.length > 0) {
-        hand.push(deck.shift());
-    }
-
-    return {
-        ...privateState,
-        hand,
-        deck
-    };
-}
-
-function setupLifeCards(privateState) {
-    if (!privateState?.leader) {
-        return privateState;
-    }
-
-    const deck = [...(privateState.deck || [])];
-    const life = [];
-    const lifeAmount = Number(privateState.leader.life || 0);
-
-    for (let i = 0; i < lifeAmount; i++) {
-        const lifeCard = deck.shift();
-
-        if (lifeCard) {
-            life.push(lifeCard);
-        }
-    }
-
-    return {
-        ...privateState,
-        deck,
-        life
-    };
-}
-
-function createPublicPlayerState(privateState, publicPlayerState = {}) {
-    const hand = Array.isArray(privateState?.hand) ? privateState.hand : [];
-    const deck = Array.isArray(privateState?.deck) ? privateState.deck : [];
-    const life = Array.isArray(privateState?.life) ? privateState.life : [];
-
-    return {
-        ...publicPlayerState,
-        leader: privateState?.leader || publicPlayerState.leader || null,
-        stage: privateState?.stage || null,
-        handCount: hand.length,
-        deckCount: deck.length,
-        lifeCount: life.length,
-        faceUpLifeCards: life
-            .map((card, index) => card?.faceUp ? { index, card: createPublicCardSnapshot(card) } : null)
-            .filter(Boolean)
-    };
-}
-
-function shuffleCards(cards) {
-    const shuffled = [...cards];
-
-    for (let i = shuffled.length - 1; i > 0; i--) {
-        const randomIndex = Math.floor(Math.random() * (i + 1));
-
-        [shuffled[i], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[i]];
-    }
-
-    return shuffled;
-}
-
 function getRoomRef(roomCode) {
     return ref(database, `matches/${cleanRoomCode(roomCode)}`);
 }
@@ -264,6 +31,14 @@ function normalizePlayerSlot(playerSlot) {
     return playerSlot;
 }
 
+function cloneData(value) {
+    if (typeof structuredClone === "function") {
+        return structuredClone(value);
+    }
+
+    return JSON.parse(JSON.stringify(value));
+}
+
 async function touchRoom(roomCode, extra = {}) {
     await update(getRoomRef(roomCode), {
         updatedAt: serverTimestamp(),
@@ -272,19 +47,17 @@ async function touchRoom(roomCode, extra = {}) {
 }
 
 export async function createRoom(user) {
-    if (!user) {
+    if (!user?.uid) {
         throw new Error("No user found. Guest login did not finish.");
     }
 
     const roomCode = generateRoomCode();
-    const matchRef = getRoomRef(roomCode);
 
-    await set(matchRef, {
+    await set(getRoomRef(roomCode), {
         status: "waiting",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         hostUid: user.uid,
-
         players: {
             p1: {
                 uid: user.uid,
@@ -295,22 +68,12 @@ export async function createRoom(user) {
                 ready: false
             }
         },
-
         public: {
-            phase: "waiting",
-            currentPlayer: null,
-            turnNumber: 0,
-            winner: null,
-            player1: null,
-            player2: null
+            phase: "viewOnly"
         },
-
         private: {
             [user.uid]: {
-                selectedDeck: null,
-                hand: [],
-                deck: [],
-                life: []
+                selectedDeck: null
             }
         }
     });
@@ -319,9 +82,12 @@ export async function createRoom(user) {
 }
 
 export async function joinRoom(roomCode, user) {
+    if (!user?.uid) {
+        throw new Error("No user found. Guest login did not finish.");
+    }
+
     const normalizedRoomCode = cleanRoomCode(roomCode);
     const matchRef = getRoomRef(normalizedRoomCode);
-
     const snapshot = await get(matchRef);
 
     if (!snapshot.exists()) {
@@ -337,7 +103,6 @@ export async function joinRoom(roomCode, user) {
     await update(matchRef, {
         status: "ready",
         updatedAt: serverTimestamp(),
-
         "players/p2": {
             uid: user.uid,
             name: "Player 2",
@@ -346,12 +111,8 @@ export async function joinRoom(roomCode, user) {
             lastSeenAt: serverTimestamp(),
             ready: false
         },
-
         [`private/${user.uid}`]: {
-            selectedDeck: null,
-            hand: [],
-            deck: [],
-            life: []
+            selectedDeck: null
         }
     });
 
@@ -359,9 +120,7 @@ export async function joinRoom(roomCode, user) {
 }
 
 export function subscribeToMatch(roomCode, callback) {
-    const matchRef = getRoomRef(roomCode);
-
-    return onValue(matchRef, (snapshot) => {
+    return onValue(getRoomRef(roomCode), snapshot => {
         const match = snapshot.val();
 
         if (!match) {
@@ -370,46 +129,28 @@ export function subscribeToMatch(roomCode, callback) {
         }
 
         const { private: _private, ...publicMatch } = match;
-
         callback(publicMatch);
     });
 }
 
-export function subscribeToPrivateState(roomCode, uid, callback) {
-    const privateRef = ref(database, `matches/${cleanRoomCode(roomCode)}/private/${uid}`);
-
-    return onValue(privateRef, (snapshot) => {
-        callback(snapshot.val());
-    });
-}
-
 export async function getMatch(roomCode) {
-    const matchRef = getRoomRef(roomCode);
-    const snapshot = await get(matchRef);
-
+    const snapshot = await get(getRoomRef(roomCode));
     return snapshot.val();
 }
 
-export async function updatePublicState(roomCode, partialState) {
-    const publicRef = ref(database, `matches/${cleanRoomCode(roomCode)}/public`);
-
-    await update(publicRef, partialState);
-    await touchRoom(roomCode);
-}
-
-export async function updatePrivateState(roomCode, uid, partialState) {
-    const privateRef = ref(database, `matches/${cleanRoomCode(roomCode)}/private/${uid}`);
-
-    await update(privateRef, partialState);
-    await touchRoom(roomCode);
-}
-
 export async function setPlayerDeck(roomCode, uid, deckData) {
-    validateSelectedDeckForMatch(deckData);
+    if (!uid) {
+        throw new Error("A player is required to save a deck selection.");
+    }
 
-    await updatePrivateState(roomCode, uid, {
-        selectedDeck: deckData
+    if (!deckData?.leaderKey || !deckData?.deckText) {
+        throw new Error("Choose a valid deck before continuing.");
+    }
+
+    await update(ref(database, `matches/${cleanRoomCode(roomCode)}/private/${uid}`), {
+        selectedDeck: cloneData(deckData)
     });
+    await touchRoom(roomCode);
 }
 
 export async function setPlayerReady(roomCode, uid, ready) {
@@ -421,14 +162,14 @@ export async function setPlayerReady(roomCode, uid, ready) {
         throw new Error("Player is not in this room.");
     }
 
-    await update(ref(database, `matches/${cleanRoomCode(roomCode)}`), {
+    await update(getRoomRef(roomCode), {
         updatedAt: serverTimestamp(),
         [`players/${playerEntry[0]}/ready`]: Boolean(ready)
     });
 }
 
-export async function initializeMultiplayerGame(roomCode) {
-    const matchRef = ref(database, `matches/${cleanRoomCode(roomCode)}`);
+export async function openPlayArea(roomCode) {
+    const matchRef = getRoomRef(roomCode);
     const snapshot = await get(matchRef);
 
     if (!snapshot.exists()) {
@@ -436,302 +177,21 @@ export async function initializeMultiplayerGame(roomCode) {
     }
 
     const match = snapshot.val();
-    const player1 = match.players?.p1;
-    const player2 = match.players?.p2;
+    const players = match.players || {};
 
-    if (!player1 || !player2) {
+    if (!players.p1?.connected || !players.p2?.connected) {
         throw new Error("Both players must be connected.");
     }
 
-    if (!player1.ready || !player2.ready) {
-        throw new Error("Both players must be ready before starting.");
+    if (!players.p1?.ready || !players.p2?.ready) {
+        throw new Error("Both players must be ready.");
     }
-
-    const player1Deck = match.private?.[player1.uid]?.selectedDeck;
-    const player2Deck = match.private?.[player2.uid]?.selectedDeck;
-
-    if (!player1Deck || !player2Deck) {
-        throw new Error("Both players must choose decks before starting.");
-    }
-
-    const p1Private = createInitialPrivateState(player1Deck);
-    const p2Private = createInitialPrivateState(player2Deck);
 
     await update(matchRef, {
-        status: "started",
+        status: "viewing",
         updatedAt: serverTimestamp(),
-        "public/phase": "diceRoll",
-        "public/sharedState": null,
-        "public/currentPlayer": null,
-        "public/turnNumber": 0,
-        "public/winner": null,
-        "public/gameOverReasonTitle": null,
-        "public/gameOverReasonText": null,
-        "public/rematch": {
-            p1: false,
-            p2: false
-        },
-        "public/firstPlayer": null,
-        "public/secondPlayer": null,
-        "public/playerTurns": {
-            p1: 0,
-            p2: 0
-        },
-        "public/revealedCards": [],
-        "public/currentAttack": null,
-        "public/setup": {
-            dice: {
-                p1Roll: null,
-                p2Roll: null,
-                winner: null,
-                tie: false
-            },
-            turnChoice: {
-                chooser: null,
-                firstPlayer: null,
-                secondPlayer: null
-            },
-            mulligan: {
-                p1: {
-                    done: false,
-                    took: false
-                },
-                p2: {
-                    done: false,
-                    took: false
-                }
-            }
-        },
-        "public/player1": {
-            ...createInitialPublicPlayerState(p1Private)
-        },
-        "public/player2": createInitialPublicPlayerState(p2Private),
-        [`private/${player1.uid}`]: p1Private,
-        [`private/${player2.uid}`]: p2Private
+        "public/phase": "viewOnly"
     });
-}
-
-export async function rollMultiplayerDice(roomCode, playerSlot) {
-    if (playerSlot !== "p1" && playerSlot !== "p2") {
-        throw new Error("Invalid player slot.");
-    }
-
-    const diceRef = ref(database, `matches/${cleanRoomCode(roomCode)}/public/setup/dice`);
-    const roll = Math.floor(Math.random() * 20) + 1;
-
-    return runTransaction(diceRef, (dice = {}) => {
-        const ownKey = `${playerSlot}Roll`;
-        const otherKey = playerSlot === "p1" ? "p2Roll" : "p1Roll";
-
-        if (dice.winner && !dice.tie) {
-            return;
-        }
-
-        if (dice[ownKey] && !dice.tie) {
-            return;
-        }
-
-        const nextDice = dice.tie
-            ? { p1Roll: null, p2Roll: null, winner: null, tie: false }
-            : { ...dice };
-
-        nextDice[ownKey] = roll;
-
-        if (nextDice[otherKey]) {
-            if (nextDice.p1Roll === nextDice.p2Roll) {
-                nextDice.tie = true;
-                nextDice.winner = null;
-            } else {
-                nextDice.tie = false;
-                nextDice.winner = nextDice.p1Roll > nextDice.p2Roll ? "p1" : "p2";
-            }
-        }
-
-        return nextDice;
-    });
-}
-
-export async function chooseMultiplayerTurnOrder(roomCode, chooserSlot, choice) {
-    if (chooserSlot !== "p1" && chooserSlot !== "p2") {
-        throw new Error("Invalid player slot.");
-    }
-
-    if (choice !== "first" && choice !== "second") {
-        throw new Error("Invalid turn choice.");
-    }
-
-    const room = cleanRoomCode(roomCode);
-    const matchRef = getRoomRef(room);
-    const snapshot = await get(matchRef);
-
-    if (!snapshot.exists()) {
-        throw new Error("Room does not exist.");
-    }
-
-    const match = snapshot.val();
-    const publicState = match.public || {};
-    const diceWinner = publicState.setup?.dice?.winner;
-
-    if (publicState.phase !== "diceRoll" || diceWinner !== chooserSlot) {
-        throw new Error("Turn order cannot be chosen right now.");
-    }
-
-    const otherSlot = chooserSlot === "p1" ? "p2" : "p1";
-    const firstPlayer = choice === "first" ? chooserSlot : otherSlot;
-    const secondPlayer = firstPlayer === "p1" ? "p2" : "p1";
-    const player1Uid = match.players?.p1?.uid;
-    const player2Uid = match.players?.p2?.uid;
-
-    if (!player1Uid || !player2Uid) {
-        throw new Error("Both players must be in the room.");
-    }
-
-    const p1Private = drawStartingHand(match.private?.[player1Uid] || {});
-    const p2Private = drawStartingHand(match.private?.[player2Uid] || {});
-
-    await update(matchRef, {
-        updatedAt: serverTimestamp(),
-        "public/phase": "mulligan",
-        "public/currentPlayer": null,
-        "public/turnNumber": 0,
-        "public/firstPlayer": firstPlayer,
-        "public/secondPlayer": secondPlayer,
-        "public/playerTurns": {
-            p1: 0,
-            p2: 0
-        },
-        "public/setup/turnChoice": {
-            chooser: chooserSlot,
-            firstPlayer,
-            secondPlayer
-        },
-        "public/player1": createPublicPlayerState(
-            p1Private,
-            publicState.player1 || {}
-        ),
-        "public/player2": createPublicPlayerState(
-            p2Private,
-            publicState.player2 || {}
-        ),
-        [`private/${player1Uid}`]: p1Private,
-        [`private/${player2Uid}`]: p2Private
-    });
-}
-
-export async function setMultiplayerMulligan(roomCode, user, playerSlot, tookMulligan) {
-    if (!user?.uid) {
-        throw new Error("User is required for mulligan.");
-    }
-
-    if (playerSlot !== "p1" && playerSlot !== "p2") {
-        throw new Error("Invalid player slot.");
-    }
-
-    const matchRef = ref(database, `matches/${cleanRoomCode(roomCode)}`);
-    const snapshot = await get(matchRef);
-
-    if (!snapshot.exists()) {
-        throw new Error("Room does not exist.");
-    }
-
-    const match = snapshot.val();
-    const publicState = match.public || {};
-    const player = match.players?.[playerSlot];
-
-    if (publicState.phase !== "mulligan") {
-        throw new Error("Mulligan is not available right now.");
-    }
-
-    if (player?.uid !== user.uid) {
-        throw new Error("Only your player slot can mulligan.");
-    }
-
-    if (publicState.setup?.mulligan?.[playerSlot]?.done) {
-        throw new Error("Mulligan was already chosen.");
-    }
-
-    const privateState = match.private?.[user.uid] || {};
-    let hand = privateState.hand || [];
-    let deck = privateState.deck || [];
-
-    if (tookMulligan) {
-        deck = shuffleCards([...deck, ...hand]);
-        hand = deck.splice(0, 5);
-    }
-
-    const nextPrivateState = setupLifeCards({
-        ...privateState,
-        hand,
-        deck,
-        life: []
-    });
-    hand = nextPrivateState.hand;
-    deck = nextPrivateState.deck;
-    const life = nextPrivateState.life;
-
-    const publicPlayerKey = playerSlot === "p1" ? "player1" : "player2";
-    const mulliganState = {
-        ...(publicState.setup?.mulligan || {}),
-        [playerSlot]: {
-            done: true,
-            took: Boolean(tookMulligan)
-        }
-    };
-    const bothDone = Boolean(mulliganState.p1?.done && mulliganState.p2?.done);
-    const updates = {
-        updatedAt: serverTimestamp(),
-        [`private/${user.uid}/hand`]: hand,
-        [`private/${user.uid}/deck`]: deck,
-        [`private/${user.uid}/life`]: life,
-        [`public/${publicPlayerKey}/handCount`]: hand.length,
-        [`public/${publicPlayerKey}/deckCount`]: deck.length,
-        [`public/${publicPlayerKey}/lifeCount`]: life.length,
-        [`public/${publicPlayerKey}/faceUpLifeCards`]: [],
-        [`public/setup/mulligan/${playerSlot}`]: mulliganState[playerSlot]
-    };
-
-    if (bothDone) {
-        const firstPlayer = publicState.firstPlayer || publicState.setup?.turnChoice?.firstPlayer || "p1";
-        const firstPublicKey = firstPlayer === "p1" ? "player1" : "player2";
-
-        updates["public/phase"] = "startOfTurn";
-        updates["public/currentPlayer"] = firstPlayer;
-        updates["public/turnNumber"] = 1;
-        updates[`public/playerTurns/${firstPlayer}`] = 1;
-        updates[`public/${firstPublicKey}/turns`] = 1;
-    }
-
-    await update(matchRef, updates);
-}
-
-export async function startMatch(roomCode) {
-    await initializeMultiplayerGame(roomCode);
-}
-
-export async function requestRematch(roomCode, playerSlot) {
-    if (playerSlot !== "p1" && playerSlot !== "p2") {
-        throw new Error("Invalid player slot.");
-    }
-
-    const matchRef = ref(database, `matches/${cleanRoomCode(roomCode)}`);
-
-    await update(matchRef, {
-        updatedAt: serverTimestamp(),
-        [`public/rematch/${playerSlot}`]: true
-    });
-
-    const snapshot = await get(matchRef);
-
-    if (!snapshot.exists()) {
-        throw new Error("Room does not exist.");
-    }
-
-    const match = snapshot.val();
-    const rematch = match.public?.rematch || {};
-
-    if (rematch.p1 && rematch.p2) {
-        await initializeMultiplayerGame(roomCode);
-    }
 }
 
 export async function registerRoomPresence(roomCode, playerSlot, user) {
@@ -757,20 +217,17 @@ export async function registerRoomPresence(roomCode, playerSlot, user) {
     const disconnectHandler = onDisconnect(playerRef);
 
     await disconnectHandler.cancel();
-
     await update(playerRef, {
         uid: user.uid,
         connected: true,
         disconnectedAt: null,
         lastSeenAt: serverTimestamp()
     });
-
     await disconnectHandler.update({
         connected: false,
         disconnectedAt: serverTimestamp(),
         lastSeenAt: serverTimestamp()
     });
-
     await touchRoom(room);
 }
 
@@ -813,4 +270,3 @@ export function sendImmediateDisconnectRequest(request) {
         console.error("Failed to send immediate disconnect request:", error);
     });
 }
-

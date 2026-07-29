@@ -8,7 +8,7 @@ import {
     getMatch,
     joinRoom,
     subscribeToMatch,
-    startMatch,
+    openPlayArea,
     registerRoomPresence,
     setPlayerDeck,
     setPlayerReady
@@ -25,7 +25,7 @@ const roomCodeDisplay = document.getElementById("roomCodeDisplay");
 const player1Status = document.getElementById("player1Status");
 const player2Status = document.getElementById("player2Status");
 const readyUpBtn = document.getElementById("readyUpBtn");
-const startGameBtn = document.getElementById("startGameBtn");
+const openPlayAreaBtn = document.getElementById("startGameBtn");
 
 let currentUser = null;
 let currentRoomCode = null;
@@ -229,7 +229,7 @@ function subscribeToCurrentRoom() {
             roomStatus.textContent = "Room no longer exists.";
             player1Status.textContent = "Player 1: Empty";
             player2Status.textContent = "Player 2: Empty";
-            startGameBtn.disabled = true;
+            openPlayAreaBtn.disabled = true;
             refreshQueueControlStates();
             return;
         }
@@ -241,7 +241,7 @@ function subscribeToCurrentRoom() {
 function updateRoomUI(match) {
     currentMatch = match;
 
-    if (match.status === "started") {
+    if (match.status === "viewing" || match.status === "started") {
         goToMatchPage();
         return;
     }
@@ -265,18 +265,18 @@ function updateRoomUI(match) {
     } else if (!bothPlayersConnected) {
         roomStatus.textContent = "A player disconnected.";
     } else if (!bothPlayersReady) {
-        roomStatus.textContent = "Both players connected. Ready up before starting.";
+        roomStatus.textContent = "Both players connected. Ready up before opening the play area.";
     } else if (playerSlot === "p1") {
-        roomStatus.textContent = "Both players are ready. Host can start.";
+        roomStatus.textContent = "Both players are ready. Host can open the play area.";
     } else {
-        roomStatus.textContent = "Both players are ready. Waiting for host.";
+        roomStatus.textContent = "Both players are ready. Waiting for the host to open the play area.";
     }
 
     if (readyUpBtn) {
         readyUpBtn.textContent = ownPlayer?.ready ? "Cancel Ready" : "Ready Up";
     }
 
-    startGameBtn.disabled = !(bothPlayersConnected && bothPlayersReady && playerSlot === "p1");
+    openPlayAreaBtn.disabled = !(bothPlayersConnected && bothPlayersReady && playerSlot === "p1");
     refreshQueueControlStates(match);
 }
 
@@ -333,17 +333,17 @@ joinRoomBtn.addEventListener("click", async () => {
     }
 });
 
-startGameBtn.addEventListener("click", async () => {
+openPlayAreaBtn.addEventListener("click", async () => {
     if (!currentRoomCode || playerSlot !== "p1") return;
 
     try {
-        startGameBtn.disabled = true;
-        roomStatus.textContent = "Starting game...";
+        openPlayAreaBtn.disabled = true;
+        roomStatus.textContent = "Opening play area...";
 
-        await startMatch(currentRoomCode);
+        await openPlayArea(currentRoomCode);
     } catch (error) {
         roomStatus.textContent = error.message;
-        startGameBtn.disabled = false;
+        openPlayAreaBtn.disabled = false;
     }
 });
 
@@ -382,7 +382,7 @@ async function initializeQueuePage() {
     try {
         queueBusy = true;
         refreshQueueControlStates();
-        startGameBtn.disabled = true;
+        openPlayAreaBtn.disabled = true;
         connectionStatus.textContent = "Loading cards...";
 
         await loadCardDatabase();
