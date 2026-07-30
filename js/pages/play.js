@@ -24,7 +24,8 @@ function updateSingleplayerPlayLink() {
         player2Deck: player2Deck.id
     });
 
-    singleplayerPlayLink.href = `singleplayer.html?${params.toString()}`;
+    const destination = `singleplayer.html?${params.toString()}`;
+    singleplayerPlayLink.href = window.addInterfacePreferencesToUrl?.(destination) || destination;
 }
 
 function savePlayDeckSelection(key, selection) {

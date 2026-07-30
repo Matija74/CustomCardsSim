@@ -8,21 +8,57 @@
     <link rel="icon" type="image/png" href="../images/a-misc/logo-without-title.png">
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/settings.css">
-    <link rel="stylesheet" href="../css/galaxy-theme.css?v=galaxy-5">
+    <link rel="stylesheet" href="../css/galaxy-theme.css?v=adaptive-color-6">
 </head>
-<body>
+<body class="workspace-body">
+    <div class="workspace-shell">
+        <aside class="workspace-sidebar">
+            <a class="workspace-logo" href="../index.html">
+                <img src="../images/a-misc/logo-without-title.png" alt="">
+                <span><strong>CCS</strong><small>Card Simulator</small></span>
+            </a>
+            <nav class="workspace-nav" aria-label="Main navigation">
+                <a href="../index.html"><i>H</i><span>Home</span></a>
+                <a href="play.html"><i>P</i><span>Play</span></a>
+                <a href="presetDecks.html"><i>D</i><span>Preset Decks</span></a>
+                <a href="deck-editor.html"><i>B</i><span>Deck Builder</span></a>
+                <a class="active" href="settings.html"><i>S</i><span>Settings</span></a>
+                <a href="patch-notes.html"><i>U</i><span>Updates</span></a>
+            </nav>
+            <div class="workspace-sidebar-footer"><i></i><span>Simulator ready</span></div>
+        </aside>
+        <div class="workspace-content">
     <div class="settings-container">
-        <header class="settings-header">
-            <a href="../index.html" class="btn-back">← Back</a>
-            <h1>Settings</h1>
+        <header class="settings-header app-page-header">
+            <a class="app-page-brand" href="../index.html">
+                <img src="../images/a-misc/logo-without-title.png" alt="">
+                <span>CCS</span>
+            </a>
+            <div class="header-title-group">
+                <span class="page-eyebrow">Preferences</span>
+                <h1>Settings</h1>
+                <p>Customize gameplay, sound, and display behavior.</p>
+            </div>
+            <a href="../index.html" class="btn-back">&#8592; Home</a>
         </header>
 
         <main class="settings-main">
+            <aside class="settings-overview">
+                <span class="page-eyebrow">Control center</span>
+                <h2>Make the simulator yours.</h2>
+                <p>Gameplay assistance, sound, layout, and visual preferences live in one focused workspace.</p>
+                <div class="settings-overview-stats">
+                    <div><strong>3</strong><span>Preference groups</span></div>
+                    <div><strong>Live</strong><span>Appearance preview</span></div>
+                </div>
+            </aside>
+
+            <section class="settings-workbench">
             <!-- Tab Navigation -->
             <div class="tabs-navigation">
-                <button class="tab-button active" data-tab="game-behaviour">Game Behaviour</button>
-                <button class="tab-button" data-tab="audio">Audio</button>
-                <button class="tab-button" data-tab="display">Display</button>
+                <button class="tab-button active" data-tab="game-behaviour"><span>01</span> Game Behaviour</button>
+                <button class="tab-button" data-tab="audio"><span>02</span> Audio</button>
+                <button class="tab-button" data-tab="appearance"><span>03</span> Appearance</button>
             </div>
 
             <!-- Game Behaviour Tab -->
@@ -142,11 +178,85 @@
                 </div>
             </div>
 
-            <!-- Display Tab -->
-            <div id="display" class="tab-content">
-                <h2>Display Settings</h2>
-                <p class="placeholder-text">Display settings coming soon...</p>
+            <div id="appearance" class="tab-content">
+                <div class="appearance-heading">
+                    <div>
+                        <span class="page-eyebrow">Live preview</span>
+                        <h2>Interface Studio</h2>
+                        <p class="setting-description">Shape the simulator around your screen and play style. Changes preview instantly.</p>
+                    </div>
+                    <button id="resetAppearanceButton" class="appearance-reset" type="button">Reset appearance</button>
+                </div>
+
+                <div class="appearance-grid">
+                    <fieldset class="appearance-control">
+                        <legend>Layout density</legend>
+                        <div class="segmented-control">
+                            <label><input type="radio" name="layoutDensity" value="comfortable"><span>Comfort</span></label>
+                            <label><input type="radio" name="layoutDensity" value="compact"><span>Compact</span></label>
+                            <label><input type="radio" name="layoutDensity" value="spacious"><span>Spacious</span></label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="appearance-control">
+                        <legend>Type style</legend>
+                        <div class="segmented-control">
+                            <label><input type="radio" name="fontStyle" value="modern"><span>Modern</span></label>
+                            <label><input type="radio" name="fontStyle" value="technical"><span>Technical</span></label>
+                            <label><input type="radio" name="fontStyle" value="classic"><span>Classic</span></label>
+                        </div>
+                    </fieldset>
+
+                    <label class="appearance-control range-control">
+                        <span><strong>Card scale</strong><output id="cardScaleOutput">100%</output></span>
+                        <input id="cardScale" type="range" min="85" max="120" step="5" value="100">
+                    </label>
+
+                    <label class="appearance-control motion-control">
+                        <span><strong>Interface motion</strong><small>Transitions and ambient movement</small></span>
+                        <span class="switch">
+                            <input type="checkbox" id="motionEnabled" checked>
+                            <span class="slider"></span>
+                        </span>
+                    </label>
+
+                    <section class="appearance-control zen-accent-control" aria-labelledby="accentControlTitle">
+                        <div class="zen-accent-heading">
+                            <span>
+                                <strong id="accentControlTitle">Interface accent</strong>
+                                <small>One color for focus, selected states, and primary actions.</small>
+                            </span>
+                            <output id="accentColorValue" for="accentColor">#44D7B6</output>
+                        </div>
+
+                        <div class="zen-accent-editor">
+                            <label class="zen-color-well" title="Choose a custom accent">
+                                <input id="accentColor" type="color" value="#44d7b6" aria-label="Custom accent color">
+                                <span></span>
+                            </label>
+                            <div class="zen-accent-presets" aria-label="Accent presets">
+                                <button type="button" data-accent="#44d7b6" style="--swatch:#44d7b6" aria-label="Mint accent"></button>
+                                <button type="button" data-accent="#7c6cff" style="--swatch:#7c6cff" aria-label="Violet accent"></button>
+                                <button type="button" data-accent="#188df5" style="--swatch:#188df5" aria-label="Blue accent"></button>
+                                <button type="button" data-accent="#f06c9b" style="--swatch:#f06c9b" aria-label="Rose accent"></button>
+                                <button type="button" data-accent="#ef8a52" style="--swatch:#ef8a52" aria-label="Orange accent"></button>
+                                <button type="button" data-accent="#d6e05b" style="--swatch:#d6e05b" aria-label="Lime accent"></button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="appearance-preview" aria-label="Appearance preview">
+                    <div class="appearance-preview-copy">
+                        <span class="page-eyebrow">Preview surface</span>
+                        <h3>Your command deck</h3>
+                        <p>Typography, density, accent, and card scale update across every screen.</p>
+                        <button type="button">Primary action</button>
+                    </div>
+                    <img src="../images/GP Okarun/DD01-001.png" alt="Okarun leader card preview">
+                </div>
             </div>
+            </section>
         </main>
 
         <!-- Save Button -->
@@ -154,8 +264,10 @@
             <button id="saveButton" class="btn btn-save">Save Settings</button>
         </footer>
     </div>
+        </div>
+    </div>
 
-    <script src="../js/pages/galaxy-theme.js?v=galaxy-4"></script>
-    <script src="../js/pages/settings.js"></script>
+    <script src="../js/pages/galaxy-theme.js?v=adaptive-color-3"></script>
+    <script src="../js/pages/settings.js?v=settings-9"></script>
 </body>
 </html>

@@ -8,12 +8,26 @@
     <link rel="icon" type="image/png" href="../images/a-misc/logo-without-title.png">
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/multiplayer.css?v=game-ui-5">
-    <link rel="stylesheet" href="../css/galaxy-theme.css?v=galaxy-5">
+    <link rel="stylesheet" href="../css/galaxy-theme.css?v=adaptive-color-6">
 </head>
 <body>
-    <a href="../index.html" class="btn-back">← Back to Main</a>
+    <a href="../index.html" class="btn-back">&#8592; Home</a>
 
     <main class="multiplayer-page">
+        <header class="match-topbar">
+            <a class="match-brand" href="../index.html">
+                <img src="../images/a-misc/logo-without-title.png" alt="">
+                <span>CCS</span>
+            </a>
+            <div class="match-heading">
+                <span class="match-mode">Online table</span>
+                <strong>Multiplayer</strong>
+            </div>
+            <div class="match-connection">
+                <i></i>
+                Live match
+            </div>
+        </header>
 
         <div class="game-layout">
             <section class="game-board">
@@ -23,6 +37,10 @@
                 <div class="hand opponent-hand" id="player2Hand"></div>
 
                 <section class="play-area opponent-area">
+                    <div class="player-rail opponent-rail">
+                        <span class="player-avatar">P2</span>
+                        <span><strong>Opponent</strong><small>Remote player</small></span>
+                    </div>
                     <div class="character-area">
                         <div class="character-label">Character Area</div>
                         <div class="character-slot" data-player="player2" data-slot="0"></div>
@@ -54,6 +72,10 @@
                 <div class="battle-controls" id="battleControls"></div>
 
                 <section class="play-area player-area">
+                    <div class="player-rail">
+                        <span class="player-avatar">P1</span>
+                        <span><strong>You</strong><small>Local player</small></span>
+                    </div>
                     <div class="character-area">
                         <div class="character-label">Character Area</div>
                         <div class="character-slot" data-player="player1" data-slot="0"></div>
@@ -87,15 +109,20 @@
             </section>
 
             <aside class="card-preview-panel">
+                <div class="sidebar-section-label">
+                    <span>Inspector</span>
+                    <small>Card preview</small>
+                </div>
                 <div class="card-preview">
                     <div class="preview-placeholder" id="previewPlaceholder">
                         Hover a card to preview it
                     </div>
 
-                    <img id="previewImage" class="preview-image" src="" alt="Card Preview">
+            <img id="previewImage" class="preview-image" alt="Selected card preview" hidden>
                 </div>
 
                 <div class="phase-controls">
+                    <span class="control-label">Match action</span>
                     <button id="phaseButton" class="phase-button">Dice Roll</button>
                 </div>
 
@@ -121,22 +148,23 @@
         </div>
     </main>
 
-    <script src="../js/pages/galaxy-theme.js?v=galaxy-4"></script>
+    <script src="../js/pages/galaxy-theme.js?v=adaptive-color-3"></script>
     <script src="../js/core/gameSettings.js?v=settings-live-1"></script>
     <script src="../js/core/gameAudio.js?v=audio-1"></script>
     <script src="../js/core/phases.js?v=game-ui-2"></script>
 
-    <script src="../js/cards/cardDatabase.js?v=perf-1"></script>
+    <script src="../js/cards/cardDataBundle.js?v=bundle-1"></script>
+    <script src="../js/cards/cardDatabase.js?v=asset-root-1"></script>
     <script src="../js/cards/decks.js?v=killer-deck-1"></script>
     <script src="../js/core/deckParser.js?v=multiplayer-fix-3"></script>
     <script src="../js/core/deckTools.js?v=deck-tools-3"></script>
 
     <script src="../js/core/effects.js?v=gameplay-rules-2"></script>
     <script src="../js/core/gameInteractions.js?v=gameplay-rules-4"></script>
-    <script src="../js/pages/matchShared.js?v=match-shared-1"></script>
+    <script src="../js/pages/matchShared.js?v=asset-root-1"></script>
 
     <script type="module" src="../js/pages/multiplayerPresence.js?v=multiplayer-fix-3"></script>
     <script src="../js/pages/multiplayer.js?v=game-ui-5"></script>
-    <script type="module" src="../js/pages/multiplayerRuntime.js?v=game-ui-5"></script>
+    <script type="module" src="../js/pages/multiplayerRuntime.js?v=game-ui-6"></script>
 </body>
 </html>

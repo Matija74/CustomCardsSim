@@ -212,7 +212,8 @@ function goToMatchPage() {
         player: playerSlot
     });
 
-    window.location.href = `multiplayer.html?${params.toString()}`;
+    const destination = `multiplayer.html?${params.toString()}`;
+    window.location.href = window.addInterfacePreferencesToUrl?.(destination) || destination;
 }
 
 function subscribeToCurrentRoom() {

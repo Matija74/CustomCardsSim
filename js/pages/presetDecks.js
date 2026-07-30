@@ -107,6 +107,7 @@ function createCompactDeckCard(deck) {
         coverImage.className = "deck-cover-image";
         coverImage.src = coverCard.image;
         coverImage.alt = coverCard.name;
+        coverImage.decoding = "async";
         coverRow.appendChild(coverImage);
     }
 
@@ -117,19 +118,19 @@ function createCompactDeckCard(deck) {
         openDeckImageModal(deck);
     });
 
-    const coverInfo = document.createElement("div");
-    coverInfo.className = "deck-cover-info";
-    coverInfo.appendChild(viewButton);
-    coverRow.appendChild(coverInfo);
-
     const meta = document.createElement("div");
     meta.className = "deck-meta";
     meta.appendChild(createMetaItem("Leader", leaderCard?.name || deck.leaderKey));
     meta.appendChild(createMetaItem("Cards", `${totalCards} total`));
 
-    card.appendChild(header);
+    const details = document.createElement("div");
+    details.className = "deck-card-details";
+    details.appendChild(header);
+    details.appendChild(meta);
+    details.appendChild(viewButton);
+
     card.appendChild(coverRow);
-    card.appendChild(meta);
+    card.appendChild(details);
 
     card.addEventListener("dblclick", () => {
         openDeckImageModal(deck);
@@ -282,6 +283,7 @@ function createDeckImageCard(entry) {
         const img = document.createElement("img");
         img.src = entry.card.image;
         img.alt = entry.card.name;
+        img.decoding = "async";
         img.addEventListener("click", event => {
             event.stopPropagation();
             openDeckCardPreview(entry.card);
@@ -331,6 +333,7 @@ function openDeckCardPreview(card) {
     image.className = "card-preview-image";
     image.src = card.image;
     image.alt = card.name;
+    image.decoding = "async";
 
     const info = document.createElement("div");
     info.className = "card-preview-info";

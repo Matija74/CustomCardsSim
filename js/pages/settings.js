@@ -18,7 +18,9 @@ class SettingsManager {
     init() {
         this.setupTabNavigation();
         this.loadCheckboxStates();
+        this.loadAppearanceControls();
         this.setupEventListeners();
+        this.setupAppearanceListeners();
     }
 
     // =========================
@@ -27,16 +29,20 @@ class SettingsManager {
 
     // Load settings from localStorage
     loadSettings() {
-        const saved = localStorage.getItem('gameSettings');
         const defaultSettings = this.getDefaultSettings();
-    
-        if (saved) {
-            return {
-                ...defaultSettings,
-                ...JSON.parse(saved)
-            };
+
+        try {
+            const saved = localStorage.getItem('gameSettings');
+            if (saved) {
+                return {
+                    ...defaultSettings,
+                    ...JSON.parse(saved)
+                };
+            }
+        } catch (error) {
+            console.warn('Unable to load saved settings. Using defaults.', error);
         }
-    
+
         return defaultSettings;
     }
     
@@ -52,13 +58,111 @@ class SettingsManager {
             confirmTrigger: true,
     
             soundEffects: true,
-            audioEnabled: true
+            audioEnabled: true,
+            layoutDensity: 'comfortable',
+            fontStyle: 'modern',
+            colorTheme: 'obsidian',
+            accentColor: '#44d7b6',
+            cardScale: 100,
+            motionEnabled: true
         };
+    }
+
+    loadAppearanceControls() {
+        ['layoutDensity', 'fontStyle', 'colorTheme'].forEach((name) => {
+            const value = this.settings[name];
+            const input = document.querySelector(`input[name="${name}"][value="${value}"]`);
+            if (input) input.checked = true;
+        });
+
+        const accent = document.getElementById('accentColor');
+        const scale = document.getElementById('cardScale');
+        const motion = document.getElementById('motionEnabled');
+        if (accent) accent.value = this.settings.accentColor;
+        if (scale) scale.value = this.settings.cardScale;
+        if (motion) motion.checked = this.settings.motionEnabled;
+        this.updateScaleOutput();
+        this.updateAccentControls();
+    }
+
+    setupAppearanceListeners() {
+        document.querySelectorAll('input[name="layoutDensity"], input[name="fontStyle"], input[name="colorTheme"]')
+            .forEach((input) => input.addEventListener('change', () => {
+                this.settings[input.name] = input.value;
+                this.previewAppearance();
+            }));
+
+        const accent = document.getElementById('accentColor');
+        const scale = document.getElementById('cardScale');
+        const motion = document.getElementById('motionEnabled');
+        accent?.addEventListener('input', () => {
+            this.settings.accentColor = accent.value;
+            this.updateAccentControls();
+            this.previewAppearance();
+        });
+        document.querySelectorAll('[data-accent]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const color = button.dataset.accent;
+                if (!accent || !color) return;
+                accent.value = color;
+                this.settings.accentColor = color;
+                this.updateAccentControls();
+                this.previewAppearance();
+            });
+        });
+        scale?.addEventListener('input', () => {
+            this.settings.cardScale = Number(scale.value);
+            this.updateScaleOutput();
+            this.previewAppearance();
+        });
+        motion?.addEventListener('change', () => {
+            this.settings.motionEnabled = motion.checked;
+            this.previewAppearance();
+        });
+        document.getElementById('resetAppearanceButton')?.addEventListener('click', () => {
+            const defaults = this.getDefaultSettings();
+            ['layoutDensity', 'fontStyle', 'colorTheme', 'accentColor', 'cardScale', 'motionEnabled']
+                .forEach((key) => { this.settings[key] = defaults[key]; });
+            this.loadAppearanceControls();
+            this.previewAppearance();
+        });
+    }
+
+    updateScaleOutput() {
+        const output = document.getElementById('cardScaleOutput');
+        if (output) output.textContent = `${this.settings.cardScale}%`;
+    }
+
+    updateAccentControls() {
+        const normalizedColor = String(this.settings.accentColor || '#44d7b6').toUpperCase();
+        const output = document.getElementById('accentColorValue');
+        if (output) output.textContent = normalizedColor;
+
+        document.querySelectorAll('[data-accent]').forEach((button) => {
+            const isActive = String(button.dataset.accent || '').toUpperCase() === normalizedColor;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+
+    previewAppearance() {
+        if (typeof window.applyInterfacePreferences === 'function') {
+            window.applyInterfacePreferences(this.settings);
+        }
+        this.persistSettings();
+    }
+
+    persistSettings() {
+        try {
+            localStorage.setItem('gameSettings', JSON.stringify(this.settings));
+        } catch (error) {
+            console.warn('Unable to persist settings.', error);
+        }
     }
 
     // Save settings to localStorage
     saveSettings() {
-        localStorage.setItem('gameSettings', JSON.stringify(this.settings));
+        this.persistSettings();
         this.showSaveNotification();
     }
 

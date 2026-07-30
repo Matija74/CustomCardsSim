@@ -8,12 +8,26 @@
     <link rel="icon" type="image/png" href="../images/a-misc/logo-without-title.png">
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/singleplayer.css?v=game-ui-5">
-    <link rel="stylesheet" href="../css/galaxy-theme.css?v=galaxy-5">
+    <link rel="stylesheet" href="../css/galaxy-theme.css?v=adaptive-color-6">
 </head>
 <body>
-    <a href="../index.html" class="btn-back">← Back to Main</a>
+    <a href="../index.html" class="btn-back">&#8592; Home</a>
 
     <main class="singleplayer-page">
+        <header class="match-topbar">
+            <a class="match-brand" href="../index.html">
+                <img src="../images/a-misc/logo-without-title.png" alt="">
+                <span>CCS</span>
+            </a>
+            <div class="match-heading">
+                <span class="match-mode">Practice table</span>
+                <strong>Singleplayer</strong>
+            </div>
+            <div class="match-connection">
+                <i></i>
+                Local match
+            </div>
+        </header>
 
         <div class="game-layout">
             <section class="game-board">
@@ -21,8 +35,12 @@
                 <svg id="attackArrowOverlay" class="attack-arrow-overlay"></svg>
 
                 <div class="hand opponent-hand" id="player2Hand"></div>
-        
+
                 <section class="play-area opponent-area">
+                    <div class="player-rail opponent-rail">
+                        <span class="player-avatar">P2</span>
+                        <span><strong>Opponent</strong><small>Practice side</small></span>
+                    </div>
                     <div class="character-area">
                         <div class="character-label">Character Area</div>
                         <div class="character-slot" data-player="player2" data-slot="0"></div>
@@ -31,29 +49,33 @@
                         <div class="character-slot" data-player="player2" data-slot="3"></div>
                         <div class="character-slot" data-player="player2" data-slot="4"></div>
                     </div>
-        
+
                     <div class="life-area" id="lifeArea">
                         <span class="life-toggle-text" id="lifeToggleText">View Life Cards</span>
-                    
+
                         <div class="life-card">Life 1</div>
                         <div class="life-card">Life 2</div>
                         <div class="life-card">Life 3</div>
                         <div class="life-card">Life 4</div>
                         <div class="life-card">Life 5</div>
                     </div>
-        
+
                     <div class="area leader-area" id="player2LeaderArea"></div>
                     <div class="area stage-area" id="player2StageArea">Stage Card</div>
                     <div class="area deck-area" id="player2DeckArea">Deck</div>
-        
+
                     <div class="area don-deck-area" id="player2DonDeckArea"></div>
                     <div class="area don-area" id="player2DonArea">Cost Area</div>
                     <div class="area trash-area" id="player2TrashArea">Trash</div>
                 </section>
 
                 <div class="battle-controls" id="battleControls"></div>
-        
+
                 <section class="play-area player-area">
+                    <div class="player-rail">
+                        <span class="player-avatar">P1</span>
+                        <span><strong>You</strong><small>Active player</small></span>
+                    </div>
                     <div class="character-area">
                         <div class="character-label">Character Area</div>
                         <div class="character-slot" data-player="player1" data-slot="0"></div>
@@ -62,40 +84,45 @@
                         <div class="character-slot" data-player="player1" data-slot="3"></div>
                         <div class="character-slot" data-player="player1" data-slot="4"></div>
                     </div>
-        
+
                     <div class="life-area" id="opponentLifeArea">
                         <span class="life-toggle-text" id="opponentLifeToggleText">View Life Cards</span>
-                    
+
                         <div class="life-card">Life 1</div>
                         <div class="life-card">Life 2</div>
                         <div class="life-card">Life 3</div>
                         <div class="life-card">Life 4</div>
                         <div class="life-card">Life 5</div>
                     </div>
-        
+
                     <div class="area leader-area" id="player1LeaderArea"></div>
                     <div class="area stage-area" id="player1StageArea">Stage Card</div>
                     <div class="area deck-area" id="player1DeckArea">Deck</div>
-        
+
                     <div class="area don-deck-area" id="player1DonDeckArea"></div>
                     <div class="area don-area" id="player1DonArea">Cost Area</div>
                     <div class="area trash-area" id="player1TrashArea">Trash</div>
                 </section>
 
                 <div class="hand player-hand" id="player1Hand"></div>
-        
+
             </section>
 
             <aside class="card-preview-panel">
+                <div class="sidebar-section-label">
+                    <span>Inspector</span>
+                    <small>Card preview</small>
+                </div>
                 <div class="card-preview">
                     <div class="preview-placeholder" id="previewPlaceholder">
                         Hover a card to preview it
                     </div>
 
-                    <img id="previewImage" class="preview-image" src="" alt="Card Preview">
+            <img id="previewImage" class="preview-image" alt="Selected card preview" hidden>
                 </div>
 
                 <div class="phase-controls">
+                    <span class="control-label">Match action</span>
                     <button id="phaseButton" class="phase-button">Dice Roll</button>
                 </div>
 
@@ -117,23 +144,24 @@
                     <a id="sidebarExitButton" class="sidebar-footer-button sidebar-footer-button-exit" href="../index.html" aria-label="Back to Main">&larr;</a>
                 </div>
             </aside>
-            
+
         </div>
     </main>
 
-    <script src="../js/pages/galaxy-theme.js?v=galaxy-4"></script>
+    <script src="../js/pages/galaxy-theme.js?v=adaptive-color-3"></script>
     <script src="../js/core/gameSettings.js?v=settings-live-1"></script>
     <script src="../js/core/gameAudio.js?v=audio-1"></script>
     <script src="../js/core/phases.js?v=game-ui-2"></script>
 
-    <script src="../js/cards/cardDatabase.js?v=perf-1"></script>
+    <script src="../js/cards/cardDataBundle.js?v=bundle-1"></script>
+    <script src="../js/cards/cardDatabase.js?v=asset-root-1"></script>
     <script src="../js/cards/decks.js?v=killer-deck-1"></script>
     <script src="../js/core/deckParser.js"></script>
     <script src="../js/core/deckTools.js?v=deck-tools-3"></script>
 
     <script src="../js/core/effects.js?v=gameplay-rules-2"></script>
     <script src="../js/core/gameInteractions.js?v=gameplay-rules-4"></script>
-    <script src="../js/pages/matchShared.js?v=match-shared-1"></script>
+    <script src="../js/pages/matchShared.js?v=asset-root-1"></script>
 
     <script src="../js/pages/singleplayer.js?v=game-ui-5"></script>
 </body>

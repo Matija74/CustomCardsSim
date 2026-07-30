@@ -1938,6 +1938,7 @@ function showCardPreview(imageSrc) {
     if (!previewImage || !previewPlaceholder || !imageSrc) return;
 
     previewImage.src = imageSrc;
+    previewImage.hidden = false;
     previewImage.style.display = "block";
     previewPlaceholder.style.display = "none";
 }
@@ -1949,6 +1950,7 @@ function clearCardPreview() {
     if (!previewImage || !previewPlaceholder) return;
 
     previewImage.src = "";
+    previewImage.hidden = true;
     previewImage.style.display = "none";
     previewPlaceholder.style.display = "block";
 }

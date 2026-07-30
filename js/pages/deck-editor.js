@@ -36,6 +36,8 @@ class DeckEditor {
         this.counterFilter = document.getElementById("counterFilter");
         this.leaderColorFilterToggle = document.getElementById("leaderColorFilterToggle");
         this.leaderTypeFilterToggle = document.getElementById("leaderTypeFilterToggle");
+        this.filterExpandButton = document.getElementById("filterExpandButton");
+        this.advancedDeckFilters = document.getElementById("advancedDeckFilters");
 
         this.saveDeckButton = document.getElementById("saveDeckButton");
         this.copyDeckCodeButton = document.getElementById("copyDeckCodeButton");
@@ -43,8 +45,13 @@ class DeckEditor {
         this.savedDeckSelect = document.getElementById("savedDeckSelect");
         this.loadSavedDeckButton = document.getElementById("loadSavedDeckButton");
         this.deleteSavedDeckButton = document.getElementById("deleteSavedDeckButton");
+        this.openImportDeckButton = document.getElementById("openImportDeckButton");
         this.importDeckText = document.getElementById("importDeckText");
         this.importDeckButton = document.getElementById("importDeckButton");
+        this.deckImportModal = document.getElementById("deckImportModal");
+        this.deckImportBackdrop = document.getElementById("deckImportBackdrop");
+        this.deckImportClose = document.getElementById("deckImportClose");
+        this.cancelImportDeckButton = document.getElementById("cancelImportDeckButton");
 
         this.cardPreviewModal = document.getElementById("cardPreviewModal");
         this.cardPreviewBackdrop = document.getElementById("cardPreviewBackdrop");
@@ -80,13 +87,18 @@ class DeckEditor {
         this.leaderColorFilterToggle.addEventListener("change", () => this.renderCardLibrary());
         this.leaderTypeFilterToggle.addEventListener("change", () => this.renderCardLibrary());
         this.limitCopiesToggle?.addEventListener("change", () => this.handleCopyLimitToggleChange());
+        this.filterExpandButton?.addEventListener("click", () => this.toggleAdvancedFilters());
 
         this.saveDeckButton?.addEventListener("click", () => this.saveCurrentDeck());
         this.copyDeckCodeButton?.addEventListener("click", () => this.copyDeckCode());
         this.clearDeckButton.addEventListener("click", () => this.clearDeck());
         this.loadSavedDeckButton?.addEventListener("click", () => this.loadSelectedSavedDeck());
         this.deleteSavedDeckButton?.addEventListener("click", () => this.deleteSelectedSavedDeck());
+        this.openImportDeckButton?.addEventListener("click", () => this.openDeckImport());
         this.importDeckButton?.addEventListener("click", () => this.importDeckFromText());
+        this.deckImportBackdrop?.addEventListener("click", () => this.closeDeckImport());
+        this.deckImportClose?.addEventListener("click", () => this.closeDeckImport());
+        this.cancelImportDeckButton?.addEventListener("click", () => this.closeDeckImport());
 
         this.cardPreviewBackdrop.addEventListener("click", () => this.closeCardPreview());
         this.cardPreviewClose.addEventListener("click", () => this.closeCardPreview());
@@ -94,6 +106,7 @@ class DeckEditor {
         document.addEventListener("keydown", (event) => {
             if (event.key === "Escape") {
                 this.closeCardPreview();
+                this.closeDeckImport();
             }
         });
     }
@@ -137,6 +150,7 @@ class DeckEditor {
 
     renderLeaderSelection() {
         this.cardLibraryGrid.innerHTML = "";
+        this.cardLibraryGrid.classList.add("leader-selection-grid");
 
         const filteredLeaders = this.getFilteredCards({
             leadersOnly: true
@@ -181,6 +195,7 @@ class DeckEditor {
 
     renderCardLibrary() {
         this.cardLibraryGrid.innerHTML = "";
+        this.cardLibraryGrid.classList.remove("leader-selection-grid");
 
         if (!this.selectedLeader) {
             this.renderLeaderSelection();
@@ -224,7 +239,6 @@ class DeckEditor {
             const image = document.createElement("img");
             image.src = card.image;
             image.alt = card.name;
-            image.loading = "lazy";
             image.decoding = "async";
             imageBox.appendChild(image);
         } else {
@@ -570,6 +584,17 @@ class DeckEditor {
         this.renderCardLibrary();
     }
 
+    toggleAdvancedFilters() {
+        if (!this.filterExpandButton || !this.advancedDeckFilters) {
+            return;
+        }
+
+        const willExpand = this.advancedDeckFilters.hidden;
+        this.advancedDeckFilters.hidden = !willExpand;
+        this.filterExpandButton.setAttribute("aria-expanded", String(willExpand));
+        this.filterExpandButton.classList.toggle("active", willExpand);
+    }
+
     addCardToDeck(card) {
         if (!this.selectedLeader) {
             alert("You must choose a Leader before adding cards.");
@@ -891,6 +916,29 @@ class DeckEditor {
             leaderKey,
             cards: parsedDeck.entries
         });
+        this.closeDeckImport();
+    }
+
+    openDeckImport() {
+        if (!this.deckImportModal) {
+            return;
+        }
+
+        this.deckImportModal.classList.add("open");
+        this.deckImportModal.setAttribute("aria-hidden", "false");
+        document.body.classList.add("modal-open");
+        this.importDeckText?.focus();
+    }
+
+    closeDeckImport() {
+        if (!this.deckImportModal?.classList.contains("open")) {
+            return;
+        }
+
+        this.deckImportModal.classList.remove("open");
+        this.deckImportModal.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("modal-open");
+        this.openImportDeckButton?.focus();
     }
 
     // =========================
@@ -932,6 +980,7 @@ class DeckEditor {
             const image = document.createElement("img");
             image.src = leader.image;
             image.alt = leader.name;
+            image.decoding = "async";
             imageBox.appendChild(image);
         } else {
             const noImage = document.createElement("span");
@@ -972,7 +1021,6 @@ class DeckEditor {
             const image = document.createElement("img");
             image.src = card.image;
             image.alt = card.name;
-            image.loading = "lazy";
             image.decoding = "async";
             imageBox.appendChild(image);
         } else {
@@ -1084,7 +1132,7 @@ class DeckEditor {
     closeCardPreview() {
         this.cardPreviewModal.classList.remove("open");
 
-        this.cardPreviewImage.src = "";
+        this.cardPreviewImage.removeAttribute("src");
         this.cardPreviewImage.alt = "Card Preview";
     }
 

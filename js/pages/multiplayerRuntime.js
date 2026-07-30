@@ -189,7 +189,7 @@ function scheduleOpponentDisconnectCheck(match) {
 
             didHandleOpponentDisconnect = true;
             window.alert(`${latestOpponentPlayer.name || "Your opponent"} left the match. You will return to the main menu.`);
-            window.location.href = "../index.html";
+            window.location.href = window.addInterfacePreferencesToUrl?.("../index.html") || "../index.html";
         } catch (error) {
             console.error("Failed to verify opponent disconnect:", error);
         }

@@ -7,84 +7,112 @@
 
     <link rel="icon" type="image/png" href="../images/a-misc/logo-without-title.png">
     <link rel="stylesheet" href="../css/queue.css?v=queue-room-deck-1">
-    <link rel="stylesheet" href="../css/galaxy-theme.css?v=galaxy-5">
+    <link rel="stylesheet" href="../css/galaxy-theme.css?v=adaptive-color-6">
 </head>
 
-<body>
+<body class="workspace-body">
+    <div class="workspace-shell">
+        <aside class="workspace-sidebar">
+            <a class="workspace-logo" href="../index.html">
+                <img src="../images/a-misc/logo-without-title.png" alt="">
+                <span><strong>CCS</strong><small>Card Simulator</small></span>
+            </a>
+            <nav class="workspace-nav" aria-label="Main navigation">
+                <a href="../index.html"><i>H</i><span>Home</span></a>
+                <a class="active" href="play.html"><i>P</i><span>Play</span></a>
+                <a href="presetDecks.html"><i>D</i><span>Preset Decks</span></a>
+                <a href="deck-editor.html"><i>B</i><span>Deck Builder</span></a>
+                <a href="settings.html"><i>S</i><span>Settings</span></a>
+                <a href="patch-notes.html"><i>U</i><span>Updates</span></a>
+            </nav>
+            <div class="workspace-sidebar-footer"><i></i><span>Online services</span></div>
+        </aside>
+        <div class="workspace-content">
     <main class="queue-page">
-        <header class="queue-header">
-            <a href="play.html" class="btn-back">Back</a>
-
+        <header class="queue-header app-page-header">
+            <a class="app-page-brand" href="../index.html">
+                <img src="../images/a-misc/logo-without-title.png" alt="">
+                <span>CCS</span>
+            </a>
             <div class="header-title-group">
-                <p>Multiplayer queue</p>
+                <span class="page-eyebrow">Online play</span>
+                <h1>Multiplayer Lobby</h1>
+                <p>Create a private room or join with a code.</p>
             </div>
+            <a href="play.html" class="btn-back">&#8592; Modes</a>
         </header>
 
-        <section class="queue-panel">
-            <div class="queue-status">
-                <span id="connectionStatus">Connecting...</span>
+        <section class="lobby-workspace">
+            <div class="lobby-command-bar">
+                <div>
+                    <span class="lobby-command-kicker">Connection</span>
+                    <strong id="connectionStatus">Connecting...</strong>
+                </div>
+                <span class="lobby-security-note">Private rooms · Six-character access code</span>
             </div>
 
-            <div class="queue-grid">
-                <section class="queue-side">
-                    <h2>Create Room</h2>
-                    <p>Host a room, share the code, then start when both players are connected.</p>
-
-                    <button id="createRoomBtn" class="btn btn-primary" type="button">
-                        Create Room
-                    </button>
+            <div class="lobby-entry-grid">
+                <section class="lobby-entry-card lobby-host-card">
+                    <span class="lobby-step">01</span>
+                    <div class="lobby-entry-copy">
+                        <span class="page-eyebrow">Host a match</span>
+                        <h2>Create a private room</h2>
+                        <p>Generate a room, share its code with your opponent, and control when the match begins.</p>
+                    </div>
+                    <button id="createRoomBtn" class="btn btn-primary" type="button">Create Room</button>
                 </section>
 
-                <div class="queue-divider"></div>
-
-                <section class="queue-side">
-                    <h2>Join Room</h2>
-                    <p>Enter the host's room code to join as Player 2.</p>
-
+                <section class="lobby-entry-card lobby-join-card">
+                    <span class="lobby-step">02</span>
+                    <div class="lobby-entry-copy">
+                        <span class="page-eyebrow">Join a match</span>
+                        <h2>Enter room code</h2>
+                        <p>Use the six-character code supplied by the room host.</p>
+                    </div>
                     <div class="join-box">
-                        <input id="roomCodeInput" type="text" maxlength="6" placeholder="Room code">
-                        <button id="joinRoomBtn" class="btn btn-secondary" type="button">
-                            Join
-                        </button>
+                        <input id="roomCodeInput" type="text" maxlength="6" placeholder="ROOM CODE" aria-label="Room code">
+                        <button id="joinRoomBtn" class="btn btn-secondary" type="button">Join Room</button>
                     </div>
                 </section>
             </div>
 
             <section class="room-panel">
-                <div>
-                    <span class="room-label">Room</span>
-                    <strong id="roomCodeDisplay">------</strong>
-                </div>
-
-                <p id="roomStatus">No room yet.</p>
+                <header class="room-panel-header">
+                    <div>
+                        <span class="room-label">Active Room</span>
+                        <strong id="roomCodeDisplay">------</strong>
+                    </div>
+                    <p id="roomStatus">No room yet.</p>
+                </header>
 
                 <div class="player-status">
                     <span id="player1Status">Player 1: Empty</span>
                     <span id="player2Status">Player 2: Empty</span>
                 </div>
 
-                <div class="deck-picker-field room-deck-picker">
-                    <span>Your Deck</span>
-                    <button id="queueDeckButton" class="deck-picker-button" type="button">Choose Deck</button>
-                    <span id="queueDeckHelp" class="deck-picker-summary"></span>
+                <div class="room-control-grid">
+                    <div class="deck-picker-field room-deck-picker">
+                        <span>Your battle deck</span>
+                        <button id="queueDeckButton" class="deck-picker-button" type="button">Choose Deck</button>
+                        <span id="queueDeckHelp" class="deck-picker-summary"></span>
+                    </div>
+                    <div class="room-launch-actions">
+                        <button id="readyUpBtn" class="btn btn-secondary" type="button" disabled>Ready Up</button>
+                        <button id="startGameBtn" class="btn btn-primary" type="button" disabled>Start Game</button>
+                    </div>
                 </div>
-
-                <button id="readyUpBtn" class="btn btn-secondary" type="button" disabled>
-                    Ready Up
-                </button>
-
-                <button id="startGameBtn" class="btn btn-primary" type="button" disabled>
-                    Start Game
-                </button>
             </section>
         </section>
     </main>
+        </div>
+    </div>
 
-    <script src="../js/pages/galaxy-theme.js?v=galaxy-4"></script>
-    <script src="../js/cards/cardDatabase.js?v=multiplayer-fix-3"></script>
+    <script src="../js/pages/galaxy-theme.js?v=adaptive-color-3"></script>
+    <script src="../js/cards/cardDataBundle.js?v=bundle-1"></script>
+    <script src="../js/cards/cardDatabase.js?v=asset-root-1"></script>
     <script src="../js/cards/decks.js?v=imu-deck-2"></script>
     <script src="../js/core/deckParser.js?v=multiplayer-fix-3"></script>
     <script src="../js/core/deckTools.js?v=deck-tools-2"></script>
-    <script type="module" src="../js/pages/queue.js?v=queue-room-deck-1"></script>
+    <script type="module" src="../js/pages/queue.js?v=queue-room-deck-2"></script>
 </body>
 </html>

@@ -7,18 +7,47 @@
 
     <link rel="icon" type="image/png" href="../images/a-misc/logo-without-title.png">
     <link rel="stylesheet" href="../css/patch-notes.css">
-    <link rel="stylesheet" href="../css/galaxy-theme.css?v=galaxy-5">
+    <link rel="stylesheet" href="../css/galaxy-theme.css?v=adaptive-color-6">
 </head>
-<body>
+<body class="workspace-body">
+    <div class="workspace-shell">
+        <aside class="workspace-sidebar">
+            <a class="workspace-logo" href="../index.html">
+                <img src="../images/a-misc/logo-without-title.png" alt="">
+                <span><strong>CCS</strong><small>Card Simulator</small></span>
+            </a>
+            <nav class="workspace-nav" aria-label="Main navigation">
+                <a href="../index.html"><i>H</i><span>Home</span></a>
+                <a href="play.html"><i>P</i><span>Play</span></a>
+                <a href="presetDecks.html"><i>D</i><span>Preset Decks</span></a>
+                <a href="deck-editor.html"><i>B</i><span>Deck Builder</span></a>
+                <a href="settings.html"><i>S</i><span>Settings</span></a>
+                <a class="active" href="patch-notes.html"><i>U</i><span>Updates</span></a>
+            </nav>
+            <div class="workspace-sidebar-footer"><i></i><span>Simulator ready</span></div>
+        </aside>
+        <div class="workspace-content">
     <main class="patch-notes-page">
-        <header class="patch-notes-header">
-            <a href="../index.html" class="btn-back">Back</a>
-
+        <header class="patch-notes-header app-page-header">
+            <a class="app-page-brand" href="../index.html">
+                <img src="../images/a-misc/logo-without-title.png" alt="">
+                <span>CCS</span>
+            </a>
             <div class="header-title-group">
+                <span class="page-eyebrow">Development log</span>
                 <h1>Patch Notes</h1>
                 <p>Patch notes restarted with the new standard format.</p>
             </div>
+            <a href="../index.html" class="btn-back">&#8592; Home</a>
         </header>
+
+        <nav class="patch-filter-bar" aria-label="Filter patch notes">
+            <span>Show</span>
+            <button class="patch-filter active" type="button" data-patch-filter="all">All changes</button>
+            <button class="patch-filter" type="button" data-patch-filter="update">Updates</button>
+            <button class="patch-filter" type="button" data-patch-filter="fix">Fixes</button>
+            <button class="patch-filter" type="button" data-patch-filter="addition">Additions</button>
+        </nav>
 
         <section class="patch-notes-panel">
             <article class="patch-note-entry">
@@ -167,7 +196,7 @@
                 <p>[UPDATE]: RB Guts preset deck no longer shows the creator name in its title.</p>
                 <p>[UPDATE]: R Eggman preset deck no longer shows the creator name in its title.</p>
                 <p>[UPDATE]: RY Ichigo preset deck no longer shows the creator name in its title.</p>
-                <p>[UPDATE]: U Taglavnovič preset deck no longer shows the creator name in its title.</p>
+                <p>[UPDATE]: U TaglavnoviÄ preset deck no longer shows the creator name in its title.</p>
                 <p>[FIX]: Deck selection pages now load the renamed preset titles from the latest deck data file.</p>
                 <p>[Dev Note]: /</p>
             </article>
@@ -298,6 +327,9 @@
             </article>
         </section>
     </main>
-    <script src="../js/pages/galaxy-theme.js?v=galaxy-4"></script>
+        </div>
+    </div>
+    <script src="../js/pages/galaxy-theme.js?v=adaptive-color-3"></script>
+    <script src="../js/pages/patch-notes.js?v=patch-ui-2"></script>
 </body>
 </html>

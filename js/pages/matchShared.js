@@ -4,9 +4,9 @@
 // Image Paths
 // =========================
 
-const cardBackImage = "../images/a-misc/card-back-normal.png";
-const donBackImage = "../images/a-misc/card-back-normal.png";
-const donImage = "../images/a-misc/card-front-don.png";
+const cardBackImage = window.resolveApplicationAsset("images/a-misc/card-back-normal.png");
+const donBackImage = window.resolveApplicationAsset("images/a-misc/card-back-don.png");
+const donImage = window.resolveApplicationAsset("images/a-misc/card-front-don.png");
 
 // =========================
 // Game Initialization

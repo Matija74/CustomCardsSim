@@ -4,53 +4,83 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Custom Cards Simulator</title>
-
     <link rel="icon" type="image/png" href="images/a-misc/logo-without-title.png">
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/galaxy-theme.css?v=galaxy-5">
+    <link rel="stylesheet" href="css/galaxy-theme.css?v=adaptive-color-6">
 </head>
-<body>
-    <main class="main-menu">
-        <section class="menu-header">
-            <img
-                class="menu-logo"
-                src="images/a-misc/logo-with-title.png"
-                alt="Custom Cards Simulator"
-            >
-            <p>Build custom decks, test card effects, and play practice games in your browser.</p>
+<body class="command-home-body">
+    <header class="site-bar command-header">
+        <a class="site-brand" href="index.html" aria-label="Custom Card Simulator home">
+            <img src="images/a-misc/logo-without-title.png" alt="">
+            <span>CCS</span>
+        </a>
+        <nav class="home-nav" aria-label="Main navigation">
+            <a class="active" href="index.html">Command</a>
+            <a href="html/presetDecks.html">Decks</a>
+            <a href="html/patch-notes.html">Updates</a>
+        </nav>
+        <a class="site-status" href="html/settings.html"><i></i> Interface options</a>
+    </header>
+
+    <main class="main-menu command-home">
+        <section class="menu-header command-hero">
+            <div class="hero-copy">
+                <span class="menu-kicker">Independent browser tabletop</span>
+                <img class="menu-logo" src="images/a-misc/logo-with-title.png" alt="Custom Cards Simulator">
+                <h1>Build the impossible.<br>Play it immediately.</h1>
+                <p>A focused tabletop for custom cards, rapid deck testing, and multiplayer sessions.</p>
+                <div class="hero-actions">
+                    <a href="html/play.html" class="btn btn-primary">Enter the table <span>→</span></a>
+                    <a href="html/deck-editor.html" class="btn btn-quiet">Build a deck</a>
+                </div>
+            </div>
+            <div class="hero-card-stack" aria-hidden="true">
+                <img src="images/GP Okarun/DD01-001.png" alt="">
+                <img src="images/RY Ichigo/BL01-001.png" alt="">
+                <img src="images/GB Hanami/JK02-001.jpg" alt="">
+            </div>
         </section>
 
-        <section class="menu-panel">
-            <div class="menu-side">
-                <h2>Game</h2>
-
-                <a href="html/play.html" class="btn btn-primary">Play</a>
-
-                <a href="html/presetDecks.html" class="btn btn-secondary">
-                    Preset Decks
+        <section class="command-grid">
+            <article class="command-feature">
+                <span class="command-index">01 / PLAY</span>
+                <h2>Choose your arena</h2>
+                <p>Run both sides in the lab or create a room for a live match.</p>
+                <a href="html/play.html" class="btn btn-primary menu-action">
+                    <span class="menu-action-icon" aria-hidden="true">▶</span>
+                    <span><strong>Play</strong><small>Start a local or online match</small></span>
+                    <span class="menu-action-arrow" aria-hidden="true">→</span>
                 </a>
+            </article>
 
-                <a href="html/deck-editor.html" class="btn btn-secondary">
-                    Deck Editor
+            <div class="command-tool-list">
+                <a href="html/presetDecks.html" class="btn btn-secondary menu-action">
+                    <span class="menu-action-icon" aria-hidden="true">◆</span>
+                    <span><strong>Preset Decks</strong><small>Browse ready-to-play lists</small></span>
+                    <span class="menu-action-arrow" aria-hidden="true">→</span>
+                </a>
+                <a href="html/deck-editor.html" class="btn btn-secondary menu-action">
+                    <span class="menu-action-icon" aria-hidden="true">＋</span>
+                    <span><strong>Deck Editor</strong><small>Build and manage your decks</small></span>
+                    <span class="menu-action-arrow" aria-hidden="true">→</span>
+                </a>
+                <a href="html/settings.html" class="btn btn-secondary menu-action">
+                    <span class="menu-action-icon" aria-hidden="true">◐</span>
+                    <span><strong>Interface Studio</strong><small>Layout, type, color, and motion</small></span>
+                    <span class="menu-action-arrow" aria-hidden="true">→</span>
                 </a>
             </div>
 
-            <div class="menu-divider"></div>
-
-            <div class="menu-side">
-                <h2>Options</h2>
-
-                <a href="html/settings.html" class="btn btn-secondary">
-                    Settings
-                </a>
-
-                <a href="html/patch-notes.html" class="btn btn-secondary">
-                    Patch Notes
-                </a>
-            </div>
+            <aside class="command-status">
+                <span class="command-index">SYSTEM</span>
+                <div><i></i><strong>Simulator ready</strong></div>
+                <p>Card library and local play tools available.</p>
+                <a href="html/patch-notes.html">Read latest patch notes →</a>
+            </aside>
         </section>
     </main>
 
-    <script src="js/pages/galaxy-theme.js?v=galaxy-4"></script>
+    <footer class="site-footer">Fan-made simulator for testing custom card designs.</footer>
+    <script src="js/pages/galaxy-theme.js?v=adaptive-color-3"></script>
 </body>
 </html>
