@@ -2363,6 +2363,7 @@ body.modal-open { overflow: hidden; }
     border: 1px solid var(--line);
     border-radius: 18px;
     background: color-mix(in srgb, var(--bg) 88%, transparent);
+    width: min(100%, 640px);
 }
 .custom-color-heading {
     display: flex;
@@ -2427,7 +2428,7 @@ body.modal-open { overflow: hidden; }
 }
 .color-map-primary {
     width: 100%;
-    height: clamp(230px, 34vw, 390px);
+    height: clamp(170px, 20vw, 245px);
     border-radius: 16px;
 }
 .color-map-wheel {
@@ -2555,7 +2556,7 @@ body.modal-open { overflow: hidden; }
 @media (max-width: 720px) {
     .interface-color-presets { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .asset-color-picker { grid-template-columns: 1fr; }
-    .color-map-primary { height: 230px; }
+    .color-map-primary { height: 190px; }
     .color-map-wheel { width: min(190px, 65%); justify-self: center; }
     .color-picker-preferences { grid-template-columns: 1fr; }
 }

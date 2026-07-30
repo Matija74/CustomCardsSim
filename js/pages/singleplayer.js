@@ -802,12 +802,6 @@ function renderPlayerHand(player, handElementId, hidden) {
         handElement.appendChild(cardElement);
     });
 
-    const count = document.createElement("div");
-
-    count.className = "hand-count";
-    count.textContent = player.hand.length;
-
-    handElement.appendChild(count);
     updateNextBoardHandOverlap(handElement);
 
     setupCardPreview();

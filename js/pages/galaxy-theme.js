@@ -160,8 +160,8 @@
     };
     try {
         applyInterfacePreferences({
-            ...JSON.parse(localStorage.getItem("gameSettings") || "{}"),
-            ...getUrlInterfacePreferences()
+            ...getUrlInterfacePreferences(),
+            ...JSON.parse(localStorage.getItem("gameSettings") || "{}")
         });
     } catch {
         applyInterfacePreferences({

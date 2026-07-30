@@ -179,7 +179,8 @@
     min-height: 0;
     padding: 10px !important;
     display: grid !important;
-    grid-template-rows: 104px minmax(175px, 1fr) 36px minmax(175px, 1fr) 120px;
+    grid-template-rows: minmax(0, 1fr) 34px minmax(0, 1fr);
+    align-content: stretch;
     gap: 7px !important;
     overflow: hidden !important;
     isolation: isolate;
@@ -310,17 +311,6 @@
     transform: translateX(-50%) translateY(-2px) !important;
 }
 
-.next-board-ui .hand-count {
-    right: 8px;
-    top: 8px;
-    bottom: auto;
-    min-width: 30px;
-    height: 30px;
-    color: var(--accent-contrast);
-    background: var(--accent);
-    box-shadow: 0 5px 16px color-mix(in srgb, var(--accent) 24%, transparent);
-}
-
 .next-board-ui .play-area {
     width: 100% !important;
     max-width: none !important;
@@ -342,11 +332,11 @@
 }
 
 .next-board-ui .opponent-area {
-    grid-row: 2;
+    grid-row: 1;
 }
 
 .next-board-ui .player-area {
-    grid-row: 4;
+    grid-row: 3;
     background:
         linear-gradient(270deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 34%),
         color-mix(in srgb, var(--surface) 72%, transparent) !important;
@@ -663,7 +653,7 @@
 }
 
 .next-board-ui .battle-controls {
-    grid-row: 3;
+    grid-row: 2;
     width: 100% !important;
     max-width: none !important;
     min-height: 0 !important;
@@ -996,7 +986,7 @@
     .next-board-ui .game-board {
         order: 1;
         height: 900px;
-        grid-template-rows: 86px 290px 44px 290px 112px;
+        grid-template-rows: minmax(0, 1fr) 42px minmax(0, 1fr);
     }
 
     .next-board-ui .card-preview-panel {
@@ -1037,7 +1027,7 @@
         height: auto;
         min-width: 0 !important;
         padding: 7px !important;
-        grid-template-rows: 76px auto 42px auto 104px;
+        grid-template-rows: auto 42px auto;
         border-radius: 13px !important;
     }
 
