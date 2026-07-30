@@ -61,6 +61,7 @@ for (const card of Object.values(cards)) {
     for (const effect of card.effects || []) {
         const row = {
             cardId: card.id || card.cardNumber,
+            cardName: card.name || "Unknown card",
             effectId: effect.id,
             type: effect.type || effect.trigger || "unknown",
             text: effect.text || ""
@@ -89,18 +90,22 @@ ready.sort(byId);
 blocked.sort(byId);
 unsupportedKeywords.sort((a, b) => a.cardId.localeCompare(b.cardId, undefined, { numeric: true }));
 
-const blockedGroups = new Map();
-for (const row of blocked) {
-    if (!blockedGroups.has(row.capability)) blockedGroups.set(row.capability, []);
-    blockedGroups.get(row.capability).push(row);
-}
+const markdownCell = value => String(value ?? "")
+    .replace(/\|/g, "\\|")
+    .replace(/\r?\n/g, " ")
+    .trim();
 
-const effectBullets = rows => {
-    const ids = rows.map(row => `\`${row.effectId}\``);
-    const lines = [];
-    for (let index = 0; index < ids.length; index += 8) lines.push(`- ${ids.slice(index, index + 8).join(", ")}`);
-    return lines;
-};
+const effectTable = (rows, includeBuildingBlocks = false) => [
+    includeBuildingBlocks
+        ? "| Card | Effect ID | Activator | Existing building blocks |"
+        : "| Card | Effect ID | Activator | Missing support |",
+    includeBuildingBlocks ? "|---|---|---|---|" : "|---|---|---|---|",
+    ...rows.map(row => {
+        const card = `\`${markdownCell(row.cardId)}\` — ${markdownCell(row.cardName)}`;
+        const details = includeBuildingBlocks ? row.buildingBlocks : row.capability;
+        return `| ${card} | \`${markdownCell(row.effectId)}\` | ${markdownCell(row.type)} | ${markdownCell(details)} |`;
+    })
+];
 
 const lines = [
     "# Unsupported Card Effects",
@@ -111,40 +116,40 @@ const lines = [
     "",
     "## Summary",
     "",
-    `- Saved cards checked: **${Object.keys(cards).length}**`,
-    `- Declared effects checked: **${executable.length + ready.length + blocked.length}**`,
-    `- Currently executable: **${executable.length}**`,
-    `- Ready to wire with existing activators and staples: **${ready.length}**`,
-    `- Still requires additional engine behavior: **${blocked.length}**`,
-    `- Unsupported printed keywords: **${unsupportedKeywords.length}**`,
+    "| Audit result | Count |",
+    "|---|---:|",
+    `| Saved cards checked | ${Object.keys(cards).length} |`,
+    `| Declared effects checked | ${executable.length + ready.length + blocked.length} |`,
+    `| Currently executable | ${executable.length} |`,
+    `| Ready to wire with existing activators and staples | ${ready.length} |`,
+    `| Requires additional engine behavior | ${blocked.length} |`,
+    `| Unsupported printed keywords | ${unsupportedKeywords.length} |`,
     "",
     '"Ready to wire" means the effect is not implemented yet, but its complete rules can be represented with the current system. It does not mean the card works today.',
     "",
     "## Ready to wire with the current system",
     "",
     ...(ready.length
-        ? [
-            "| Card | Effect | Existing building blocks |",
-            "|---|---|---|",
-            ...ready.map(row => `| ${row.cardId} | \`${row.effectId}\` | ${row.buildingBlocks} |`)
-        ]
+        ? effectTable(ready, true)
         : ["None."]),
     "",
     "## Still blocked by missing engine behavior",
     "",
-    "Each effect appears once under its primary missing capability. Some effects will need more than one new capability.",
+    "Each effect appears once with its primary missing capability. Some effects will require more than one new capability.",
+    "",
+    ...effectTable(blocked),
     ""
 ];
-
-for (const [capability, rows] of [...blockedGroups.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))) {
-    lines.push(`### ${capability} (${rows.length})`, "", ...effectBullets(rows), "");
-}
 
 lines.push(
     "## Unsupported printed keywords",
     "",
     ...(unsupportedKeywords.length
-        ? unsupportedKeywords.map(row => `- ${row.cardId}: \`${row.keyword}\``)
+        ? [
+            "| Card | Unsupported keyword |",
+            "|---|---|",
+            ...unsupportedKeywords.map(row => `| \`${markdownCell(row.cardId)}\` | ${markdownCell(row.keyword)} |`)
+        ]
         : ["None. Rush, Rush: Characters, Blocker, Unblockable, Banish, and Double Attack are implemented."]),
     ""
 );
