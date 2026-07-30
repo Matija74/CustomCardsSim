@@ -77,7 +77,9 @@ export function getPrintedPower(definition) {
 
 function isModifierActive(modifier, state) {
     if (!modifier?.duration) return true;
-    if (modifier.duration === "battle") return Boolean(state.pendingCombat);
+    if (modifier.duration === "battle") {
+        return Boolean(state.pendingCombat && (!modifier.battleId || modifier.battleId === state.pendingCombat.id));
+    }
     if (modifier.expiresTurn === undefined) return true;
 
     return state.turnNumber <= modifier.expiresTurn;
@@ -111,13 +113,17 @@ export function getEffectivePower(card, definition, state) {
 
 export function cardMatchesFilters(card, definition, filters = {}, state) {
     const cost = getEffectiveCost(card, definition, state);
+    const power = getEffectivePower(card, definition, state);
+    const names = [definition.name, ...(Array.isArray(definition.aliases) ? definition.aliases : [])];
 
     if (filters.maximumCost !== undefined && cost > Number(filters.maximumCost)) return false;
     if (filters.minimumCost !== undefined && cost < Number(filters.minimumCost)) return false;
+    if (filters.maximumPower !== undefined && power > Number(filters.maximumPower)) return false;
+    if (filters.minimumPower !== undefined && power < Number(filters.minimumPower)) return false;
     if (filters.cardType && String(definition.cardType).toLowerCase() !== String(filters.cardType).toLowerCase()) return false;
     if (filters.state && card.state !== filters.state) return false;
-    if (filters.name && definition.name !== filters.name) return false;
-    if (filters.excludeName && definition.name === filters.excludeName) return false;
+    if (filters.name && !names.includes(filters.name)) return false;
+    if (filters.excludeName && names.includes(filters.excludeName)) return false;
     if (filters.typeIncludes && !String(definition.type || "").includes(filters.typeIncludes)) return false;
     if (filters.color && String(definition.color || "").toLowerCase() !== String(filters.color).toLowerCase()) return false;
 

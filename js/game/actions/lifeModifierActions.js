@@ -57,8 +57,13 @@ function modifier(type, amountFactor = 1, setBase = false) {
         const amount = Number(action.amount);
         if (!card || !Number.isFinite(amount)) return failed("Card and numeric amount are required.");
         const key = setBase ? (type === "power" ? "basePower" : "baseCost") : type;
-        const expiresThisTurn = ["turn", "endOfTurn", "untilEndOfTurn"].includes(action.duration);
-        card.modifiers[key].push({ amount: amount * amountFactor, duration: action.duration, expiresTurn: expiresThisTurn ? state.turnNumber : undefined });
+        const expiresThisTurn = ["turn", "endOfTurn", "untilEndOfTurn", "battle"].includes(action.duration);
+        card.modifiers[key].push({
+            amount: amount * amountFactor,
+            duration: action.duration,
+            expiresTurn: expiresThisTurn ? state.turnNumber : undefined,
+            battleId: action.duration === "battle" ? state.pendingCombat?.id : undefined
+        });
         return completed();
     };
 }

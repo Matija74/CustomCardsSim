@@ -83,7 +83,7 @@ async function ensureHostEngine(match) {
     const definitions = { ...window.cardDatabase, ...window.leaders };
     window.__gameDefinitions = definitions;
     const saved = match.private?.[currentUser.uid]?.authoritativeGame || null;
-    engine = createGameEngine({ p1: { ...parseDeck(p1Deck), name: match.players.p1.name || "Player 1" }, p2: { ...parseDeck(p2Deck), name: match.players.p2.name || "Player 2" }, definitions, initialState: saved });
+    engine = createGameEngine({ p1: { ...parseDeck(p1Deck), name: match.players.p1.name || "Player 1" }, p2: { ...parseDeck(p2Deck), name: match.players.p2.name || "Player 2" }, definitions, initialState: saved, autoDraw: false });
     latestState = redactStateForPlayer(engine.state, localSlot);
     controller = mountMatchController({ engine, localPlayerId: localSlot, getState: () => latestState, sendCommand });
     await publish(match);

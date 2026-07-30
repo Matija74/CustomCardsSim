@@ -1,3 +1,5 @@
+import { meetsEffectRequirements } from "./effectRequirements.js";
+
 const ACTIVATOR_ALIASES = Object.freeze({
     onPlay: "onPlay",
     onKO: "onKO",
@@ -98,11 +100,12 @@ export function requiresActivationChoice(effect, activator, confirmed = false) {
     return !confirmed && Boolean(effect?.optional) && AUTOMATIC_ACTIVATORS.includes(activator);
 }
 
-export function validateMainActivation(state, location, playerId, descriptor) {
+export function validateMainActivation(state, definitions, location, playerId, descriptor) {
     if (state.phase !== "main" || state.activePlayerId !== playerId) return { status: "failed", message: "Main effects can only be activated during your Main Phase." };
     if (state.pendingCombat || state.pendingSelection || state.pendingTrigger || state.pendingActivation || state.effectQueue.length) return { status: "failed", message: "Finish the pending interaction first." };
     if (!location || location.playerId !== playerId || location.card.controllerId !== playerId || !["leader", "characterArea", "stage"].includes(location.zone)) return { status: "failed", message: "You cannot activate that card." };
     if (!descriptor?.executable) return { status: "failed", message: "That Main effect is not implemented yet." };
+    if (!meetsEffectRequirements(state, definitions, location.card, descriptor.effect.requirements)) return { status: "failed", message: "That effect's requirements are not met." };
     if (!canUseEffect(location.card, descriptor.effect, descriptor.usageKey, state.turnNumber)) return { status: "failed", message: "That effect has already reached its use limit this turn." };
     return { status: "completed" };
 }
@@ -114,6 +117,7 @@ export function validateCounterEventActivation(state, definitions, location, pla
     const definition = definitions[location?.card.definitionId];
     if (!location || location.zone !== "hand" || location.playerId !== playerId || location.card.controllerId !== playerId || String(definition?.cardType || "").toLowerCase() !== "event") return { status: "failed", message: "You may only activate your own Event from your hand." };
     if (!descriptor?.executable) return { status: "failed", message: "That Counter effect is not implemented yet." };
+    if (!meetsEffectRequirements(state, definitions, location.card, descriptor.effect.requirements)) return { status: "failed", message: "That effect's requirements are not met." };
     if (!canUseEffect(location.card, descriptor.effect, descriptor.usageKey, state.turnNumber)) return { status: "failed", message: "That effect has already reached its use limit this turn." };
     return { status: "completed" };
 }

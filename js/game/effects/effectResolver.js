@@ -3,7 +3,8 @@ import { findCard, getAllCards, getBoardCards, getPlayer } from "../state/zones.
 import { createSelection, validateSelectionResponse } from "../checks/selections.js";
 import { failed, skipped } from "../checks/validation.js";
 import { getActionHandler } from "./actionRegistry.js";
-import { canUseEffect, getActivatorEffects, getSupportedActivators, markEffectUsed, normalizeActivator, requiresActivationChoice } from "./effectActivators.js";
+import { AUTOMATIC_ACTIVATORS, canUseEffect, getActivatorEffects, getSupportedActivators, markEffectUsed, normalizeActivator, requiresActivationChoice } from "./effectActivators.js";
+import { meetsEffectRequirements } from "./effectRequirements.js";
 
 const SUPPORTED_TRIGGERS = new Set(getSupportedActivators());
 
@@ -30,7 +31,8 @@ export function queueTrigger(state, definitions, trigger, sourceInstanceId, acti
     if (!source) return skipped("Trigger source is no longer in game state.");
     const definition = definitions[source.definitionId];
     const effects = getActivatorEffects(definition, activator, { executableOnly: true })
-        .filter(descriptor => !options.effectId || descriptor.effectId === options.effectId);
+        .filter(descriptor => !options.effectId || descriptor.effectId === options.effectId)
+        .filter(descriptor => meetsEffectRequirements(state, definitions, source, descriptor.effect.requirements));
     let queued = 0;
     for (const descriptor of effects) {
         const reservedUses = state.effectQueue.filter(entry => entry.sourceInstanceId === sourceInstanceId && entry.usageKey === descriptor.usageKey).length;
@@ -118,12 +120,12 @@ export function resolveEffectQueue(state, definitions) {
             };
             return { status: "awaitingActivation", activation: state.pendingActivation };
         }
-        if (entry.useLimit && !entry.usageMarked) {
-            const source = findCard(state, entry.sourceInstanceId)?.card;
-            if (source) markEffectUsed(source, entry.usageKey, state.turnNumber);
-            entry.usageMarked = true;
-        }
         if (entry.actionIndex >= entry.actions.length) {
+            if (entry.useLimit && !entry.usageMarked) {
+                const source = findCard(state, entry.sourceInstanceId)?.card;
+                if (source) markEffectUsed(source, entry.usageKey, state.turnNumber);
+                entry.usageMarked = true;
+            }
             state.effectQueue.shift();
             continue;
         }
@@ -141,12 +143,26 @@ export function resolveEffectQueue(state, definitions) {
                 entry.actionIndex += 1;
                 continue;
             }
-            if (selection.validCardIds.length < (selection.upTo ? 0 : selection.amount)) return failed("A required effect has no valid targets.");
+            if (selection.validCardIds.length < (selection.upTo ? 0 : selection.amount)) {
+                state.effectQueue.shift();
+                if (AUTOMATIC_ACTIVATORS.includes(entry.trigger)) {
+                    if (entry.useLimit) {
+                        const source = findCard(state, entry.sourceInstanceId)?.card;
+                        if (source) markEffectUsed(source, entry.usageKey, state.turnNumber);
+                    }
+                    continue;
+                }
+                return failed("A required effect has no valid targets.");
+            }
             state.pendingSelection = selection;
             return { status: "awaitingSelection", selection };
         }
         const result = runAction(state, definitions, entry, action);
-        if (result.status === "failed") return result;
+        if (result.status === "failed") {
+            state.effectQueue.shift();
+            if (AUTOMATIC_ACTIVATORS.includes(entry.trigger)) continue;
+            return result;
+        }
         if (result.status === "awaitingSelection") {
             const returnAction = entry.actions[entry.actionIndex + 1];
             state.pendingSelection = {

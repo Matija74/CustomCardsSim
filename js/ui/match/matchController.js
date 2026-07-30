@@ -2,8 +2,11 @@ import { createGameEngine } from "../../game/engine/gameEngine.js";
 import { findCard } from "../../game/state/zones.js";
 import { canUseEffect, getActivatorEffects } from "../../game/effects/effectActivators.js";
 import { getEffectiveCost, getEffectivePower, getPrintedPower } from "../../game/checks/validation.js";
+import { hasKeyword } from "../../game/keywords/cardKeywords.js";
+import { hasStatePrevention } from "../../game/checks/statePreventions.js";
+import { loadGameSettings, normalizeGameSettings } from "../shared/gameSettings.js";
 
-const PHASE_LABELS = { refresh: "Advance to Draw", draw: "Advance to DON!!", don: "Advance to Main", main: "End Main Phase", end: "End Turn" };
+const PHASE_LABELS = { draw: "Draw Card", don: "Draw DON!!", main: "End Turn" };
 
 function cardDefinition(definitions, card) {
     return card?.definitionId ? definitions[card.definitionId] : null;
@@ -83,8 +86,9 @@ function replaceChildren(target, children) {
     if (target) target.replaceChildren(...children);
 }
 
-export function mountMatchController({ engine, localPlayerId = null, sendCommand = null, getState = null }) {
+export function mountMatchController({ engine, localPlayerId = null, sendCommand = null, getState = null, settings = null }) {
     const definitions = engine?.definitions || window.__gameDefinitions;
+    const gameSettings = normalizeGameSettings(settings || loadGameSettings());
     let selectedId = null;
     let attackModeId = null;
     let replacementId = null;
@@ -96,7 +100,11 @@ export function mountMatchController({ engine, localPlayerId = null, sendCommand
     let previousSnapshot = null;
     let previewPinnedId = null;
     const runtimeMessages = [];
+    const automaticCommandKeys = new Set();
     const stateOf = () => getState ? getState() : engine.state;
+
+    document.documentElement.dataset.audioEnabled = String(gameSettings.audioEnabled);
+    document.documentElement.dataset.soundEffects = String(gameSettings.soundEffects);
 
     function reportRuntimeIssue(error) {
         const message = error?.message || String(error || "Unknown runtime error.");
@@ -126,21 +134,97 @@ export function mountMatchController({ engine, localPlayerId = null, sendCommand
     };
     const allowed = playerId => !localPlayerId || playerId === localPlayerId;
 
+    function confirmAction(setting, message, action) {
+        if (!gameSettings[setting] || typeof globalThis.confirm !== "function" || globalThis.confirm(message)) action();
+    }
+
+    function dispatchAutomatic(key, command) {
+        if (automaticCommandKeys.has(key)) return false;
+        automaticCommandKeys.add(key);
+        const result = dispatch(command);
+        if (result?.then) result.then(value => {
+            if (value?.status === "failed") automaticCommandKeys.delete(key);
+        });
+        else if (result?.status === "failed") automaticCommandKeys.delete(key);
+        return true;
+    }
+
+    function highestValueSelection(state, pending) {
+        return pending.validCardIds
+            .map((instanceId, index) => {
+                const location = findCard(state, instanceId);
+                const definition = definitions[location?.card.definitionId] || {};
+                const hidden = location?.zone === "life" && location.card.face !== "up";
+                const card = location?.card;
+                return {
+                    instanceId,
+                    index,
+                    cost: hidden || !card ? 0 : getEffectiveCost(card, definition, state),
+                    power: hidden || !card ? 0 : getEffectivePower(card, definition, state)
+                };
+            })
+            .sort((first, second) => second.cost - first.cost || second.power - first.power || first.index - second.index)
+            .slice(0, pending.amount)
+            .map(entry => entry.instanceId);
+    }
+
+    function applyAutomaticSettings(state) {
+        if (state.pendingTrigger && allowed(state.pendingTrigger.playerId)) {
+            if (gameSettings.autoSkipTrigger) {
+                return dispatchAutomatic(`skip-trigger:${state.pendingTrigger.id}`, {
+                    id: crypto.randomUUID(), type: "triggerChoice", playerId: state.pendingTrigger.playerId, activate: false
+                });
+            }
+            if (!gameSettings.confirmTrigger) {
+                return dispatchAutomatic(`activate-trigger:${state.pendingTrigger.id}`, {
+                    id: crypto.randomUUID(), type: "triggerChoice", playerId: state.pendingTrigger.playerId, activate: true
+                });
+            }
+        }
+        if (gameSettings.autoSelectMaxValue && state.pendingSelection && allowed(state.pendingSelection.actingPlayerId)) {
+            const pending = state.pendingSelection;
+            return dispatchAutomatic(`select-max:${pending.id}`, {
+                id: crypto.randomUUID(),
+                type: "select",
+                playerId: pending.actingPlayerId,
+                cardIds: highestValueSelection(state, pending)
+            });
+        }
+        if (gameSettings.autoSkipBlock && state.pendingCombat?.window === "blocker"
+            && allowed(state.pendingCombat.defenderPlayerId)) {
+            return dispatchAutomatic(`skip-block:${state.pendingCombat.id}`, {
+                id: crypto.randomUUID(), type: "blocker", playerId: state.pendingCombat.defenderPlayerId, blockerId: null
+            });
+        }
+        if (gameSettings.autoDraw && state.phase === "draw" && state.activePlayerId && allowed(state.activePlayerId)) {
+            return dispatchAutomatic(`auto-draw:${state.gameId}:${state.turnNumber}:${state.activePlayerId}`, {
+                id: crypto.randomUUID(), type: "advancePhase", playerId: state.activePlayerId
+            });
+        }
+        return false;
+    }
+
     function currentDecisionPlayer(state) {
         return state.pendingSelection?.actingPlayerId || state.pendingActivation?.playerId || state.pendingTrigger?.playerId || state.pendingCombat?.defenderPlayerId || state.activePlayerId || "p1";
     }
 
-    function canAttack(state, location) {
+    function canAttack(state, location, targetId = null) {
         if (!location || location.playerId !== state.activePlayerId || !["leader", "characterArea"].includes(location.zone)) return false;
         const type = String(definitions[location.card.definitionId]?.cardType || "").toLowerCase();
-        return ["leader", "character"].includes(type) && location.card.state === "active" && location.card.playedOnTurn !== state.turnNumber;
+        if (!["leader", "character"].includes(type) || location.card.state !== "active") return false;
+        if (hasStatePrevention(state, location.card, "cannotAttack") || hasStatePrevention(state, location.card, "cannotBeRested")) return false;
+        if (location.card.playedOnTurn !== state.turnNumber || hasKeyword(state, definitions, location.card, "rush")) return true;
+        if (!hasKeyword(state, definitions, location.card, "rush: characters")) return false;
+        return targetId ? findCard(state, targetId)?.zone === "characterArea" : true;
     }
 
     function getAttackTargetIds(state) {
         if (!attackModeId || !canAttack(state, findCard(state, attackModeId))) return [];
         const opponentId = state.activePlayerId === "p1" ? "p2" : "p1";
         const opponent = state.players[opponentId];
-        return [opponent.leader, ...opponent.characters.filter(card => card?.state === "rested")].filter(Boolean).map(card => card.instanceId);
+        return [opponent.leader, ...opponent.characters.filter(card => card?.state === "rested")]
+            .filter(card => card && canAttack(state, findCard(state, attackModeId), card.instanceId))
+            .map(card => card.instanceId);
     }
 
     function handleCardClick(card) {
@@ -281,15 +365,19 @@ export function mountMatchController({ engine, localPlayerId = null, sendCommand
             const counter = Number(definition?.counter || 0);
             if (counter > 0) {
                 element.append(actionButton(`Counter +${counter}`, () => {
-                    clearCardSelection();
-                    dispatch({ id: crypto.randomUUID(), type: "counter", playerId: location.playerId, cardId: card.instanceId });
+                    confirmAction("confirmCounter", `Use ${definition?.name || "this card"} as a +${counter} Counter?`, () => {
+                        clearCardSelection();
+                        dispatch({ id: crypto.randomUUID(), type: "counter", playerId: location.playerId, cardId: card.instanceId });
+                    });
                 }));
             }
             getActivatorEffects(definition, "counter").forEach((descriptor, index) => element.append(actionButton(
                 descriptor.executable ? (index ? `Counter Effect ${index + 1}` : "Counter Effect") : "Not Implemented",
                 () => {
-                    clearCardSelection();
-                    dispatch({ id: crypto.randomUUID(), type: "activateCounterEvent", playerId: location.playerId, cardId: card.instanceId, effectId: descriptor.effectId });
+                    confirmAction("confirmCounter", `Activate ${definition?.name || "this Event"}'s Counter effect?`, () => {
+                        clearCardSelection();
+                        dispatch({ id: crypto.randomUUID(), type: "activateCounterEvent", playerId: location.playerId, cardId: card.instanceId, effectId: descriptor.effectId });
+                    });
                 },
                 "card-action-button-on-card",
                 !descriptor.executable
@@ -497,15 +585,18 @@ export function mountMatchController({ engine, localPlayerId = null, sendCommand
         } else if (state.phase === "gameOver") {
             phaseButton.textContent = `${state.players[state.winnerId]?.name || "Player"} Wins`;
             phaseButton.disabled = true;
+        } else if (["refresh", "end"].includes(state.phase)) {
+            phaseButton.style.display = "none";
+            phaseButton.disabled = true;
         } else {
-            const skipsFirstDraw = state.phase === "refresh" && state.activePlayerId === state.firstPlayerId && state.players[state.activePlayerId].turns === 1;
-            const phaseLabel = skipsFirstDraw ? "Skip First-Turn Draw" : PHASE_LABELS[state.phase] || "Wait";
-            phaseButton.textContent = `${state.players[state.activePlayerId].name} • ${state.phase.toUpperCase()} • ${phaseLabel}`;
+            phaseButton.textContent = PHASE_LABELS[state.phase] || "Wait";
             phaseButton.disabled = !allowed(state.activePlayerId) || Boolean(state.pendingSelection || state.pendingCombat || state.pendingTrigger || state.pendingActivation || state.effectQueue.length || attackModeId);
             phaseButton.onclick = () => {
                 if (state.phase === "main") {
-                    endTurnConfirming = true;
-                    render();
+                    if (gameSettings.confirmEndTurn) {
+                        endTurnConfirming = true;
+                        render();
+                    } else dispatch({ id: crypto.randomUUID(), type: "advancePhase", playerId: state.activePlayerId });
                 } else dispatch({ id: crypto.randomUUID(), type: "advancePhase", playerId: state.activePlayerId });
             };
             if (endTurnConfirming && state.phase === "main") {
@@ -965,6 +1056,7 @@ export function mountMatchController({ engine, localPlayerId = null, sendCommand
     function render() {
         const state = stateOf();
         if (!state) return;
+        if (applyAutomaticSettings(state)) return;
         if (selectedId && !findCard(state, selectedId)) clearCardSelection();
         if (attackModeId && !findCard(state, attackModeId)) attackModeId = null;
         const bottomPlayerId = localPlayerId || "p1";
@@ -1026,7 +1118,7 @@ export async function initializeLocalMatch() {
     const p2 = resolveDeck(params.get("player2Deck"));
     const definitions = { ...window.cardDatabase, ...window.leaders };
     window.__gameDefinitions = definitions;
-    const engine = createGameEngine({ p1: { ...p1, name: "Player 1" }, p2: { ...p2, name: "Player 2" }, definitions, turnOrderChooserId: "p1" });
+    const engine = createGameEngine({ p1: { ...p1, name: "Player 1" }, p2: { ...p2, name: "Player 2" }, definitions, turnOrderChooserId: "p1", autoDraw: false });
     window.__gameEngine = engine;
     return mountMatchController({ engine });
 }

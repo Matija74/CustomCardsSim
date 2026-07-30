@@ -4,6 +4,8 @@ import { cardEffectDefinitions } from "../js/cards/effects/cardEffectDefinitions
 import { compileCardCollection } from "../js/cards/effects/effectCompiler.js";
 import { getEffectActivator } from "../js/game/effects/effectActivators.js";
 import { getRegisteredActions } from "../js/game/effects/actionRegistry.js";
+import { continuousKeywordDefinitions } from "../js/game/keywords/continuousKeywordDefinitions.js";
+import { normalizeKeyword } from "../js/game/keywords/cardKeywords.js";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
 const dataDirectory = path.join(projectRoot, "js", "cards", "data");
@@ -11,137 +13,141 @@ const dataFiles = ["characters.json", "stages.json", "events.json", "leaders.jso
 const rawCards = Object.assign({}, ...dataFiles.map(file => JSON.parse(fs.readFileSync(path.join(dataDirectory, file), "utf8"))));
 const cards = compileCardCollection(rawCards, cardEffectDefinitions);
 const registeredActions = new Set(getRegisteredActions());
-const unsupportedEffects = [];
-const executableEffects = [];
-const cardAudits = [];
+const supportedPrintedKeywords = new Set(["rush", "rush: characters", "blocker", "unblockable", "banish", "double attack"]);
+
+// Keep this list for audited effects that can be expressed without adding new
+// engine behavior but have not yet been wired to definitions.
+const readyWithCurrentSystem = Object.freeze({});
+
+function isExecutable(effect) {
+    if (continuousKeywordDefinitions[effect.id]?.complete) return true;
+    const actions = Array.isArray(effect.actions) ? effect.actions : [];
+    return Boolean(getEffectActivator(effect) && actions.length && actions.every(action => registeredActions.has(action?.action)));
+}
+
+function primaryMissingCapability(row) {
+    const text = String(row.text || "").toLowerCase();
+    const type = String(row.type || "").toLowerCase();
+    if (/checkpoint|under the rules|deck consists|copies of any|you (win|lose) the game|return the game state/.test(text)) {
+        return "Special game, deck-building, checkpoint, or win-condition rules";
+    }
+    if (type === "replacement" || /would be|instead|cannot be k\.o|cannot be removed|negate|change the target|replacement effects/.test(text)) {
+        return "Replacement, protection, negation, or attack redirection";
+    }
+    if (/activate .*('s |its |your |leader's )?(effect|ability)|use one of|choose(:| whether| one)|declare a/.test(text)) {
+        return "Branching choices, copied effects, or invoking another effect";
+    }
+    if (/rested don!!.*(give|attach)|attach .*rested don!!|give up to .*rested don!!/.test(text)) {
+        return "Attaching DON!! directly from the rested Cost Area";
+    }
+    if (["continuous", "yourturn", "opponentsturn", "custom"].includes(type)) {
+        return "Persistent, aura, or turn-condition evaluation";
+    }
+    if (/reveal|shuffle|from (your|the) deck|top .*deck|bottom .*deck|top card of .*life|bottom .*life|life cards until|any card .*life/.test(text)) {
+        return "Hidden-card, positional deck, or positional Life operations";
+    }
+    if (/for every| per 1|same as|same cost|half of|any number|all of|attacked twice|played this turn|that character|that card/.test(text)) {
+        return "Dynamic values, bulk operations, or reusing a selected target";
+    }
+    return "Additional condition, duration, cost, or target-flow support";
+}
+
+const executable = [];
+const ready = [];
+const blocked = [];
 const unsupportedKeywords = [];
-const unsupportedKeywordDetails = {
-    rush: "Rush attack permission is not implemented; newly played Characters still cannot attack that turn.",
-    doubleattack: "Double Attack damage is not implemented; successful Leader attacks currently take only 1 Life.",
-    unblockable: "Unblockable is not enforced; the defending player can still select a Blocker."
-};
 
 for (const card of Object.values(cards)) {
-    const cardId = card.id || card.cardNumber;
-    const statuses = (card.effects || []).map((effect, index) => {
-        const activator = getEffectActivator(effect);
-        const actions = Array.isArray(effect.actions) ? effect.actions : [];
-        const missingActions = actions.filter(action => !registeredActions.has(action?.action)).map(action => action?.action || "(missing action name)");
-        const supported = Boolean(activator && actions.length && !missingActions.length);
-        let status;
-        if (!activator) {
-            if (effect.type === "continuous") status = "No continuous-effect evaluator is implemented; this is not an activator.";
-            else if (effect.type === "replacement") status = "No replacement-effect interception is implemented; this is not an activator.";
-            else if (["yourTurn", "opponentsTurn"].includes(effect.type)) status = "No persistent turn-condition evaluator is implemented; this is not an activator.";
-            else status = `Effect type ${effect.type || effect.trigger || "unknown"} is not mapped to an executable rules model.`;
-        } else if (!actions.length) {
-            status = effect.actionId
-                ? `Activator ${activator} is supported, but actionId ${effect.actionId} has no executable compiler mapping.`
-                : `Activator ${activator} is supported, but this effect has no executable actions.`;
-        } else {
-            status = `Unregistered action handler(s): ${[...new Set(missingActions)].join(", ")}.`;
-        }
+    for (const effect of card.effects || []) {
         const row = {
-            cardId,
-            name: card.name || cardId,
-            effectId: effect.id || `${cardId}-effect-${index + 1}`,
+            cardId: card.id || card.cardNumber,
+            effectId: effect.id,
             type: effect.type || effect.trigger || "unknown",
-            text: effect.text || "(No effect text provided.)",
-            status,
-            supported,
-            activator,
-            actions: actions.map(action => action.action)
+            text: effect.text || ""
         };
-        (supported ? executableEffects : unsupportedEffects).push(row);
-        return row;
-    });
-    cardAudits.push({ cardId, name: card.name || cardId, effects: card.effects || [], statuses });
+        if (isExecutable(effect)) executable.push(row);
+        else if (readyWithCurrentSystem[effect.id]) ready.push({ ...row, buildingBlocks: readyWithCurrentSystem[effect.id] });
+        else blocked.push({ ...row, capability: primaryMissingCapability(row) });
+    }
     for (const keyword of Array.isArray(card.keywords) ? card.keywords : []) {
-        const normalized = String(keyword).toLowerCase().replace(/\s+/g, "");
-        if (unsupportedKeywordDetails[normalized]) {
-            unsupportedKeywords.push({ cardId, name: card.name || cardId, keyword, status: unsupportedKeywordDetails[normalized] });
-        }
+        if (!supportedPrintedKeywords.has(normalizeKeyword(keyword))) unsupportedKeywords.push({ cardId: card.id, keyword });
     }
 }
 
-const sortEffects = (a, b) => a.cardId.localeCompare(b.cardId, undefined, { numeric: true }) || a.effectId.localeCompare(b.effectId);
-unsupportedEffects.sort(sortEffects);
-executableEffects.sort(sortEffects);
-unsupportedKeywords.sort((a, b) => a.cardId.localeCompare(b.cardId, undefined, { numeric: true }) || a.keyword.localeCompare(b.keyword));
+const declaredEffectIds = new Set([...executable, ...ready, ...blocked].map(row => row.effectId));
+const executableEffectIds = new Set(executable.map(row => row.effectId));
+const staleReadyIds = Object.keys(readyWithCurrentSystem).filter(effectId =>
+    !declaredEffectIds.has(effectId) || executableEffectIds.has(effectId)
+);
+if (staleReadyIds.length) {
+    throw new Error(`Ready-to-wire audit contains unknown or already executable effect IDs: ${staleReadyIds.join(", ")}`);
+}
 
-const cardsWithUnsupported = cardAudits.filter(card => card.statuses.some(effect => !effect.supported));
-const fullySupportedCards = cardAudits.filter(card => card.effects.length && card.statuses.every(effect => effect.supported));
-const mixedCards = cardAudits.filter(card => card.statuses.some(effect => effect.supported) && card.statuses.some(effect => !effect.supported));
-const noEffectCards = cardAudits.filter(card => !card.effects.length);
-const byType = new Map();
-for (const row of unsupportedEffects) byType.set(row.type, (byType.get(row.type) || 0) + 1);
+const byId = (a, b) => a.cardId.localeCompare(b.cardId, undefined, { numeric: true }) || a.effectId.localeCompare(b.effectId);
+executable.sort(byId);
+ready.sort(byId);
+blocked.sort(byId);
+unsupportedKeywords.sort((a, b) => a.cardId.localeCompare(b.cardId, undefined, { numeric: true }));
 
-const escapeCell = value => String(value ?? "").replace(/\|/g, "\\|").replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim();
-const cardList = list => list
-    .sort((a, b) => a.cardId.localeCompare(b.cardId, undefined, { numeric: true }))
-    .map(card => `${card.cardId} - ${card.name}`)
-    .join("; ");
+const blockedGroups = new Map();
+for (const row of blocked) {
+    if (!blockedGroups.has(row.capability)) blockedGroups.set(row.capability, []);
+    blockedGroups.get(row.capability).push(row);
+}
+
+const effectBullets = rows => {
+    const ids = rows.map(row => `\`${row.effectId}\``);
+    const lines = [];
+    for (let index = 0; index < ids.length; index += 8) lines.push(`- ${ids.slice(index, index + 8).join(", ")}`);
+    return lines;
+};
+
 const lines = [
     "# Unsupported Card Effects",
     "",
-    "Generated from the current JSON card definitions, the card-effect registry, and the same compiler used by `js/cards/cardDatabase.js`.",
+    "Compact audit generated from every saved card, the compiled card-effect registry, the activator registry, the action registry, continuous keyword rules, and supported printed keywords.",
     "",
-    "Regenerate this file after each activator batch with:",
+    "Regenerate after gameplay-system changes with `node scripts/generateUnsupportedEffects.mjs`.",
     "",
-    "```powershell",
-    "node scripts/generateUnsupportedEffects.mjs",
-    "```",
+    "## Summary",
     "",
-    "## Audit summary",
+    `- Saved cards checked: **${Object.keys(cards).length}**`,
+    `- Declared effects checked: **${executable.length + ready.length + blocked.length}**`,
+    `- Currently executable: **${executable.length}**`,
+    `- Ready to wire with existing activators and staples: **${ready.length}**`,
+    `- Still requires additional engine behavior: **${blocked.length}**`,
+    `- Unsupported printed keywords: **${unsupportedKeywords.length}**`,
     "",
-    `- Saved cards checked: **${cardAudits.length}**`,
-    `- Saved effect records checked: **${unsupportedEffects.length + executableEffects.length}**`,
-    `- Executable effect records: **${executableEffects.length}**`,
-    `- Unsupported effect records: **${unsupportedEffects.length}** across **${cardsWithUnsupported.length} cards**`,
-    `- Unsupported printed keyword entries: **${unsupportedKeywords.length}**`,
-    `- Cards with every declared effect executable: **${fullySupportedCards.length}**`,
-    `- Cards containing both working and unsupported effects: **${mixedCards.length}**`,
-    `- Cards with no declared effects: **${noEffectCards.length}**`,
+    '"Ready to wire" means the effect is not implemented yet, but its complete rules can be represented with the current system. It does not mean the card works today.',
     "",
-    "An effect is counted as executable only when its timing maps to the current activator layer, it has a non-empty compiled `actions` array, and every action name is registered. This is a static executable check, not proof that every possible rules interaction has been exhaustively tested.",
+    "## Ready to wire with the current system",
     "",
-    "Continuous, replacement, and persistent turn-condition effects are included below because they require rules evaluators rather than activator buttons. Printed keywords are audited separately after the effect table.",
+    ...(ready.length
+        ? [
+            "| Card | Effect | Existing building blocks |",
+            "|---|---|---|",
+            ...ready.map(row => `| ${row.cardId} | \`${row.effectId}\` | ${row.buildingBlocks} |`)
+        ]
+        : ["None."]),
     "",
-    "## Unsupported effects by type",
+    "## Still blocked by missing engine behavior",
     "",
-    "| Type | Count |",
-    "|---|---:|",
-    ...[...byType.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([type, count]) => `| ${escapeCell(type)} | ${count} |`),
-    "",
-    "## Cards whose declared effects are currently executable",
-    "",
-    cardList(fullySupportedCards) || "None.",
-    "",
-    "## Cards with a mixture of working and unsupported effects",
-    "",
-    cardList(mixedCards) || "None.",
-    "",
-    "## Executable effect records excluded from the unsupported table",
-    "",
-    "| Card ID | Name | Effect ID | Activator | Registered actions |",
-    "|---|---|---|---|---|",
-    ...executableEffects.map(row => `| ${escapeCell(row.cardId)} | ${escapeCell(row.name)} | ${escapeCell(row.effectId)} | ${escapeCell(row.activator)} | ${escapeCell(row.actions.join(", "))} |`),
-    "",
-    "## Unsupported effect records",
-    "",
-    "| Card ID | Name | Effect ID | Type | Effect text | Current missing behavior |",
-    "|---|---|---|---|---|---|",
-    ...unsupportedEffects.map(row => `| ${escapeCell(row.cardId)} | ${escapeCell(row.name)} | ${escapeCell(row.effectId)} | ${escapeCell(row.type)} | ${escapeCell(row.text)} | ${escapeCell(row.status)} |`),
-    "",
-    "## Unsupported printed keywords",
-    "",
-    "Blocker is implemented and is intentionally excluded. The following printed keywords still lack their required gameplay behavior:",
-    "",
-    "| Card ID | Name | Keyword | Current missing behavior |",
-    "|---|---|---|---|",
-    ...unsupportedKeywords.map(row => `| ${escapeCell(row.cardId)} | ${escapeCell(row.name)} | ${escapeCell(row.keyword)} | ${escapeCell(row.status)} |`),
+    "Each effect appears once under its primary missing capability. Some effects will need more than one new capability.",
     ""
 ];
 
+for (const [capability, rows] of [...blockedGroups.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))) {
+    lines.push(`### ${capability} (${rows.length})`, "", ...effectBullets(rows), "");
+}
+
+lines.push(
+    "## Unsupported printed keywords",
+    "",
+    ...(unsupportedKeywords.length
+        ? unsupportedKeywords.map(row => `- ${row.cardId}: \`${row.keyword}\``)
+        : ["None. Rush, Rush: Characters, Blocker, Unblockable, Banish, and Double Attack are implemented."]),
+    ""
+);
+
 fs.writeFileSync(path.join(projectRoot, "UNSUPPORTED_CARD_EFFECTS.md"), lines.join("\n"), "utf8");
-console.log(`Wrote ${unsupportedEffects.length} unsupported effects and ${unsupportedKeywords.length} unsupported keywords.`);
+console.log(`Audited ${Object.keys(cards).length} cards: ${executable.length} executable, ${ready.length} ready to wire, ${blocked.length} blocked, ${unsupportedKeywords.length} unsupported keywords.`);

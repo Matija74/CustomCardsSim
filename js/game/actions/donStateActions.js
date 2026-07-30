@@ -1,4 +1,4 @@
-import { getPlayer, findCard } from "../state/zones.js";
+import { getPlayer, findCard, getBoardCards } from "../state/zones.js";
 import { completed, failed, resolvePlayerReference, validatePositiveQuantity } from "../checks/validation.js";
 
 export function addDon(state, definitions, context, action) {
@@ -12,14 +12,51 @@ export function addDon(state, definitions, context, action) {
     return completed({ quantity: amount });
 }
 
-export function returnDon(state, definitions, context, action) {
+export function returnDon(state, definitions, context, action, targets = []) {
     const player = getPlayer(state, resolvePlayerReference(action.player, context));
     const check = validatePositiveQuantity(action.quantity);
-    const stateKey = action.cardState === "active" ? "activeDon" : "restedDon";
-    if (!player || check.status === "failed" || player[stateKey] < check.quantity) return failed(check.message || "Not enough DON!!.");
-    player[stateKey] -= check.quantity;
-    player.donDeck += check.quantity;
-    return completed();
+    if (!player || check.status === "failed") return failed(check.message || "Player was not found.");
+
+    const sourceKey = String(action.source || action.cardState || "any").trim().toLowerCase().replace(/[^a-z]/g, "");
+    const sourceMap = {
+        active: ["active"],
+        activedon: ["active"],
+        rested: ["rested"],
+        resteddon: ["rested"],
+        attached: ["attached"],
+        attacheddon: ["attached"],
+        costarea: ["rested", "active"],
+        any: ["rested", "active", "attached"],
+        all: ["rested", "active", "attached"]
+    };
+    const sources = sourceMap[sourceKey];
+    if (!sources) return failed("DON!! return source must be active, rested, attached, Cost Area, or any.");
+
+    const targetIds = new Set(targets);
+    const attachedCards = getBoardCards(player).filter(card => !targetIds.size || targetIds.has(card.instanceId));
+    let remaining = check.quantity;
+    let returned = 0;
+    for (const source of sources) {
+        if (!remaining) break;
+        if (source === "attached") {
+            for (const card of attachedCards) {
+                if (!remaining) break;
+                const amount = Math.min(remaining, Number(card.attachedDon || 0));
+                if (!amount) continue;
+                card.attachedDon = Number(card.attachedDon || 0) - amount;
+                remaining -= amount;
+                returned += amount;
+            }
+            continue;
+        }
+        const stateKey = source === "active" ? "activeDon" : "restedDon";
+        const amount = Math.min(remaining, player[stateKey]);
+        player[stateKey] -= amount;
+        remaining -= amount;
+        returned += amount;
+    }
+    player.donDeck += returned;
+    return completed({ quantity: returned, requestedQuantity: check.quantity });
 }
 
 function changeDonState(state, context, action, sourceState, destinationState) {

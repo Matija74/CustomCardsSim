@@ -1,3 +1,5 @@
+import { loadGameSettings, saveGameSettings } from "../shared/gameSettings.js";
+
 // Settings management for Game Behaviour and other tabs
 
 // =========================
@@ -27,38 +29,12 @@ class SettingsManager {
 
     // Load settings from localStorage
     loadSettings() {
-        const saved = localStorage.getItem('gameSettings');
-        const defaultSettings = this.getDefaultSettings();
-    
-        if (saved) {
-            return {
-                ...defaultSettings,
-                ...JSON.parse(saved)
-            };
-        }
-    
-        return defaultSettings;
-    }
-    
-    // Get default settings
-    getDefaultSettings() {
-        return {
-            autoDraw: false,
-            autoSkipBlock: false,
-            autoSkipTrigger: false,
-            autoSelectMaxValue: false,
-            confirmEndTurn: true,
-            confirmCounter: true,
-            confirmTrigger: true,
-    
-            soundEffects: true,
-            audioEnabled: true
-        };
+        return loadGameSettings();
     }
 
     // Save settings to localStorage
     saveSettings() {
-        localStorage.setItem('gameSettings', JSON.stringify(this.settings));
+        this.settings = saveGameSettings(this.settings);
         this.showSaveNotification();
     }
 

@@ -1,12 +1,14 @@
 import { cardActionHandlers } from "../actions/cardActions.js";
 import { donStateActionHandlers } from "../actions/donStateActions.js";
 import { lifeModifierActionHandlers } from "../actions/lifeModifierActions.js";
+import { keywordActionHandlers } from "../actions/keywordActions.js";
 import { searchActionHandlers } from "../actions/searchActions.js";
 
 const handlers = new Map(Object.entries({
     ...cardActionHandlers,
     ...donStateActionHandlers,
     ...lifeModifierActionHandlers,
+    ...keywordActionHandlers,
     ...searchActionHandlers
 }));
 

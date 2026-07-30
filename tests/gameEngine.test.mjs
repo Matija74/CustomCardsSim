@@ -2,13 +2,25 @@ import assert from "node:assert/strict";
 import { createGameEngine, redactStateForPlayer } from "../js/game/engine/gameEngine.js";
 import { createCardInstance } from "../js/game/state/gameState.js";
 import { lifeModifierActionHandlers } from "../js/game/actions/lifeModifierActions.js";
-import { getEffectivePower } from "../js/game/checks/validation.js";
+import { getEffectiveCost, getEffectivePower } from "../js/game/checks/validation.js";
 import { cardActionHandlers, drawCard } from "../js/game/actions/cardActions.js";
 import { getSupportedActivators, normalizeActivator } from "../js/game/effects/effectActivators.js";
 import { getRegisteredActions } from "../js/game/effects/actionRegistry.js";
+import { activateMainEffectDefinitions } from "../js/cards/effects/activateMainEffects.js";
+import { counterEffectDefinitions } from "../js/cards/effects/counterEffects.js";
+import { onBlockEffectDefinitions } from "../js/cards/effects/onBlockEffects.js";
+import { onKOEffectDefinitions } from "../js/cards/effects/onKOEffects.js";
+import { onOpponentAttackEffectDefinitions } from "../js/cards/effects/onOpponentAttackEffects.js";
 import { onPlayEffectDefinitions } from "../js/cards/effects/onPlayEffects.js";
+import { turnEffectDefinitions } from "../js/cards/effects/turnEffects.js";
+import { triggerEffectDefinitions } from "../js/cards/effects/triggerEffects.js";
+import { whenAttackingEffectDefinitions } from "../js/cards/effects/whenAttackingEffects.js";
+import { whenTrashedFromDeckEffectDefinitions } from "../js/cards/effects/whenTrashedFromDeckEffects.js";
 import { cardEffectDefinitions } from "../js/cards/effects/cardEffectDefinitions.js";
 import { compileCardEffects } from "../js/cards/effects/effectCompiler.js";
+import { refreshPlayer } from "../js/game/phases/turnSystem.js";
+import { returnDon } from "../js/game/actions/donStateActions.js";
+import { loadGameSettings, normalizeGameSettings, saveGameSettings } from "../js/ui/shared/gameSettings.js";
 
 const leader = id => ({ id, name: id, cardType: "leader", power: 5000, life: 5 });
 const vanilla = { id: "T-001", name: "Vanilla", cardType: "character", cost: 1, power: 3000, counter: 1000, effects: [] };
@@ -33,6 +45,16 @@ const lifeTrigger = { id: "T-005", name: "Life Trigger", cardType: "event", cost
 const searchProof = { id: "T-006", name: "Search Proof", cardType: "character", cost: 1, power: 1000, effects: [{ id: "search-main", trigger: "activateMain", actions: [{ action: "search", player: "self", deckLocation: "top", quantity: 3, amountTaken: 1, targetArea: "hand", filters: { name: "Vanilla" } }, { action: "returnRest", deckLocation: "bottom" }] }] };
 const definitions = Object.fromEntries([leader("L-1"), leader("L-2"), vanilla, koTarget, proof, blocker, lifeTrigger, searchProof].map(card => [card.id, card]));
 const deck = Array.from({ length: 30 }, () => vanilla);
+const settingsStorage = {
+    value: null,
+    getItem() { return this.value; },
+    setItem(key, value) { this.value = value; }
+};
+saveGameSettings({ autoDraw: true, confirmEndTurn: false }, settingsStorage);
+assert.equal(loadGameSettings(settingsStorage).autoDraw, true, "saved Auto Draw preference is loaded for gameplay");
+assert.equal(loadGameSettings(settingsStorage).confirmEndTurn, false, "saved confirmation preferences are loaded for gameplay");
+assert.equal(normalizeGameSettings({ autoSkipBlock: true }).autoSkipBlock, true, "gameplay settings normalize saved booleans");
+assert.equal(normalizeGameSettings({ autoDraw: "yes" }).autoDraw, false, "invalid saved values fall back safely");
 assert.deepEqual(new Set(getSupportedActivators()), new Set(["activateMain", "counter", "trigger", "onPlay", "onKO", "whenAttacking", "onOpponentAttack", "whenAttacked", "onBlock", "gameStart", "startOfTurn", "endOfTurn", "endOfOpponentTurn", "onOpponentDealsDamage", "onCharacterPlay", "whenTrashedFromDeck"]));
 assert.equal(normalizeActivator("main"), "activateMain");
 assert.equal(normalizeActivator("onOpponentsAttack"), "onOpponentAttack");
@@ -47,6 +69,21 @@ assert.equal(singleplayerEngine.dispatch({ id: "p2-cannot-choose", type: "choose
 assert.match(singleplayerEngine.state.logs.at(-1).message, /Action failed \(chooseFirst\)/);
 assert.equal(singleplayerEngine.dispatch({ id: "p1-chooses-second", type: "chooseFirst", playerId: "p1", firstPlayerId: "p2" }).status, "completed");
 
+const manualDrawEngine = createGameEngine({ p1: { name: "P1", leader: definitions["L-1"], deck }, p2: { name: "P2", leader: definitions["L-2"], deck }, definitions, turnOrderChooserId: "p1", autoDraw: false });
+manualDrawEngine.dispatch({ id: "manual-draw-first", type: "chooseFirst", playerId: "p1", firstPlayerId: "p1" });
+manualDrawEngine.dispatch({ id: "manual-draw-mulligan-p1", type: "mulligan", playerId: "p1", redraw: false });
+manualDrawEngine.dispatch({ id: "manual-draw-mulligan-p2", type: "mulligan", playerId: "p2", redraw: false });
+assert.equal(manualDrawEngine.state.phase, "don", "the first player skips Draw Card and starts with Draw DON!!");
+manualDrawEngine.dispatch({ id: "manual-draw-first-don", type: "advancePhase", playerId: "p1" });
+assert.equal(manualDrawEngine.state.phase, "main", "Draw DON!! adds DON!! and enters the Main Phase");
+manualDrawEngine.dispatch({ id: "manual-draw-end-turn", type: "advancePhase", playerId: "p1" });
+assert.equal(manualDrawEngine.state.activePlayerId, "p2", "End Turn completes the End Phase and starts the opponent's turn");
+assert.equal(manualDrawEngine.state.phase, "draw", "disabled Auto Draw leaves the second player on Draw Card");
+const manualDrawHandBefore = manualDrawEngine.state.players.p2.hand.length;
+manualDrawEngine.dispatch({ id: "manual-draw-card", type: "advancePhase", playerId: "p2" });
+assert.equal(manualDrawEngine.state.phase, "don", "Draw Card advances to Draw DON!!");
+assert.equal(manualDrawEngine.state.players.p2.hand.length, manualDrawHandBefore + 1, "Draw Card draws exactly one card");
+
 function command(type, playerId, extra = {}) {
     return engine.dispatch({ id: `${type}-${Math.random()}`, type, playerId, ...extra });
 }
@@ -57,21 +94,20 @@ assert.equal(engine.state.phase, "chooseFirst");
 command("chooseFirst", engine.state.setup.dice.winnerId, { firstPlayerId: "p1" });
 command("mulligan", "p1", { redraw: false });
 command("mulligan", "p2", { redraw: false });
-assert.equal(engine.state.phase, "draw", "refresh completes automatically");
+assert.equal(engine.state.phase, "don", "refresh and the first player's skipped draw complete automatically");
 assert.equal(engine.state.players.p1.life.length, 5);
 assert.equal(engine.state.players.p1.hand.length, 5, "first player skips first draw");
-assert.match(engine.state.logs.at(-2).message, /skips the first-turn draw/);
+assert.equal(engine.state.logs.some(entry => /skips the first-turn draw/.test(entry.message)), true);
 command("advancePhase", "p1");
 assert.equal(engine.state.players.p1.activeDon, 1, "first DON!! phase adds one");
-command("advancePhase", "p1");
 assert.equal(engine.state.phase, "main");
 assert.equal(command("advancePhase", "p2").status, "failed", "out-of-turn phase command rejected");
 
 const turnEngine = createGameEngine({ p1: { name: "P1", leader: definitions["L-1"], deck }, p2: { name: "P2", leader: definitions["L-2"], deck }, definitions, random: () => Math.random() });
-turnEngine.state.phase = "draw";
 turnEngine.state.firstPlayerId = "p1";
 turnEngine.state.activePlayerId = "p2";
 turnEngine.state.players.p2.turns = 1;
+turnEngine.state.phase = "don";
 turnEngine.dispatch({ id: "p2-first-don", type: "advancePhase", playerId: "p2" });
 assert.equal(turnEngine.state.players.p2.activeDon, 2, "second player receives 2 DON!! on their first turn");
 
@@ -79,13 +115,13 @@ const secondPlayerDrawEngine = createGameEngine({ p1: { name: "P1", leader: defi
 secondPlayerDrawEngine.state.firstPlayerId = "p1";
 secondPlayerDrawEngine.state.activePlayerId = "p2";
 secondPlayerDrawEngine.state.players.p2.turns = 1;
-secondPlayerDrawEngine.state.phase = "refresh";
+secondPlayerDrawEngine.state.phase = "draw";
 const secondPlayerHandBeforeDraw = secondPlayerDrawEngine.state.players.p2.hand.length;
 secondPlayerDrawEngine.dispatch({ id: "p2-first-draw", type: "advancePhase", playerId: "p2" });
 assert.equal(secondPlayerDrawEngine.state.players.p2.hand.length, secondPlayerHandBeforeDraw + 1, "second player draws on their first turn");
 
 const refreshEngine = createGameEngine({ p1: { name: "P1", leader: definitions["L-1"], deck }, p2: { name: "P2", leader: definitions["L-2"], deck }, definitions });
-refreshEngine.state.phase = "end";
+refreshEngine.state.phase = "main";
 refreshEngine.state.firstPlayerId = "p1";
 refreshEngine.state.activePlayerId = "p1";
 const refreshCard = createCardInstance(vanilla, "p2", "characterArea");
@@ -94,8 +130,8 @@ refreshCard.attachedDon = 2;
 refreshEngine.state.players.p2.characters[0] = refreshCard;
 refreshEngine.state.players.p2.restedDon = 1;
 const refreshHandBefore = refreshEngine.state.players.p2.hand.length;
-refreshEngine.dispatch({ id: "automatic-refresh", type: "advancePhase", playerId: "p1" });
-assert.equal(refreshEngine.state.phase, "draw", "next player's refresh advances automatically");
+refreshEngine.dispatch({ id: "automatic-end-turn", type: "advancePhase", playerId: "p1" });
+assert.equal(refreshEngine.state.phase, "don", "End Turn completes End and Refresh, then automatically draws when enabled");
 assert.equal(refreshCard.state, "active", "refresh readies rested cards");
 assert.equal(refreshCard.attachedDon, 0, "refresh detaches DON!! from cards");
 assert.equal(refreshEngine.state.players.p2.activeDon, 3, "detached and rested DON!! become active");
@@ -216,13 +252,14 @@ drawCard(deckOutEngine.state, definitions, { controllerId: "p1", actingPlayerId:
 assert.equal(deckOutEngine.state.winnerId, "p2");
 assert.equal(deckOutEngine.state.winReason, "deck out");
 
-function activationEngine(extraDefinitions = {}, p1Leader = leader("A-L1"), p2Leader = leader("A-L2")) {
+function activationEngine(extraDefinitions = {}, p1Leader = leader("A-L1"), p2Leader = leader("A-L2"), engineOptions = {}) {
     const allDefinitions = { [p1Leader.id]: p1Leader, [p2Leader.id]: p2Leader, [vanilla.id]: vanilla, ...extraDefinitions };
     const game = createGameEngine({
         p1: { name: "P1", leader: p1Leader, deck: Array.from({ length: 20 }, () => vanilla) },
         p2: { name: "P2", leader: p2Leader, deck: Array.from({ length: 20 }, () => vanilla) },
         definitions: allDefinitions,
-        random: () => 0.5
+        random: () => 0.5,
+        ...engineOptions
     });
     game.state.phase = "main";
     game.state.firstPlayerId = "p1";
@@ -230,6 +267,140 @@ function activationEngine(extraDefinitions = {}, p1Leader = leader("A-L1"), p2Le
     game.state.turnNumber = 1;
     return game;
 }
+
+const rushDefinition = { id: "KEY-RUSH", name: "Rush", cardType: "character", power: 5000, keywords: ["rush"] };
+const rushGame = activationEngine({ [rushDefinition.id]: rushDefinition });
+const rushCard = createCardInstance(rushDefinition, "p1", "characterArea");
+rushCard.playedOnTurn = rushGame.state.turnNumber;
+rushGame.state.players.p1.characters[0] = rushCard;
+assert.notEqual(rushGame.dispatch({ id: "rush-attack", type: "attack", playerId: "p1", attackerId: rushCard.instanceId, targetId: rushGame.state.players.p2.leader.instanceId }).status, "failed", "Rush can attack on the turn the Character was played");
+
+const characterRushDefinition = { id: "KEY-CHAR-RUSH", name: "Character Rush", cardType: "character", power: 5000, keywords: ["Rush: Characters"] };
+const characterRushGame = activationEngine({ [characterRushDefinition.id]: characterRushDefinition });
+const characterRushCard = createCardInstance(characterRushDefinition, "p1", "characterArea");
+const characterRushTarget = createCardInstance(vanilla, "p2", "characterArea");
+characterRushCard.playedOnTurn = characterRushGame.state.turnNumber;
+characterRushTarget.state = "rested";
+characterRushGame.state.players.p1.characters[0] = characterRushCard;
+characterRushGame.state.players.p2.characters[0] = characterRushTarget;
+assert.equal(characterRushGame.dispatch({ id: "character-rush-leader", type: "attack", playerId: "p1", attackerId: characterRushCard.instanceId, targetId: characterRushGame.state.players.p2.leader.instanceId }).status, "failed", "Rush: Characters cannot attack a Leader on the turn played");
+assert.notEqual(characterRushGame.dispatch({ id: "character-rush-character", type: "attack", playerId: "p1", attackerId: characterRushCard.instanceId, targetId: characterRushTarget.instanceId }).status, "failed", "Rush: Characters can attack a Character on the turn played");
+
+const unblockableDefinition = { id: "KEY-UNBLOCKABLE", name: "Unblockable", cardType: "character", power: 5000, keywords: ["unblockable"] };
+const unblockableGame = activationEngine({ [unblockableDefinition.id]: unblockableDefinition, [blocker.id]: blocker });
+const unblockableCard = createCardInstance(unblockableDefinition, "p1", "characterArea");
+const ignoredBlocker = createCardInstance(blocker, "p2", "characterArea");
+unblockableGame.state.players.p1.characters[0] = unblockableCard;
+unblockableGame.state.players.p2.characters[0] = ignoredBlocker;
+unblockableGame.dispatch({ id: "unblockable-attack", type: "attack", playerId: "p1", attackerId: unblockableCard.instanceId, targetId: unblockableGame.state.players.p2.leader.instanceId });
+assert.equal(unblockableGame.state.pendingCombat?.window, "counter", "Unblockable skips the Blocker Step");
+assert.deepEqual(unblockableGame.state.pendingCombat?.validBlockerIds, [], "Unblockable exposes no valid Blocker choices");
+assert.equal(ignoredBlocker.state, "active", "an ignored Blocker is not rested");
+
+const preventionGame = activationEngine();
+const preventionCard = createCardInstance(vanilla, "p1", "characterArea");
+const preventionContext = { actingPlayerId: "p1", controllerId: "p1", ownerId: "p1" };
+preventionGame.state.players.p1.characters[0] = preventionCard;
+
+cardActionHandlers.preventStateChange(preventionGame.state, preventionGame.definitions, preventionContext, { prevention: "cannotBeRested", duration: "turn" }, [preventionCard.instanceId]);
+assert.equal(cardActionHandlers.restCard(preventionGame.state, preventionGame.definitions, preventionContext, {}, [preventionCard.instanceId]).status, "failed", "cannotBeRested rejects effect resting");
+assert.equal(preventionGame.dispatch({ id: "cannot-rest-attack", type: "attack", playerId: "p1", attackerId: preventionCard.instanceId, targetId: preventionGame.state.players.p2.leader.instanceId }).status, "failed", "cannotBeRested also prevents paying the rest requirement to attack");
+
+preventionCard.preventions = [];
+cardActionHandlers.preventStateChange(preventionGame.state, preventionGame.definitions, preventionContext, { prevention: "cannotAttack", duration: "turn" }, [preventionCard.instanceId]);
+assert.equal(preventionGame.dispatch({ id: "cannot-attack", type: "attack", playerId: "p1", attackerId: preventionCard.instanceId, targetId: preventionGame.state.players.p2.leader.instanceId }).status, "failed", "cannotAttack rejects attack declaration");
+assert.equal(cardActionHandlers.restCard(preventionGame.state, preventionGame.definitions, preventionContext, {}, [preventionCard.instanceId]).status, "completed", "cannotAttack does not prevent other resting");
+
+preventionCard.preventions = [];
+preventionCard.state = "rested";
+cardActionHandlers.preventStateChange(preventionGame.state, preventionGame.definitions, preventionContext, { prevention: "skipRefreshActivation", duration: "nextRefresh" }, [preventionCard.instanceId]);
+refreshPlayer(preventionGame.state.players.p1, preventionGame.state);
+assert.equal(preventionCard.state, "rested", "skipRefreshActivation leaves the card rested during the next Refresh Phase");
+assert.equal(preventionCard.preventions.length, 0, "a next-Refresh prevention is consumed by that Refresh Phase");
+refreshPlayer(preventionGame.state.players.p1, preventionGame.state);
+assert.equal(preventionCard.state, "active", "the card becomes active during a later Refresh Phase");
+
+preventionCard.state = "rested";
+cardActionHandlers.preventStateChange(preventionGame.state, preventionGame.definitions, preventionContext, { prevention: "cannotBecomeActive", duration: "turn" }, [preventionCard.instanceId]);
+assert.equal(cardActionHandlers.restandCard(preventionGame.state, preventionGame.definitions, preventionContext, {}, [preventionCard.instanceId]).status, "failed", "cannotBecomeActive rejects effect activation");
+refreshPlayer(preventionGame.state.players.p1, preventionGame.state);
+assert.equal(preventionCard.state, "rested", "cannotBecomeActive also prevents Refresh activation");
+preventionGame.state.turnNumber += 1;
+assert.equal(cardActionHandlers.restandCard(preventionGame.state, preventionGame.definitions, preventionContext, {}, [preventionCard.instanceId]).status, "completed", "turn-duration prevention expires after its stated turn");
+
+const preventionStageDefinition = { id: "PREVENTION-STAGE", name: "Prevention Source", cardType: "stage", cost: 1 };
+const whileInPlayGame = activationEngine({ [preventionStageDefinition.id]: preventionStageDefinition });
+const preventionStage = createCardInstance(preventionStageDefinition, "p1", "stage");
+whileInPlayGame.state.players.p1.stage = preventionStage;
+const whileInPlayContext = { actingPlayerId: "p1", controllerId: "p1", ownerId: "p1", sourceInstanceId: preventionStage.instanceId };
+cardActionHandlers.preventStateChange(whileInPlayGame.state, whileInPlayGame.definitions, whileInPlayContext, { prevention: "cannotAttack", duration: "whileInPlay" }, [whileInPlayGame.state.players.p1.leader.instanceId]);
+assert.equal(whileInPlayGame.dispatch({ id: "while-in-play-blocked", type: "attack", playerId: "p1", attackerId: whileInPlayGame.state.players.p1.leader.instanceId, targetId: whileInPlayGame.state.players.p2.leader.instanceId }).status, "failed", "whileInPlay prevention applies while its source remains on the board");
+cardActionHandlers.trashCard(whileInPlayGame.state, whileInPlayGame.definitions, whileInPlayContext, {}, [preventionStage.instanceId]);
+assert.notEqual(whileInPlayGame.dispatch({ id: "while-in-play-expired", type: "attack", playerId: "p1", attackerId: whileInPlayGame.state.players.p1.leader.instanceId, targetId: whileInPlayGame.state.players.p2.leader.instanceId }).status, "failed", "whileInPlay prevention expires when its source leaves the board");
+
+const returnDonGame = activationEngine();
+const returnDonCard = createCardInstance(vanilla, "p1", "characterArea");
+returnDonGame.state.players.p1.characters[0] = returnDonCard;
+returnDonGame.state.players.p1.activeDon = 1;
+returnDonGame.state.players.p1.restedDon = 1;
+returnDonGame.state.players.p1.donDeck = 6;
+returnDonCard.attachedDon = 2;
+const partialDonReturn = returnDon(returnDonGame.state, returnDonGame.definitions, preventionContext, { player: "self", quantity: 5 });
+assert.equal(partialDonReturn.status, "completed", "returnDon does not fail when fewer DON!! are available than requested");
+assert.equal(partialDonReturn.quantity, 4, "returnDon reports the amount actually returned");
+assert.equal(returnDonGame.state.players.p1.donDeck, 10, "returnDon returns Cost Area and attached DON!! to the DON!! deck");
+assert.equal(returnDonGame.state.players.p1.activeDon + returnDonGame.state.players.p1.restedDon + returnDonCard.attachedDon, 0, "returnDon removes every available eligible DON!! up to the requested amount");
+const emptyDonReturn = returnDon(returnDonGame.state, returnDonGame.definitions, preventionContext, { player: "self", quantity: 2 });
+assert.equal(emptyDonReturn.status, "completed", "returnDon completes when no eligible DON!! are available");
+assert.equal(emptyDonReturn.quantity, 0, "returnDon reports zero when nothing can be returned");
+
+const protectedLeader = returnDonGame.state.players.p1.leader;
+const leaderTrashResult = cardActionHandlers.trashCard(returnDonGame.state, returnDonGame.definitions, preventionContext, {}, [protectedLeader.instanceId]);
+assert.equal(leaderTrashResult.status, "failed", "trashCard rejects Leader cards");
+assert.equal(returnDonGame.state.players.p1.leader, protectedLeader, "a rejected trash action leaves the Leader in play");
+
+returnDonGame.state.players.p1.activeDon = 1;
+returnDonGame.state.players.p1.restedDon = 1;
+returnDonGame.state.players.p1.donDeck = 6;
+returnDonCard.attachedDon = 2;
+const attachedOnlyReturn = returnDon(returnDonGame.state, returnDonGame.definitions, preventionContext, { player: "self", quantity: 1, source: "attached" }, [returnDonCard.instanceId]);
+assert.equal(attachedOnlyReturn.quantity, 1, "returnDon can be limited to attached DON!! on selected cards");
+assert.equal(returnDonCard.attachedDon, 1, "attached-only return removes DON!! from the selected card");
+assert.equal(returnDonGame.state.players.p1.activeDon, 1, "attached-only return does not remove active Cost Area DON!!");
+assert.equal(returnDonGame.state.players.p1.restedDon, 1, "attached-only return does not remove rested Cost Area DON!!");
+
+const doubleAttackDefinition = { id: "KEY-DOUBLE", name: "Double Attack", cardType: "character", power: 7000, keywords: ["doubleAttack"] };
+const doubleAttackGame = activationEngine({ [doubleAttackDefinition.id]: doubleAttackDefinition });
+const doubleAttackCard = createCardInstance(doubleAttackDefinition, "p1", "characterArea");
+doubleAttackGame.state.players.p1.characters[0] = doubleAttackCard;
+doubleAttackGame.state.players.p2.life = Array.from({ length: 3 }, () => createCardInstance(vanilla, "p2", "life"));
+doubleAttackGame.dispatch({ id: "double-attack", type: "attack", playerId: "p1", attackerId: doubleAttackCard.instanceId, targetId: doubleAttackGame.state.players.p2.leader.instanceId });
+doubleAttackGame.dispatch({ id: "double-attack-damage", type: "resolveBattle", playerId: "p2" });
+assert.equal(doubleAttackGame.state.players.p2.life.length, 1, "Double Attack deals two Life damage");
+assert.equal(doubleAttackGame.state.players.p2.hand.length, 2, "both Double Attack Life cards go to hand normally");
+
+const banishDefinition = { id: "KEY-BANISH", name: "Banish", cardType: "character", power: 7000, keywords: ["banish"] };
+const banishGame = activationEngine({ [banishDefinition.id]: banishDefinition, [lifeTrigger.id]: lifeTrigger });
+const banishCard = createCardInstance(banishDefinition, "p1", "characterArea");
+const banishedLife = createCardInstance(lifeTrigger, "p2", "life");
+banishGame.state.players.p1.characters[0] = banishCard;
+banishGame.state.players.p2.life = [banishedLife];
+banishGame.dispatch({ id: "banish-attack", type: "attack", playerId: "p1", attackerId: banishCard.instanceId, targetId: banishGame.state.players.p2.leader.instanceId });
+banishGame.dispatch({ id: "banish-damage", type: "resolveBattle", playerId: "p2" });
+assert.equal(banishGame.state.pendingTrigger, null, "Banish prevents a Life Trigger from activating");
+assert.equal(banishGame.state.players.p2.hand.includes(banishedLife), false, "Banish does not add the Life card to hand");
+assert.equal(banishGame.state.players.p2.trash.includes(banishedLife), true, "Banish sends the Life card to Trash");
+
+const doubleTriggerGame = activationEngine({ [doubleAttackDefinition.id]: doubleAttackDefinition, [lifeTrigger.id]: lifeTrigger });
+const doubleTriggerAttacker = createCardInstance(doubleAttackDefinition, "p1", "characterArea");
+doubleTriggerGame.state.players.p1.characters[0] = doubleTriggerAttacker;
+doubleTriggerGame.state.players.p2.life = [createCardInstance(lifeTrigger, "p2", "life"), createCardInstance(vanilla, "p2", "life"), createCardInstance(vanilla, "p2", "life")];
+doubleTriggerGame.dispatch({ id: "double-trigger-attack", type: "attack", playerId: "p1", attackerId: doubleTriggerAttacker.instanceId, targetId: doubleTriggerGame.state.players.p2.leader.instanceId });
+doubleTriggerGame.dispatch({ id: "double-trigger-damage", type: "resolveBattle", playerId: "p2" });
+assert.equal(doubleTriggerGame.state.pendingTrigger?.playerId, "p2", "Double Attack pauses on the first Life Trigger");
+assert.equal(doubleTriggerGame.state.players.p2.life.length, 2, "the second Double Attack damage waits for the Trigger choice");
+doubleTriggerGame.dispatch({ id: "double-trigger-skip", type: "triggerChoice", playerId: "p2", activate: false });
+assert.equal(doubleTriggerGame.state.players.p2.life.length, 1, "Double Attack resumes after the Trigger choice");
 
 const rematchGame = activationEngine();
 const finishedGameId = rematchGame.state.gameId;
@@ -257,7 +428,16 @@ assert.deepEqual(
 );
 
 const registeredActionNames = new Set(getRegisteredActions());
-assert.equal(Object.keys(onPlayEffectDefinitions).length, 12, "the On Play implementation batch is registered separately");
+assert.equal(Object.keys(onPlayEffectDefinitions).length, 32, "the On Play implementation batch is registered separately");
+assert.equal(Object.keys(activateMainEffectDefinitions).length, 19, "the Activate: Main implementation batch is registered separately");
+assert.equal(Object.keys(counterEffectDefinitions).length, 13, "the Counter implementation batch is registered separately");
+assert.equal(Object.keys(onBlockEffectDefinitions).length, 1, "the On Block implementation batch is registered separately");
+assert.equal(Object.keys(onKOEffectDefinitions).length, 7, "the On K.O. implementation batch is registered separately");
+assert.equal(Object.keys(onOpponentAttackEffectDefinitions).length, 1, "the On Opponent Attack implementation batch is registered separately");
+assert.equal(Object.keys(turnEffectDefinitions).length, 3, "the turn timing implementation batch is registered separately");
+assert.equal(Object.keys(triggerEffectDefinitions).length, 20, "the Trigger implementation batch is registered separately");
+assert.equal(Object.keys(whenAttackingEffectDefinitions).length, 12, "the When Attacking implementation batch is registered separately");
+assert.equal(Object.keys(whenTrashedFromDeckEffectDefinitions).length, 1, "the When Trashed From Deck implementation batch is registered separately");
 const compiledRegistryProof = compileCardEffects({ id: "REGISTRY", effects: [{ id: "BK01-009-on-play-ko-cost-five", type: "onPlay" }] }, cardEffectDefinitions);
 assert.equal(compiledRegistryProof.effects[0].actions[0].action, "cardKO", "the shared card compiler merges activator definitions into JSON cards");
 for (const [effectId, implementation] of Object.entries(onPlayEffectDefinitions)) {
@@ -265,6 +445,186 @@ for (const [effectId, implementation] of Object.entries(onPlayEffectDefinitions)
     assert.ok(implementation.actions.length > 0, `${effectId} has executable actions`);
     assert.equal(implementation.actions.every(action => registeredActionNames.has(action.action)), true, `${effectId} uses only registered staple actions`);
 }
+for (const [effectId, implementation] of Object.entries(activateMainEffectDefinitions)) {
+    assert.equal(implementation.trigger, "activateMain", `${effectId} stays in the Activate: Main activator module`);
+    assert.ok(implementation.actions.length > 0, `${effectId} has executable actions`);
+    assert.equal(implementation.actions.every(action => registeredActionNames.has(action.action)), true, `${effectId} uses only registered staple actions`);
+}
+for (const [effectId, implementation] of Object.entries(counterEffectDefinitions)) {
+    assert.equal(implementation.trigger, "counter", `${effectId} stays in the Counter activator module`);
+    assert.ok(implementation.actions.length > 0, `${effectId} has executable actions`);
+    assert.equal(implementation.actions.every(action => registeredActionNames.has(action.action)), true, `${effectId} uses only registered staple actions`);
+}
+for (const [effectId, implementation] of Object.entries(onBlockEffectDefinitions)) {
+    assert.equal(implementation.trigger, "onBlock", `${effectId} stays in the On Block activator module`);
+    assert.ok(implementation.actions.length > 0, `${effectId} has executable actions`);
+    assert.equal(implementation.actions.every(action => registeredActionNames.has(action.action)), true, `${effectId} uses only registered staple actions`);
+}
+for (const [effectId, implementation] of Object.entries(onKOEffectDefinitions)) {
+    assert.equal(implementation.trigger, "onKO", `${effectId} stays in the On K.O. activator module`);
+    assert.ok(implementation.actions.length > 0, `${effectId} has executable actions`);
+    assert.equal(implementation.actions.every(action => registeredActionNames.has(action.action)), true, `${effectId} uses only registered staple actions`);
+}
+for (const [effectId, implementation] of Object.entries(onOpponentAttackEffectDefinitions)) {
+    assert.equal(implementation.trigger, "onOpponentAttack", `${effectId} stays in the On Opponent Attack activator module`);
+    assert.ok(implementation.actions.length > 0, `${effectId} has executable actions`);
+    assert.equal(implementation.actions.every(action => registeredActionNames.has(action.action)), true, `${effectId} uses only registered staple actions`);
+}
+for (const [effectId, implementation] of Object.entries(turnEffectDefinitions)) {
+    assert.equal(implementation.trigger, "endOfTurn", `${effectId} stays in the turn activator module`);
+    assert.ok(implementation.actions.length > 0, `${effectId} has executable actions`);
+    assert.equal(implementation.actions.every(action => registeredActionNames.has(action.action)), true, `${effectId} uses only registered staple actions`);
+}
+for (const [effectId, implementation] of Object.entries(triggerEffectDefinitions)) {
+    assert.equal(implementation.trigger, "trigger", `${effectId} stays in the Trigger activator module`);
+    assert.ok(implementation.actions.length > 0, `${effectId} has executable actions`);
+    assert.equal(implementation.actions.every(action => registeredActionNames.has(action.action)), true, `${effectId} uses only registered staple actions`);
+}
+for (const [effectId, implementation] of Object.entries(whenAttackingEffectDefinitions)) {
+    assert.equal(implementation.trigger, "whenAttacking", `${effectId} stays in the When Attacking activator module`);
+    assert.ok(implementation.actions.length > 0, `${effectId} has executable actions`);
+    assert.equal(implementation.actions.every(action => registeredActionNames.has(action.action)), true, `${effectId} uses only registered staple actions`);
+}
+for (const [effectId, implementation] of Object.entries(whenTrashedFromDeckEffectDefinitions)) {
+    assert.equal(implementation.trigger, "whenTrashedFromDeck", `${effectId} stays in the When Trashed From Deck activator module`);
+    assert.ok(implementation.actions.length > 0, `${effectId} has executable actions`);
+    assert.equal(implementation.actions.every(action => registeredActionNames.has(action.action)), true, `${effectId} uses only registered staple actions`);
+}
+
+const trashReturnTrigger = compileCardEffects({
+    id: "POG1-014", name: "Hvala hvala hvala", cardType: "event", cost: 1,
+    effects: [{ id: "POG1-014-trigger", type: "trigger" }]
+}, cardEffectDefinitions);
+const trashReturnTriggerGame = activationEngine({ [trashReturnTrigger.id]: trashReturnTrigger });
+const trashReturnSource = createCardInstance(trashReturnTrigger, "p2", "life");
+const trashReturnTarget = createCardInstance(vanilla, "p2", "trash");
+trashReturnTriggerGame.state.players.p2.life = [trashReturnSource];
+trashReturnTriggerGame.state.players.p2.trash = [trashReturnTarget];
+trashReturnTriggerGame.dispatch({
+    id: "trash-return-trigger-attack",
+    type: "attack",
+    playerId: "p1",
+    attackerId: trashReturnTriggerGame.state.players.p1.leader.instanceId,
+    targetId: trashReturnTriggerGame.state.players.p2.leader.instanceId
+});
+trashReturnTriggerGame.dispatch({ id: "trash-return-trigger-damage", type: "resolveBattle", playerId: "p2" });
+trashReturnTriggerGame.dispatch({ id: "trash-return-trigger-use", type: "triggerChoice", playerId: "p2", activate: true });
+assert.deepEqual(trashReturnTriggerGame.state.pendingSelection?.validCardIds, [trashReturnTarget.instanceId], "a Trigger cannot select its own resolving Life card from Trash");
+trashReturnTriggerGame.dispatch({ id: "trash-return-trigger-select", type: "select", playerId: "p2", cardIds: [trashReturnTarget.instanceId] });
+assert.equal(trashReturnTriggerGame.state.players.p2.hand.includes(trashReturnTarget), true, "the selected Trash card returns to hand");
+assert.equal(trashReturnTriggerGame.state.players.p2.trash.includes(trashReturnSource), true, "the resolved Trigger card remains in Trash");
+
+const vamolaOnKO = compileCardEffects({
+    id: "DD01-012", name: "Vamola", cardType: "character", cost: 1, power: 1000,
+    effects: [{ id: "DD01-012-on-ko-add-don", type: "onKO" }]
+}, cardEffectDefinitions);
+const vamolaOnKOGame = activationEngine({ [vamolaOnKO.id]: vamolaOnKO });
+const vamolaOnKOCard = createCardInstance(vamolaOnKO, "p2", "characterArea");
+vamolaOnKOCard.state = "rested";
+vamolaOnKOGame.state.players.p2.characters[0] = vamolaOnKOCard;
+const activeDonBeforeVamola = vamolaOnKOGame.state.players.p2.activeDon;
+vamolaOnKOGame.dispatch({
+    id: "vamola-on-ko-attack",
+    type: "attack",
+    playerId: "p1",
+    attackerId: vamolaOnKOGame.state.players.p1.leader.instanceId,
+    targetId: vamolaOnKOCard.instanceId
+});
+vamolaOnKOGame.dispatch({ id: "vamola-on-ko-battle", type: "resolveBattle", playerId: "p2" });
+assert.equal(vamolaOnKOGame.state.pendingActivation?.effectId, "DD01-012-on-ko-add-don", "Vamola's optional On K.O. effect asks its controller");
+vamolaOnKOGame.dispatch({ id: "vamola-on-ko-use", type: "activationChoice", playerId: "p2", activate: true });
+assert.equal(vamolaOnKOGame.state.players.p2.activeDon, activeDonBeforeVamola + 1, "Vamola adds its DON!! active");
+
+const yamatoOnKO = compileCardEffects({
+    id: "OP16-096", name: "Yamato", cardType: "character", cost: 8, power: 1000,
+    effects: [{ id: "OP16-096-on-ko-play-yamato", type: "onKO" }]
+}, cardEffectDefinitions);
+const smallerYamato = { id: "YAMATO-SIX", name: "Yamato", cardType: "character", cost: 6, power: 6000 };
+const yamatoOnKOGame = activationEngine({ [yamatoOnKO.id]: yamatoOnKO, [smallerYamato.id]: smallerYamato });
+const yamatoOnKOSource = createCardInstance(yamatoOnKO, "p2", "characterArea");
+const smallerYamatoCard = createCardInstance(smallerYamato, "p2", "trash");
+yamatoOnKOSource.state = "rested";
+yamatoOnKOGame.state.players.p2.characters[0] = yamatoOnKOSource;
+yamatoOnKOGame.state.players.p2.trash = [smallerYamatoCard];
+yamatoOnKOGame.dispatch({
+    id: "yamato-on-ko-attack",
+    type: "attack",
+    playerId: "p1",
+    attackerId: yamatoOnKOGame.state.players.p1.leader.instanceId,
+    targetId: yamatoOnKOSource.instanceId
+});
+yamatoOnKOGame.dispatch({ id: "yamato-on-ko-battle", type: "resolveBattle", playerId: "p2" });
+assert.deepEqual(yamatoOnKOGame.state.pendingSelection?.validCardIds, [smallerYamatoCard.instanceId], "Yamato's On K.O. effect finds an eligible different Yamato");
+yamatoOnKOGame.dispatch({ id: "yamato-on-ko-select", type: "select", playerId: "p2", cardIds: [smallerYamatoCard.instanceId] });
+assert.equal(yamatoOnKOGame.state.players.p2.characters.includes(smallerYamatoCard), true, "the selected Yamato is played from Trash");
+assert.equal(smallerYamatoCard.state, "active", "the Yamato played by the On K.O. effect enters active");
+
+const uryuWhenAttacking = compileCardEffects({
+    id: "BL01-014", name: "Uryu Ishida", cardType: "character", cost: 4, power: 5000,
+    effects: [{ id: "BL01-014-when-attacking-minus-ko", type: "whenAttacking" }]
+}, cardEffectDefinitions);
+const uryuVictimDefinition = { id: "URYU-VICTIM", name: "Power Target", cardType: "character", cost: 5, power: 5000 };
+const uryuWhenAttackingGame = activationEngine({ [uryuWhenAttacking.id]: uryuWhenAttacking, [uryuVictimDefinition.id]: uryuVictimDefinition });
+const uryuAttacker = createCardInstance(uryuWhenAttacking, "p1", "characterArea");
+const uryuVictim = createCardInstance(uryuVictimDefinition, "p2", "characterArea");
+uryuWhenAttackingGame.state.players.p1.characters[0] = uryuAttacker;
+uryuWhenAttackingGame.state.players.p2.characters[0] = uryuVictim;
+uryuWhenAttackingGame.dispatch({
+    id: "uryu-when-attacking",
+    type: "attack",
+    playerId: "p1",
+    attackerId: uryuAttacker.instanceId,
+    targetId: uryuWhenAttackingGame.state.players.p2.leader.instanceId
+});
+uryuWhenAttackingGame.dispatch({ id: "uryu-minus-power", type: "select", playerId: "p1", cardIds: [uryuVictim.instanceId] });
+assert.equal(getEffectivePower(uryuVictim, uryuVictimDefinition, uryuWhenAttackingGame.state), 4000, "Uryu first reduces the selected Character's power");
+assert.deepEqual(uryuWhenAttackingGame.state.pendingSelection?.validCardIds, [uryuVictim.instanceId], "the K.O. filter uses the Character's reduced effective power");
+uryuWhenAttackingGame.dispatch({ id: "uryu-ko-target", type: "select", playerId: "p1", cardIds: [uryuVictim.instanceId] });
+assert.equal(uryuWhenAttackingGame.state.players.p2.characters[0], null, "Uryu K.O.s the eligible Character before the Counter Step");
+assert.equal(uryuWhenAttackingGame.state.pendingCombat?.window, "counter", "combat continues after the When Attacking effect");
+
+const eggmanWhenAttacking = compileCardEffects({
+    id: "EGG1-001", name: "Eggman", cardType: "leader", power: 5000, life: 5,
+    effects: [{ id: "EGG1-001-when-attacking-power", type: "whenAttacking" }]
+}, cardEffectDefinitions);
+const eggmanWhenAttackingGame = activationEngine({}, eggmanWhenAttacking, leader("EGGMAN-OPPONENT"));
+const targetlessAttack = eggmanWhenAttackingGame.dispatch({
+    id: "eggman-no-target-attack",
+    type: "attack",
+    playerId: "p1",
+    attackerId: eggmanWhenAttackingGame.state.players.p1.leader.instanceId,
+    targetId: eggmanWhenAttackingGame.state.players.p2.leader.instanceId
+});
+assert.notEqual(targetlessAttack.status, "failed", "a targetless automatic effect does not fail the attack");
+assert.equal(eggmanWhenAttackingGame.state.pendingCombat?.window, "counter", "a targetless automatic effect does not block combat");
+
+const ishidroMain = compileCardEffects({
+    id: "BK01-008", name: "Ishidro", cardType: "character", cost: 1, power: 1000,
+    effects: [{ id: "BK01-008-activate-main-minus-cost-rest", type: "activateMain" }]
+}, cardEffectDefinitions);
+const ishidroMainGame = activationEngine({ [ishidroMain.id]: ishidroMain });
+const ishidroMainCard = createCardInstance(ishidroMain, "p1", "characterArea");
+const ishidroMainTargetDefinition = { ...vanilla, id: "ISHIDRO-TARGET", cost: 5 };
+const ishidroMainTarget = createCardInstance(ishidroMainTargetDefinition, "p2", "characterArea");
+ishidroMainGame.definitions[ishidroMainTargetDefinition.id] = ishidroMainTargetDefinition;
+ishidroMainGame.state.players.p1.characters[0] = ishidroMainCard;
+ishidroMainGame.state.players.p2.characters[0] = ishidroMainTarget;
+ishidroMainGame.dispatch({ id: "ishidro-main", type: "activateMain", playerId: "p1", cardId: ishidroMainCard.instanceId });
+ishidroMainGame.dispatch({ id: "ishidro-main-target", type: "select", playerId: "p1", cardIds: [ishidroMainTarget.instanceId] });
+assert.equal(getEffectiveCost(ishidroMainTarget, ishidroMainTargetDefinition, ishidroMainGame.state), 3, "Ishidro reduces the chosen opposing Character's cost");
+assert.equal(ishidroMainCard.state, "rested", "Ishidro rests after its Activate: Main effect resolves");
+
+const magdalenaMain = compileCardEffects({
+    id: "POG1-013", name: "Magdalena", cardType: "character", cost: 1, power: 1000,
+    effects: [{ id: "POG1-013-activate-main", type: "activateMain" }]
+}, cardEffectDefinitions);
+const magdalenaMainGame = activationEngine({ [magdalenaMain.id]: magdalenaMain });
+const magdalenaMainCard = createCardInstance(magdalenaMain, "p1", "characterArea");
+magdalenaMainGame.state.players.p1.characters[0] = magdalenaMainCard;
+const unavailableMain = magdalenaMainGame.dispatch({ id: "magdalena-main-unavailable", type: "activateMain", playerId: "p1", cardId: magdalenaMainCard.instanceId });
+assert.equal(unavailableMain.status, "failed", "an Activate: Main cost cannot be paid without its required cards");
+assert.equal(magdalenaMainGame.state.effectQueue.length, 0, "an unavailable activation does not leave the game blocked");
+assert.equal(Object.keys(magdalenaMainCard.oncePerTurn).length, 0, "an unavailable activation does not consume Once Per Turn usage");
 
 const addDonOnPlay = {
     id: "DD01-008", name: "Ayase Momo", cardType: "character", cost: 0, power: 1000,
@@ -373,7 +733,7 @@ assert.equal(counterGame.state.players.p2.life.length, 1, "Counter Event power a
 
 const endOwn = { id: "A-005", name: "Own End", cardType: "character", power: 1000, effects: [{ id: "own-end", type: "endOfYourTurn", actions: [{ action: "drawCard", player: "self", quantity: 1 }] }] };
 const endOpponent = { id: "A-006", name: "Opponent End", cardType: "character", power: 1000, effects: [{ id: "opponent-end", type: "endOfOpponentTurn", actions: [{ action: "drawCard", player: "self", quantity: 1 }] }] };
-const endGame = activationEngine({ [endOwn.id]: endOwn, [endOpponent.id]: endOpponent });
+const endGame = activationEngine({ [endOwn.id]: endOwn, [endOpponent.id]: endOpponent }, leader("A-L1"), leader("A-L2"), { autoDraw: false });
 endGame.state.players.p1.characters[0] = createCardInstance(endOwn, "p1", "characterArea");
 endGame.state.players.p2.characters[0] = createCardInstance(endOpponent, "p2", "characterArea");
 const ownEndHand = endGame.state.players.p1.hand.length;
@@ -381,6 +741,16 @@ const opponentEndHand = endGame.state.players.p2.hand.length;
 endGame.dispatch({ id: "end-timings", type: "advancePhase", playerId: "p1" });
 assert.equal(endGame.state.players.p1.hand.length, ownEndHand + 1);
 assert.equal(endGame.state.players.p2.hand.length, opponentEndHand + 1, "opponent End Phase timing is recognized separately");
+
+const optionalEnd = { id: "A-005-OPTIONAL", name: "Optional End", cardType: "character", power: 1000, effects: [{ id: "optional-own-end", type: "endOfYourTurn", optional: true, actions: [{ action: "drawCard", player: "self", quantity: 1 }] }] };
+const optionalEndGame = activationEngine({ [optionalEnd.id]: optionalEnd }, leader("A-L1"), leader("A-L2"), { autoDraw: false });
+optionalEndGame.state.players.p1.characters[0] = createCardInstance(optionalEnd, "p1", "characterArea");
+optionalEndGame.dispatch({ id: "optional-end-turn", type: "advancePhase", playerId: "p1" });
+assert.equal(optionalEndGame.state.phase, "end", "an optional End Phase effect pauses turn completion");
+assert.equal(optionalEndGame.state.pendingActivation?.playerId, "p1", "an optional End Phase effect prompts its controller");
+optionalEndGame.dispatch({ id: "optional-end-choice", type: "activationChoice", playerId: "p1", activate: false });
+assert.equal(optionalEndGame.state.activePlayerId, "p2", "the next turn begins automatically after the optional End Phase choice");
+assert.equal(optionalEndGame.state.phase, "draw", "disabled Auto Draw leaves the next player on Draw Card after the End Phase choice");
 
 const characterWatcherLeader = { id: "A-L3", name: "Character Watcher", cardType: "leader", power: 5000, life: 5, effects: [{ id: "character-play-draw", type: "onCharacterPlay", actions: [{ action: "drawCard", player: "self", quantity: 1 }] }] };
 const characterGame = activationEngine({}, characterWatcherLeader, leader("A-L4"));

@@ -6,7 +6,7 @@ import { attachDon } from "../actions/donStateActions.js";
 import { advancePhase, beginTurn, refreshPlayer } from "../phases/turnSystem.js";
 import { queueCharacterPlayedTriggers, queuePlayerBoardTriggers, queueTrigger, resolveEffectQueue, submitActivationChoice, submitEffectSelection } from "../effects/effectResolver.js";
 import { getActivatorEffects, validateCounterEventActivation, validateMainActivation } from "../effects/effectActivators.js";
-import { chooseBlocker, continueCombat, declareAttack, resolveBattle, resolveLifeTriggerChoice, useCounter } from "../battle/battleSystem.js";
+import { chooseBlocker, continueCombat, continueLeaderDamage, declareAttack, resolveBattle, resolveLifeTriggerChoice, useCounter } from "../battle/battleSystem.js";
 
 function contextFor(playerId, emit) {
     return { actingPlayerId: playerId, controllerId: playerId, ownerId: playerId, emit };
@@ -151,7 +151,7 @@ function activateMain(state, definitions, playerId, cardId, effectIndex = 0, eff
     const location = findCard(state, cardId);
     const effects = getActivatorEffects(definitions[location?.card.definitionId], "activateMain");
     const descriptor = effectId ? effects.find(entry => entry.effectId === effectId) : effects[Number(effectIndex || 0)];
-    const check = validateMainActivation(state, location, playerId, descriptor);
+    const check = validateMainActivation(state, definitions, location, playerId, descriptor);
     if (check.status === "failed") return check;
     return queueTrigger(state, definitions, "activateMain", cardId, playerId, "activation", { effectId: descriptor.effectId, confirmed: true });
 }
@@ -182,18 +182,48 @@ function activateCounterEvent(state, definitions, playerId, command) {
 function drain(state, definitions) {
     const effectResult = resolveEffectQueue(state, definitions);
     if (["failed", "awaitingSelection", "awaitingActivation"].includes(effectResult.status)) return effectResult;
+    if (state.pendingDamage && !state.pendingTrigger) {
+        const damageResult = continueLeaderDamage(state, definitions, queueTrigger);
+        if (damageResult.status !== "completed") return damageResult;
+        if (state.effectQueue.length) return drain(state, definitions);
+    }
     if (["effects", "counterEffects"].includes(state.pendingCombat?.window)) return continueCombat(state, definitions);
     return effectResult;
 }
 
-function finishAutomaticRefresh(state, definitions) {
-    if (state.phase !== "refresh" || state.pendingSelection || state.pendingCombat || state.pendingTrigger || state.pendingActivation || state.effectQueue.length) {
-        return { status: "completed" };
-    }
-    return advancePhase(state, definitions, queueTrigger);
+function hasPendingInteraction(state) {
+    return Boolean(state.pendingSelection || state.pendingCombat || state.pendingTrigger || state.pendingActivation || state.effectQueue.length);
 }
 
-export function createGameEngine({ p1, p2, definitions, random = Math.random, initialState = null, turnOrderChooserId = null }) {
+function settleAutomaticTurnFlow(state, definitions, autoDraw) {
+    while (state.phase !== "gameOver" && !hasPendingInteraction(state)) {
+        if (state.phase === "end") {
+            const endResult = advancePhase(state, definitions, queueTrigger);
+            if (endResult.status === "failed") return endResult;
+            const startEffects = drain(state, definitions);
+            if (startEffects.status !== "completed") return startEffects;
+            continue;
+        }
+        if (state.phase === "refresh") {
+            const refreshResult = advancePhase(state, definitions, queueTrigger);
+            if (refreshResult.status === "failed") return refreshResult;
+            continue;
+        }
+        if (state.phase === "draw") {
+            const player = getPlayer(state, state.activePlayerId);
+            const skipsFirstDraw = player?.id === state.firstPlayerId && player.turns === 1;
+            if (skipsFirstDraw || autoDraw) {
+                const drawResult = advancePhase(state, definitions, queueTrigger);
+                if (drawResult.status === "failed") return drawResult;
+                continue;
+            }
+        }
+        break;
+    }
+    return { status: "completed" };
+}
+
+export function createGameEngine({ p1, p2, definitions, random = Math.random, initialState = null, turnOrderChooserId = null, autoDraw = true }) {
     if (!definitions || !p1 || !p2) throw new Error("Two players and card definitions are required.");
     const state = initialState || createGameState({ p1, p2, random });
     if (!initialState && turnOrderChooserId) {
@@ -203,9 +233,9 @@ export function createGameEngine({ p1, p2, definitions, random = Math.random, in
         appendLog(state, `${state.players[turnOrderChooserId].name} chooses who goes first.`);
     }
     if (initialState && state.phase === "refresh" && state.activePlayerId) {
-        refreshPlayer(getPlayer(state, state.activePlayerId));
-        const refreshResult = finishAutomaticRefresh(state, definitions);
-        if (refreshResult.status === "completed") state.revision += 1;
+        refreshPlayer(getPlayer(state, state.activePlayerId), state);
+        const turnFlowResult = settleAutomaticTurnFlow(state, definitions, autoDraw);
+        if (turnFlowResult.status === "completed") state.revision += 1;
     }
 
     function dispatch(command) {
@@ -285,8 +315,8 @@ export function createGameEngine({ p1, p2, definitions, random = Math.random, in
             const drained = drain(state, definitions);
             if (drained.status === "failed") result = drained;
             else if (drained.status === "completed") {
-                const refreshResult = finishAutomaticRefresh(state, definitions);
-                if (refreshResult.status === "failed") result = refreshResult;
+                const turnFlowResult = settleAutomaticTurnFlow(state, definitions, autoDraw);
+                if (turnFlowResult.status === "failed") result = turnFlowResult;
             }
         }
         if (result.status === "failed") {

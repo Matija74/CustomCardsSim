@@ -39,6 +39,7 @@ export function createCardInstance(definition, ownerId, zone = "deck") {
             baseCost: []
         },
         preventions: [],
+        keywordModifiers: [],
         oncePerTurn: {}
     };
 }
@@ -104,6 +105,7 @@ export function createGameState({ p1, p2, random = Math.random }) {
         pendingCombat: null,
         pendingSelection: null,
         pendingTrigger: null,
+        pendingDamage: null,
         pendingActivation: null,
         effectQueue: [],
         resolvedStepIds: [],
@@ -134,6 +136,7 @@ export function finishGame(state, winnerId, loserId, reason) {
     state.pendingCombat = null;
     state.pendingSelection = null;
     state.pendingTrigger = null;
+    state.pendingDamage = null;
     state.pendingActivation = null;
     state.effectQueue = [];
     appendLog(state, `${state.players[winnerId]?.name || "A player"} wins: ${reason}`);

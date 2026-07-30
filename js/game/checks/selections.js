@@ -3,6 +3,7 @@ import { cardMatchesFilters, resolvePlayerReference } from "./validation.js";
 
 function cardsInArea(player, area) {
     if (!player) return [];
+    if (Array.isArray(area)) return area.flatMap(entry => cardsInArea(player, entry));
     if (area === "characterArea") return player.characters.filter(Boolean);
     if (area === "leader") return player.leader ? [player.leader] : [];
     if (area === "stage") return player.stage ? [player.stage] : [];
@@ -15,6 +16,8 @@ export function createSelection(state, definitions, context, action, actionIndex
     const player = getPlayer(state, playerId);
     const amount = Math.max(1, Number(spec.amount || 1));
     const validCardIds = cardsInArea(player, spec.area)
+        .filter(card => action.action !== "trashCard" || card.zone !== "leader")
+        .filter(card => !spec.excludeSource || card.instanceId !== context.sourceInstanceId)
         .filter(card => cardMatchesFilters(card, definitions[card.definitionId], spec.filters, state))
         .map(card => card.instanceId);
 
@@ -24,7 +27,7 @@ export function createSelection(state, definitions, context, action, actionIndex
         actionIndex,
         actingPlayerId: resolvePlayerReference(action.actingPlayer || "actingPlayer", context),
         targetPlayerId: playerId,
-        area: spec.area,
+        area: Array.isArray(spec.area) ? "board" : spec.area,
         amount,
         upTo: Boolean(spec.upTo),
         validCardIds,
