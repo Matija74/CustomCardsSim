@@ -60,6 +60,20 @@ export const onPlayEffectDefinitions = Object.freeze({
         optional: true,
         actions: [{ action: "addDon", player: "self", quantity: 1, cardState: "rested" }]
     },
+    "DD01-009-on-play-rest-character": {
+        trigger: "onPlay",
+        actions: [{
+            action: "restCard",
+            allowOpponent: true,
+            selection: {
+                controller: "opponent",
+                area: "characterArea",
+                amount: 1,
+                upTo: true,
+                filters: { maximumCost: 4, state: "active" }
+            }
+        }]
+    },
     "IMU1-003-on-play": {
         trigger: "onPlay",
         actions: [{

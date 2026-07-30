@@ -148,7 +148,15 @@ export function resolveEffectQueue(state, definitions) {
         const result = runAction(state, definitions, entry, action);
         if (result.status === "failed") return result;
         if (result.status === "awaitingSelection") {
-            state.pendingSelection = { ...result.selection, actionIndex: entry.actionIndex, action };
+            const returnAction = entry.actions[entry.actionIndex + 1];
+            state.pendingSelection = {
+                ...result.selection,
+                actionIndex: entry.actionIndex,
+                action,
+                returnRest: returnAction?.action === "returnRest"
+                    ? { deckLocation: returnAction.deckLocation || "bottom", order: returnAction.order || null }
+                    : null
+            };
             return { status: "awaitingSelection", selection: state.pendingSelection };
         }
         state.resolvedStepIds.push(stepId);
@@ -172,7 +180,7 @@ export function submitActivationChoice(state, definitions, playerId, activate) {
     return resolveEffectQueue(state, definitions);
 }
 
-export function submitEffectSelection(state, definitions, playerId, cardIds) {
+export function submitEffectSelection(state, definitions, playerId, cardIds, options = {}) {
     const validation = validateSelectionResponse(state, playerId, cardIds);
     if (validation.status === "failed") return validation;
     const pending = state.pendingSelection;
@@ -180,8 +188,23 @@ export function submitEffectSelection(state, definitions, playerId, cardIds) {
     if (!entry || entry.actionIndex !== pending.actionIndex) return failed("The pending effect is no longer current.");
     const stepId = `${entry.executionId}:${entry.actionIndex}`;
     if (state.resolvedStepIds.includes(stepId)) return failed("This effect step already resolved.");
+    let requestedReturnOrder = null;
+    if (pending.area === "search" && Array.isArray(options.returnOrder) && entry.searchBuffer) {
+        const selectedIds = new Set(validation.selectedCardIds);
+        const expectedRemaining = entry.searchBuffer.cards.filter(card => !selectedIds.has(card.instanceId));
+        requestedReturnOrder = [...new Set(options.returnOrder)];
+        if (requestedReturnOrder.length !== expectedRemaining.length || requestedReturnOrder.some(id => !expectedRemaining.some(card => card.instanceId === id))) {
+            return failed("The searched cards require a complete unique return order.");
+        }
+    }
     const result = runAction(state, definitions, entry, pending.action, validation.selectedCardIds);
     if (result.status === "failed") return result;
+    if (requestedReturnOrder && entry.searchBuffer) {
+        const remaining = entry.searchBuffer.cards;
+        const byId = new Map(remaining.map(card => [card.instanceId, card]));
+        entry.searchBuffer.cards = requestedReturnOrder.map(id => byId.get(id));
+        entry.searchBuffer.userOrdered = true;
+    }
     state.pendingSelection = null;
     state.resolvedStepIds.push(stepId);
     entry.actionIndex += 1;

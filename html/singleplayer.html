@@ -7,14 +7,13 @@
 
     <link rel="icon" type="image/png" href="../images/a-misc/logo-without-title.png">
     <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="../css/singleplayer.css?v=game-ui-5">
+    <link rel="stylesheet" href="../css/singleplayer.css?v=game-ui-7">
     <link rel="stylesheet" href="../css/galaxy-theme.css?v=galaxy-5">
 </head>
 <body>
     <a href="../index.html" class="btn-back">← Back to Main</a>
 
     <main class="singleplayer-page">
-
         <div class="game-layout">
             <section class="game-board">
 
@@ -23,6 +22,10 @@
                 <div class="hand opponent-hand" id="player2Hand"></div>
         
                 <section class="play-area opponent-area">
+                    <div class="player-rail opponent-rail">
+                        <span class="player-avatar">P2</span>
+                        <span><strong id="player2Name">Opponent</strong><small id="player2Status">Practice side</small></span>
+                    </div>
                     <div class="character-area">
                         <div class="character-label">Character Area</div>
                         <div class="character-slot" data-player="player2" data-slot="0"></div>
@@ -52,8 +55,12 @@
                 </section>
 
                 <div class="battle-controls" id="battleControls"></div>
-        
+
                 <section class="play-area player-area">
+                    <div class="player-rail">
+                        <span class="player-avatar">P1</span>
+                        <span><strong id="player1Name">You</strong><small id="player1Status">Active player</small></span>
+                    </div>
                     <div class="character-area">
                         <div class="character-label">Character Area</div>
                         <div class="character-slot" data-player="player1" data-slot="0"></div>
@@ -87,6 +94,10 @@
             </section>
 
             <aside class="card-preview-panel">
+                <div class="sidebar-section-label">
+                    <span>Inspector</span>
+                    <small>Card preview</small>
+                </div>
                 <div class="card-preview">
                     <div class="preview-placeholder" id="previewPlaceholder">
                         Hover a card to preview it
@@ -96,6 +107,7 @@
                 </div>
 
                 <div class="phase-controls">
+                    <span class="control-label">Match Action</span>
                     <button id="phaseButton" class="phase-button">Loading Game...</button>
                 </div>
 
@@ -125,6 +137,6 @@
     <script src="../js/cards/cardDatabase.js?v=game-2"></script>
     <script src="../js/cards/decks.js?v=game-1"></script>
     <script src="../js/decks/deckParser.js?v=game-1"></script>
-    <script type="module" src="../js/ui/match/singleplayerRuntime.js?v=game-1"></script>
+    <script type="module" src="../js/ui/match/singleplayerRuntime.js?v=game-ui-7"></script>
 </body>
 </html>

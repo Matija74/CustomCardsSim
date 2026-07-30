@@ -154,9 +154,16 @@ assert.equal(engine.state.pendingSelection?.area, "search");
 const opponentSearchView = redactStateForPlayer(engine.state, "p2");
 assert.deepEqual(opponentSearchView.pendingSelection.validCardIds, []);
 assert.equal(opponentSearchView.effectQueue[0].searchBuffer.cards.some(card => card.definitionId), false);
-command("select", "p1", { cardIds: [engine.state.pendingSelection.validCardIds[0]] });
+assert.equal(engine.state.pendingSelection.returnRest?.deckLocation, "bottom");
+const searchedCardId = engine.state.pendingSelection.validCardIds[0];
+const returnOrder = engine.state.effectQueue[0].searchBuffer.cards
+    .filter(card => card.instanceId !== searchedCardId)
+    .map(card => card.instanceId)
+    .reverse();
+command("select", "p1", { cardIds: [searchedCardId], returnOrder });
 assert.equal(p1.hand.length, handBeforeSearch + 1);
 assert.equal(p1.deck.length, deckBeforeSearch - 1, "unselected search cards return to the deck");
+assert.deepEqual(p1.deck.slice(-returnOrder.length).map(card => card.instanceId), returnOrder, "searched cards use the chosen return order");
 
 engine.state.effectQueue = [];
 engine.state.pendingSelection = null;
@@ -224,8 +231,33 @@ function activationEngine(extraDefinitions = {}, p1Leader = leader("A-L1"), p2Le
     return game;
 }
 
+const rematchGame = activationEngine();
+const finishedGameId = rematchGame.state.gameId;
+rematchGame.state.phase = "gameOver";
+rematchGame.state.winnerId = "p1";
+assert.equal(rematchGame.dispatch({ id: "rematch-p1", type: "requestRematch", playerId: "p1" }).awaitingOpponent, true);
+assert.equal(rematchGame.state.rematchRequests.p1, true);
+assert.equal(rematchGame.dispatch({ id: "rematch-p2", type: "requestRematch", playerId: "p2" }).rematchStarted, true);
+assert.notEqual(rematchGame.state.gameId, finishedGameId, "both rematch requests create a fresh match");
+assert.equal(rematchGame.state.phase, "diceRoll");
+
+const sortableCards = [
+    { id: "SORT-010", name: "Beta", cardType: "character", cost: 1, power: 1000 },
+    { id: "SORT-002", name: "Alpha", cardType: "character", cost: 3, power: 1000 },
+    { id: "SORT-001", name: "Alpha", cardType: "character", cost: 3, power: 1000 },
+    { id: "SORT-003", name: "Zeta", cardType: "character", cost: 2, power: 1000 }
+];
+const sortGame = activationEngine(Object.fromEntries(sortableCards.map(card => [card.id, card])));
+sortGame.state.players.p1.hand = sortableCards.map(card => createCardInstance(card, "p1", "hand"));
+sortGame.dispatch({ id: "sort-hand-proof", type: "sortHand", playerId: "p1" });
+assert.deepEqual(
+    sortGame.state.players.p1.hand.map(card => card.definitionId),
+    ["SORT-010", "SORT-003", "SORT-001", "SORT-002"],
+    "hand sorting uses cost, then name, then card ID"
+);
+
 const registeredActionNames = new Set(getRegisteredActions());
-assert.equal(Object.keys(onPlayEffectDefinitions).length, 11, "the first On Play implementation batch is registered separately");
+assert.equal(Object.keys(onPlayEffectDefinitions).length, 12, "the On Play implementation batch is registered separately");
 const compiledRegistryProof = compileCardEffects({ id: "REGISTRY", effects: [{ id: "BK01-009-on-play-ko-cost-five", type: "onPlay" }] }, cardEffectDefinitions);
 assert.equal(compiledRegistryProof.effects[0].actions[0].action, "cardKO", "the shared card compiler merges activator definitions into JSON cards");
 for (const [effectId, implementation] of Object.entries(onPlayEffectDefinitions)) {
@@ -247,6 +279,21 @@ assert.equal(addDonGame.state.pendingActivation?.effectId, "DD01-008-on-play-add
 addDonGame.dispatch({ id: "on-play-add-don-confirm", type: "activationChoice", playerId: "p1", activate: true });
 assert.equal(addDonGame.state.players.p1.donDeck, donDeckBeforeEffect - 1);
 assert.equal(addDonGame.state.players.p1.restedDon, 1, "On Play adds the DON!! rested");
+
+const restCharacterOnPlay = {
+    id: "DD01-009", name: "Sakata Kinta", cardType: "character", cost: 0, power: 3000,
+    effects: [{ id: "DD01-009-on-play-rest-character", type: "onPlay", ...onPlayEffectDefinitions["DD01-009-on-play-rest-character"] }]
+};
+const restCharacterGame = activationEngine({ [restCharacterOnPlay.id]: restCharacterOnPlay });
+const restSource = createCardInstance(restCharacterOnPlay, "p1", "hand");
+const restTarget = createCardInstance({ ...vanilla, cost: 4 }, "p2", "characterArea");
+restCharacterGame.state.players.p1.hand.push(restSource);
+restCharacterGame.state.players.p2.characters[0] = restTarget;
+restCharacterGame.dispatch({ id: "on-play-rest-character", type: "playCard", playerId: "p1", cardId: restSource.instanceId });
+assert.deepEqual(restCharacterGame.state.pendingSelection?.validCardIds, [restTarget.instanceId]);
+assert.equal(restCharacterGame.dispatch({ id: "opponent-cannot-choose-rest", type: "select", playerId: "p2", cardIds: [restTarget.instanceId] }).status, "failed");
+restCharacterGame.dispatch({ id: "on-play-rest-select", type: "select", playerId: "p1", cardIds: [restTarget.instanceId] });
+assert.equal(restTarget.state, "rested", "On Play may rest an eligible opposing Character");
 
 const koOnPlay = {
     id: "BK01-009", name: "Serpico", cardType: "character", cost: 0, power: 1000,

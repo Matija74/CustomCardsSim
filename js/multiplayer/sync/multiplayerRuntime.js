@@ -29,6 +29,16 @@ function setStatus(message, error = false) {
     if (log && (!latestState || error)) log.textContent = message;
 }
 
+function updateConnectionStatus(match) {
+    const connection = document.querySelector(".match-connection");
+    if (!connection) return;
+    const opponentSlot = localSlot === "p1" ? "p2" : "p1";
+    const opponentConnected = match?.players?.[opponentSlot]?.connected !== false;
+    const dot = document.createElement("i");
+    connection.classList.toggle("is-warning", !match || !opponentConnected);
+    connection.replaceChildren(dot, document.createTextNode(!match ? "Room closed" : opponentConnected ? "Live match" : "Opponent reconnecting"));
+}
+
 function parseDeck(deckData) {
     const deck = String(deckData.deckText || "").trim().split(/\r?\n/).flatMap(line => {
         const match = line.trim().match(/^(\d+)x(.+)$/);
@@ -143,6 +153,7 @@ async function initialize() {
     });
     if (localSlot === "p1") {
         subscribeToFullMatch(roomCode, match => {
+            updateConnectionStatus(match);
             if (!match) return setStatus("The room was closed.", true);
             ensureHostEngine(match).then(() => {
                 monitorDisconnect(match, "p2");
@@ -152,6 +163,7 @@ async function initialize() {
         await ensureHostEngine(await getMatch(roomCode));
     } else {
         subscribeToMatch(roomCode, match => {
+            updateConnectionStatus(match);
             if (!match) setStatus("The room was closed.", true);
         });
     }

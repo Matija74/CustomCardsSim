@@ -364,6 +364,26 @@ body {
     z-index: 1000;
 }
 
+.control-label {
+    color: rgba(205, 218, 239, 0.68);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.phase-controls.phase-choice-layout {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.phase-controls.phase-choice-layout > .control-label {
+    grid-column: 1 / -1;
+}
+
+.phase-controls.phase-choice-layout > .battle-controls {
+    display: block;
+}
+
 .phase-button {
     background: linear-gradient(135deg, #9ad7ff 0%, #5faee8 100%);
     color: white;
@@ -1370,11 +1390,16 @@ body {
     min-height: 48px;
 
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: center;
     gap: 10px;
 
     padding: 4px 8px;
+}
+
+.battle-controls:empty {
+    display: none;
 }
 
 .battle-button {
@@ -1395,6 +1420,94 @@ body {
 
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     transition: 0.2s ease;
+}
+
+.match-topbar {
+    width: 100%;
+    height: 52px;
+    padding: 0 14px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid rgba(118, 137, 197, 0.34);
+    border-radius: 12px;
+    background: rgba(13, 18, 43, 0.94);
+}
+
+.match-brand,
+.match-heading,
+.match-connection,
+.player-rail,
+.player-rail > span:last-child {
+    display: flex;
+    align-items: center;
+}
+
+.match-brand {
+    gap: 9px;
+    color: white;
+    text-decoration: none;
+    font-weight: 900;
+}
+
+.match-brand img { width: 34px; height: 34px; object-fit: contain; }
+.match-heading { justify-content: center; gap: 8px; color: white; }
+.match-mode,
+.sidebar-section-label { color: rgba(205, 218, 239, 0.72); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.match-connection { justify-self: end; gap: 7px; color: rgba(205, 218, 239, 0.72); font-size: 0.72rem; }
+.match-connection i { width: 7px; height: 7px; border-radius: 50%; background: #68d391; }
+.game-layout { margin-top: 10px; }
+.sidebar-section-label { display: flex; align-items: baseline; justify-content: space-between; }
+.sidebar-section-label span { color: white; font-weight: 900; }
+
+.play-area { position: relative; }
+.player-rail {
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 75;
+    gap: 7px;
+    padding: 5px 8px;
+    border: 1px solid rgba(176, 212, 238, 0.34);
+    border-radius: 999px;
+    background: rgba(8, 13, 35, 0.84);
+    color: white;
+    pointer-events: none;
+}
+.player-rail > span:last-child { align-items: flex-start; flex-direction: column; }
+.opponent-area .player-rail { transform: translateX(-50%) rotate(180deg); }
+.player-rail small { color: rgba(205, 218, 239, 0.68); font-size: 0.58rem; }
+.player-avatar { display: grid; place-items: center; width: 25px; height: 25px; border-radius: 50%; background: #5faee8; font-size: 0.65rem; font-weight: 900; }
+
+.board-card-shell {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    overflow: visible;
+    cursor: pointer;
+}
+
+.stage-area.replace-target {
+    cursor: pointer;
+    outline: 3px solid #ffcc66;
+    box-shadow: 0 0 16px rgba(255, 204, 102, 0.95);
+}
+
+.phase-controls > .choice-buttons { width: 100%; }
+.phase-controls > .choice-buttons .phase-button { flex: 1 1 0; }
+.look-top-card-grid { overflow-y: auto; }
+
+@media (max-width: 700px) {
+    .match-topbar { grid-template-columns: auto 1fr; gap: 8px; }
+    .match-heading { justify-content: flex-end; }
+    .match-connection { display: none; }
+    .player-rail { display: none; }
 }
 
 .battle-button.player1-resolve {
@@ -2041,6 +2154,12 @@ body {
 
 .game-over-button:hover {
     transform: translateY(-2px);
+}
+
+.game-over-button:disabled {
+    cursor: wait;
+    opacity: 0.65;
+    transform: none;
 }
 
 .game-over-button.main-menu {

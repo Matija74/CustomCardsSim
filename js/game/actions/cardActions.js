@@ -1,6 +1,6 @@
 import { appendLog, finishGame, otherPlayerId } from "../state/gameState.js";
 import { findCard, getPlayer, insertCard, moveCard, removeCard } from "../state/zones.js";
-import { completed, failed, skipped, resolvePlayerReference, validatePositiveQuantity } from "../checks/validation.js";
+import { canPlayerControlCard, completed, failed, resolvePlayerReference, validatePositiveQuantity } from "../checks/validation.js";
 
 export function drawCard(state, definitions, context, action) {
     const playerId = resolvePlayerReference(action.player, context);
@@ -85,6 +85,29 @@ export function moveCardToLife(state, definitions, context, action, targets) {
     return completed();
 }
 
+function changeState(state, definitions, context, action, targets, nextState) {
+    const card = findCard(state, targets[0] || action.instanceId)?.card;
+    if (!canPlayerControlCard(context.actingPlayerId, card, action.allowOpponent === true)) return failed("You cannot change the opponent's card state.");
+    if (card.preventions.some(entry => entry.state === nextState)) return failed(`This card cannot become ${nextState}.`);
+    card.state = nextState;
+    return completed();
+}
+
+export function restCard(state, definitions, context, action, targets) {
+    return changeState(state, definitions, context, action, targets, "rested");
+}
+
+export function restandCard(state, definitions, context, action, targets) {
+    return changeState(state, definitions, context, action, targets, "active");
+}
+
+export function preventStateChange(state, definitions, context, action, targets) {
+    const card = findCard(state, targets[0] || action.instanceId)?.card;
+    if (!card) return failed("Card was not found.");
+    card.preventions.push({ state: action.preventedState, duration: action.duration, expiresTurn: state.turnNumber });
+    return completed();
+}
+
 export function playCard(state, definitions, context, action, targets) {
     const instanceId = targets[0] || action.instanceId;
     const location = findCard(state, instanceId);
@@ -122,4 +145,17 @@ export function useEventCard(state, definitions, context, action, targets) {
     return trashCard(state, definitions, context, action, [instanceId]);
 }
 
-export const cardActionHandlers = { drawCard, trashCard, cardKO, returnCardToHand, returnCardToDeck, moveCardToLife, playCard, replaceCharacter, useEventCard };
+export const cardActionHandlers = {
+    drawCard,
+    trashCard,
+    cardKO,
+    returnCardToHand,
+    returnCardToDeck,
+    moveCardToLife,
+    playCard,
+    replaceCharacter,
+    useEventCard,
+    restCard,
+    restandCard,
+    preventStateChange
+};

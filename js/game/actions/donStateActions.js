@@ -22,6 +22,24 @@ export function returnDon(state, definitions, context, action) {
     return completed();
 }
 
+function changeDonState(state, context, action, sourceState, destinationState) {
+    const player = getPlayer(state, resolvePlayerReference(action.player, context));
+    const check = validatePositiveQuantity(action.quantity);
+    if (!player || check.status === "failed") return failed(check.message || "Player was not found.");
+    if (player[sourceState] < check.quantity) return failed(`Not enough ${sourceState === "activeDon" ? "active" : "rested"} DON!!.`);
+    player[sourceState] -= check.quantity;
+    player[destinationState] += check.quantity;
+    return completed();
+}
+
+export function restDon(state, definitions, context, action) {
+    return changeDonState(state, context, action, "activeDon", "restedDon");
+}
+
+export function restandDon(state, definitions, context, action) {
+    return changeDonState(state, context, action, "restedDon", "activeDon");
+}
+
 export function attachDon(state, definitions, context, action, targets) {
     const player = getPlayer(state, context.actingPlayerId);
     const check = validatePositiveQuantity(action.quantity);
@@ -53,26 +71,12 @@ export function moveAttachedDon(state, definitions, context, action, targets) {
     return completed();
 }
 
-function changeState(state, definitions, context, action, targets, nextState) {
-    const card = findCard(state, targets[0] || action.instanceId)?.card;
-    if (!card || card.controllerId !== context.actingPlayerId) return failed("You cannot change the opponent's card state.");
-    if (card.preventions.some(entry => entry.state === nextState)) return failed(`This card cannot become ${nextState}.`);
-    card.state = nextState;
-    return completed();
-}
-
 export const donStateActionHandlers = {
     addDon,
     returnDon,
+    restDon,
+    restandDon,
     attachDon,
     detachDon,
-    moveAttachedDon,
-    restCard: (state, definitions, context, action, targets) => changeState(state, definitions, context, action, targets, "rested"),
-    restandCard: (state, definitions, context, action, targets) => changeState(state, definitions, context, action, targets, "active"),
-    preventStateChange(state, definitions, context, action, targets) {
-        const card = findCard(state, targets[0] || action.instanceId)?.card;
-        if (!card) return failed("Card was not found.");
-        card.preventions.push({ state: action.preventedState, duration: action.duration, expiresTurn: state.turnNumber });
-        return completed();
-    }
+    moveAttachedDon
 };

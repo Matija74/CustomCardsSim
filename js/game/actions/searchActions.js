@@ -55,11 +55,11 @@ export function returnRest(state, definitions, context, action) {
     const buffer = context.searchBuffer;
     if (!buffer) return failed("There is no active search.");
     const player = getPlayer(state, buffer.playerId);
-    const cards = action.order === "reverse" ? [...buffer.cards].reverse() : buffer.cards;
+    const cards = !buffer.userOrdered && action.order === "reverse" ? [...buffer.cards].reverse() : buffer.cards;
     for (const card of cards) {
         card.zone = "deck";
-        if (action.deckLocation === "top") player.deck.unshift(card); else player.deck.push(card);
     }
+    if (action.deckLocation === "top") player.deck.unshift(...cards); else player.deck.push(...cards);
     context.searchBuffer = null;
     return completed();
 }

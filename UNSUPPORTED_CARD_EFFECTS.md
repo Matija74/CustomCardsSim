@@ -12,10 +12,10 @@ node scripts/generateUnsupportedEffects.mjs
 
 - Saved cards checked: **171**
 - Saved effect records checked: **267**
-- Executable effect records: **23**
-- Unsupported effect records: **244** across **156 cards**
+- Executable effect records: **24**
+- Unsupported effect records: **243** across **155 cards**
 - Unsupported printed keyword entries: **12**
-- Cards with every declared effect executable: **11**
+- Cards with every declared effect executable: **12**
 - Cards containing both working and unsupported effects: **9**
 - Cards with no declared effects: **4**
 
@@ -27,7 +27,7 @@ Continuous, replacement, and persistent turn-condition effects are included belo
 
 | Type | Count |
 |---|---:|
-| onPlay | 46 |
+| onPlay | 45 |
 | continuous | 34 |
 | activateMain | 30 |
 | main | 25 |
@@ -53,7 +53,7 @@ Continuous, replacement, and persistent turn-condition effects are included belo
 
 ## Cards whose declared effects are currently executable
 
-BK01-009 - Serpico; BK01-012 - Farnese de Vandimion; BK01-014 - Guts; BL01-007 - Inoue Orihime; BL01-015 - Ganju Shiba; DD01-003 - Ayase Seiko; DD01-005 - We'll kill all of ya.; DD01-008 - Ayase Momo; EGG1-003 - Motobug; EGG1-011 - Eggrobo; SUB1-006 - Subaru Natsuki
+BK01-009 - Serpico; BK01-012 - Farnese de Vandimion; BK01-014 - Guts; BL01-007 - Inoue Orihime; BL01-015 - Ganju Shiba; DD01-003 - Ayase Seiko; DD01-005 - We'll kill all of ya.; DD01-008 - Ayase Momo; DD01-009 - Sakata Kinta; EGG1-003 - Motobug; EGG1-011 - Eggrobo; SUB1-006 - Subaru Natsuki
 
 ## Cards with a mixture of working and unsupported effects
 
@@ -75,6 +75,7 @@ BK01-003 - Isma; IMU1-003 - Cerberus; IMU1-009 - St. Satchels Maffey; JK02-012 -
 | DD01-005 | We'll kill all of ya. | DD01-005-trigger | trigger | search, returnRest |
 | DD01-008 | Ayase Momo | DD01-008-on-ko-draw | onKO | drawCard |
 | DD01-008 | Ayase Momo | DD01-008-on-play-add-don | onPlay | addDon |
+| DD01-009 | Sakata Kinta | DD01-009-on-play-rest-character | onPlay | restCard |
 | EGG1-003 | Motobug | EGG1-003-on-play-draw | onPlay | drawCard |
 | EGG1-011 | Eggrobo | EGG1-011-on-play-draw | onPlay | drawCard |
 | IMU1-003 | Cerberus | IMU1-003-on-play | onPlay | increasePower |
@@ -142,7 +143,6 @@ BK01-003 - Isma; IMU1-003 - Cerberus; IMU1-009 - St. Satchels Maffey; JK02-012 -
 | DD01-006 | Takakura Ken | DD01-006-name-okarun | continuous | Also treat this card's name as [Okarun]. | No continuous-effect evaluator is implemented; this is not an activator. |
 | DD01-006 | Takakura Ken | DD01-006-when-attacking-active | whenAttacking | When Attacking Once Per Turn: If you have a [Turbo Granny Form] stage card in play, set this character as active. | Activator whenAttacking is supported, but this effect has no executable actions. |
 | DD01-007 | Unji Zuma | DD01-007-when-attacking-refresh-don | whenAttacking | When Attacking: You may set up to 2 of your DON!! cards as active. | Activator whenAttacking is supported, but this effect has no executable actions. |
-| DD01-009 | Sakata Kinta | DD01-009-on-play-rest-character | onPlay | On Play: Rest up to 1 of your opponent's characters with a cost of 4 or less. | Activator onPlay is supported, but this effect has no executable actions. |
 | DD01-010 | Evil Eye | DD01-010-when-attacking-unblockable | whenAttacking | When Attacking: DON!! -1: This character gains Unblockable until the end of this turn. | Activator whenAttacking is supported, but this effect has no executable actions. |
 | DD01-011 | If its for Momo-chan, I can go All-out! | DD01-011-main | main | Main: Take 1 damage: Set 1 of your [Okarun] cards as active. | Activator activateMain is supported, but this effect has no executable actions. |
 | DD01-011 | If its for Momo-chan, I can go All-out! | DD01-011-trigger | trigger | Trigger: Set 1 of your [Okarun] cards as active. | Activator trigger is supported, but this effect has no executable actions. |

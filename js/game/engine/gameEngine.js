@@ -227,20 +227,55 @@ export function createGameEngine({ p1, p2, definitions, random = Math.random, in
             case "activateCounterEvent": result = activateCounterEvent(state, definitions, command.playerId, command); break;
             case "resolveBattle": result = state.pendingCombat?.defenderPlayerId === command.playerId ? resolveBattle(state, definitions, queueTrigger) : { status: "failed", message: "Only the defending player can resolve this battle." }; break;
             case "triggerChoice": result = resolveLifeTriggerChoice(state, definitions, queueTrigger, command.playerId, command.activate); break;
-            case "select": result = submitEffectSelection(state, definitions, command.playerId, command.cardIds); break;
+            case "select": result = submitEffectSelection(state, definitions, command.playerId, command.cardIds, { returnOrder: command.returnOrder }); break;
             case "activationChoice": result = submitActivationChoice(state, definitions, command.playerId, command.activate); break;
             case "activateMain": result = activateMain(state, definitions, command.playerId, command.cardId, command.effectIndex, command.effectId); break;
             case "sortHand": {
                 const player = getPlayer(state, command.playerId);
                 if (!player) result = { status: "failed", message: "Player was not found." };
                 else {
-                    player.hand.sort((a, b) => String(definitions[a.definitionId]?.name || a.definitionId).localeCompare(String(definitions[b.definitionId]?.name || b.definitionId)));
+                    player.hand.sort((a, b) => {
+                        const firstDefinition = definitions[a.definitionId] || {};
+                        const secondDefinition = definitions[b.definitionId] || {};
+                        const costDifference = Number(firstDefinition.cost ?? firstDefinition.playCost ?? 0)
+                            - Number(secondDefinition.cost ?? secondDefinition.playCost ?? 0);
+                        if (costDifference) return costDifference;
+                        const nameDifference = String(firstDefinition.name || a.definitionId).localeCompare(
+                            String(secondDefinition.name || b.definitionId),
+                            undefined,
+                            { numeric: true, sensitivity: "base" }
+                        );
+                        if (nameDifference) return nameDifference;
+                        return String(a.definitionId).localeCompare(String(b.definitionId), undefined, { numeric: true, sensitivity: "base" });
+                    });
                     result = { status: "completed" };
                 }
                 break;
             }
             case "surrender": finishGame(state, otherPlayerId(command.playerId), command.playerId, "surrender"); result = { status: "completed" }; break;
             case "disconnect": finishGame(state, otherPlayerId(command.playerId), command.playerId, "disconnect"); result = { status: "completed" }; break;
+            case "requestRematch": {
+                if (state.phase !== "gameOver") {
+                    result = { status: "failed", message: "A rematch can only be requested after the game ends." };
+                    break;
+                }
+                state.rematchRequests = { ...(state.rematchRequests || {}), [command.playerId]: true };
+                if (state.rematchRequests.p1 && state.rematchRequests.p2) {
+                    const freshState = createGameState({ p1, p2, random });
+                    if (turnOrderChooserId) {
+                        freshState.phase = "chooseFirst";
+                        freshState.setup.turnOrderChooserId = turnOrderChooserId;
+                    }
+                    for (const key of Object.keys(state)) delete state[key];
+                    Object.assign(state, freshState);
+                    appendLog(state, "Rematch started.");
+                    result = { status: "completed", rematchStarted: true };
+                } else {
+                    appendLog(state, `${state.players[command.playerId].name} requested a rematch.`);
+                    result = { status: "completed", awaitingOpponent: true };
+                }
+                break;
+            }
             default: result = { status: "failed", message: `Unknown command: ${command.type}` };
         }
         state.processedCommandIds.push(commandId);
