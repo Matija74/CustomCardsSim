@@ -63,6 +63,8 @@ class SettingsManager {
             fontStyle: 'modern',
             colorTheme: 'obsidian',
             accentColor: '#44d7b6',
+            colorPickerGrid: true,
+            colorPickerFrame: false,
             cardScale: 100,
             motionEnabled: true
         };
@@ -75,12 +77,14 @@ class SettingsManager {
             if (input) input.checked = true;
         });
 
-        const accent = document.getElementById('accentColor');
         const scale = document.getElementById('cardScale');
         const motion = document.getElementById('motionEnabled');
-        if (accent) accent.value = this.settings.accentColor;
+        const pickerGrid = document.getElementById('colorPickerGrid');
+        const pickerFrame = document.getElementById('colorPickerFrame');
         if (scale) scale.value = this.settings.cardScale;
         if (motion) motion.checked = this.settings.motionEnabled;
+        if (pickerGrid) pickerGrid.checked = this.settings.colorPickerGrid;
+        if (pickerFrame) pickerFrame.checked = this.settings.colorPickerFrame;
         this.updateScaleOutput();
         this.updateAccentControls();
     }
@@ -89,42 +93,48 @@ class SettingsManager {
         document.querySelectorAll('input[name="layoutDensity"], input[name="fontStyle"], input[name="colorTheme"]')
             .forEach((input) => input.addEventListener('change', () => {
                 this.settings[input.name] = input.value;
-                this.previewAppearance();
             }));
 
-        const accent = document.getElementById('accentColor');
         const scale = document.getElementById('cardScale');
         const motion = document.getElementById('motionEnabled');
-        accent?.addEventListener('input', () => {
-            this.settings.accentColor = accent.value;
-            this.updateAccentControls();
-            this.previewAppearance();
+        const pickerGrid = document.getElementById('colorPickerGrid');
+        const pickerFrame = document.getElementById('colorPickerFrame');
+        document.querySelectorAll('[data-color-map]').forEach((map) => {
+            map.addEventListener('click', (event) => {
+                const color = this.sampleColorMap(map, event);
+                if (!color) return;
+                this.settings.accentColor = color;
+                this.updateAccentControls();
+            });
         });
         document.querySelectorAll('[data-accent]').forEach((button) => {
             button.addEventListener('click', () => {
                 const color = button.dataset.accent;
-                if (!accent || !color) return;
-                accent.value = color;
+                if (!color) return;
                 this.settings.accentColor = color;
                 this.updateAccentControls();
-                this.previewAppearance();
             });
         });
         scale?.addEventListener('input', () => {
             this.settings.cardScale = Number(scale.value);
             this.updateScaleOutput();
-            this.previewAppearance();
         });
         motion?.addEventListener('change', () => {
             this.settings.motionEnabled = motion.checked;
-            this.previewAppearance();
+        });
+        pickerGrid?.addEventListener('change', () => {
+            this.settings.colorPickerGrid = pickerGrid.checked;
+            this.updateAccentControls();
+        });
+        pickerFrame?.addEventListener('change', () => {
+            this.settings.colorPickerFrame = pickerFrame.checked;
+            this.updateAccentControls();
         });
         document.getElementById('resetAppearanceButton')?.addEventListener('click', () => {
             const defaults = this.getDefaultSettings();
-            ['layoutDensity', 'fontStyle', 'colorTheme', 'accentColor', 'cardScale', 'motionEnabled']
+            ['layoutDensity', 'fontStyle', 'colorTheme', 'accentColor', 'colorPickerGrid', 'colorPickerFrame', 'cardScale', 'motionEnabled']
                 .forEach((key) => { this.settings[key] = defaults[key]; });
             this.loadAppearanceControls();
-            this.previewAppearance();
         });
     }
 
@@ -137,6 +147,12 @@ class SettingsManager {
         const normalizedColor = String(this.settings.accentColor || '#44d7b6').toUpperCase();
         const output = document.getElementById('accentColorValue');
         if (output) output.textContent = normalizedColor;
+        const studio = document.getElementById('customColorStudio');
+        if (studio) {
+            studio.style.setProperty('--picker-color', normalizedColor);
+            studio.classList.toggle('grid-enabled', Boolean(this.settings.colorPickerGrid));
+            studio.classList.toggle('frame-enabled', Boolean(this.settings.colorPickerFrame));
+        }
 
         document.querySelectorAll('[data-accent]').forEach((button) => {
             const isActive = String(button.dataset.accent || '').toUpperCase() === normalizedColor;
@@ -145,11 +161,35 @@ class SettingsManager {
         });
     }
 
-    previewAppearance() {
-        if (typeof window.applyInterfacePreferences === 'function') {
-            window.applyInterfacePreferences(this.settings);
+    sampleColorMap(map, event) {
+        const image = map.querySelector('img:not(.color-map-grid)');
+        if (!image?.complete || !image.naturalWidth) return null;
+
+        const rect = map.getBoundingClientRect();
+        const xRatio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+        const yRatio = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+        const canvas = image._colorSampler || document.createElement('canvas');
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        context.drawImage(image, 0, 0);
+        image._colorSampler = canvas;
+
+        try {
+            const pixel = context.getImageData(
+                Math.min(image.naturalWidth - 1, Math.floor(xRatio * image.naturalWidth)),
+                Math.min(image.naturalHeight - 1, Math.floor(yRatio * image.naturalHeight)),
+                1,
+                1
+            ).data;
+            const color = `#${[pixel[0], pixel[1], pixel[2]].map(value => value.toString(16).padStart(2, '0')).join('')}`;
+            map.style.setProperty('--cursor-x', `${xRatio * 100}%`);
+            map.style.setProperty('--cursor-y', `${yRatio * 100}%`);
+            return color;
+        } catch (error) {
+            console.warn('Unable to sample the color map.', error);
+            return null;
         }
-        this.persistSettings();
     }
 
     persistSettings() {
@@ -163,6 +203,9 @@ class SettingsManager {
     // Save settings to localStorage
     saveSettings() {
         this.persistSettings();
+        if (typeof window.applyInterfacePreferences === 'function') {
+            window.applyInterfacePreferences(this.settings);
+        }
         this.showSaveNotification();
     }
 

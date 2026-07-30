@@ -7,8 +7,14 @@
 
     <link rel="icon" type="image/png" href="../images/a-misc/logo-without-title.png">
     <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="../css/singleplayer.css?v=game-ui-5">
-    <link rel="stylesheet" href="../css/galaxy-theme.css?v=adaptive-color-6">
+    <link rel="stylesheet" href="../css/singleplayer.css?v=game-ui-6">
+    <link rel="stylesheet" href="../css/galaxy-theme.css?v=adaptive-color-13">
+    <link rel="stylesheet" href="../css/next-board.css?v=next-board-13">
+    <script>
+        if (new URLSearchParams(window.location.search).get("boardUI") === "next") {
+            document.documentElement.classList.add("next-board-ui");
+        }
+    </script>
 </head>
 <body>
     <a href="../index.html" class="btn-back">&#8592; Home</a>
@@ -30,6 +36,18 @@
         </header>
 
         <div class="game-layout">
+            <aside id="nextBoardActivityRail" class="match-activity-panel" aria-label="Match activity">
+                <div class="activity-panel-heading">
+                    <span class="activity-live-dot"></span>
+                    <span><small>Live match</small><strong>Activity feed</strong></span>
+                </div>
+                <div id="nextBoardLogMount" class="activity-log-mount"></div>
+                <div class="activity-panel-footer">
+                    <span class="player-avatar">P1</span>
+                    <span><strong>Local table</strong><small>Practice session</small></span>
+                </div>
+            </aside>
+
             <section class="game-board">
 
                 <svg id="attackArrowOverlay" class="attack-arrow-overlay"></svg>
@@ -148,21 +166,21 @@
         </div>
     </main>
 
-    <script src="../js/pages/galaxy-theme.js?v=adaptive-color-3"></script>
+    <script src="../js/pages/galaxy-theme.js?v=adaptive-color-4"></script>
     <script src="../js/core/gameSettings.js?v=settings-live-1"></script>
     <script src="../js/core/gameAudio.js?v=audio-1"></script>
     <script src="../js/core/phases.js?v=game-ui-2"></script>
 
     <script src="../js/cards/cardDataBundle.js?v=bundle-1"></script>
     <script src="../js/cards/cardDatabase.js?v=asset-root-1"></script>
-    <script src="../js/cards/decks.js?v=killer-deck-1"></script>
+    <script src="../js/cards/decks.js?v=deck-count-fix-1"></script>
     <script src="../js/core/deckParser.js"></script>
     <script src="../js/core/deckTools.js?v=deck-tools-3"></script>
 
     <script src="../js/core/effects.js?v=gameplay-rules-2"></script>
     <script src="../js/core/gameInteractions.js?v=gameplay-rules-4"></script>
-    <script src="../js/pages/matchShared.js?v=asset-root-1"></script>
+    <script src="../js/pages/matchShared.js?v=card-details-1"></script>
 
-    <script src="../js/pages/singleplayer.js?v=game-ui-5"></script>
+    <script src="../js/pages/singleplayer.js?v=game-ui-8"></script>
 </body>
 </html>

@@ -126,9 +126,8 @@
         return `#${mixed.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
     }
 
-    function applyInterfacePreferences(settings) {
+    function applyInterfacePreferences(settings, options = {}) {
         const preferences = { ...defaults, ...(settings || {}) };
-        currentPreferences = preferences;
         const root = document.documentElement;
         const accentColor = normalizeHexColor(preferences.accentColor);
         const isLightAccent = getRelativeLuminance(accentColor) > 0.48;
@@ -142,14 +141,20 @@
         root.style.setProperty("--accent-contrast", isLightAccent ? "#091018" : "#ffffff");
         root.style.setProperty("--accent-icon-filter", isLightAccent ? "brightness(0) saturate(100%)" : "none");
         root.style.setProperty("--user-card-scale", String(preferences.cardScale / 100));
-        persistInterfacePreferences(preferences);
+        if (options.persist !== false) {
+            currentPreferences = preferences;
+            persistInterfacePreferences(preferences);
 
-        if (document.body) {
-            syncInterfaceLinks();
+            if (document.body) {
+                syncInterfaceLinks();
+            }
         }
     }
 
     window.applyInterfacePreferences = applyInterfacePreferences;
+    window.previewInterfacePreferences = function (settings) {
+        applyInterfacePreferences(settings, { persist: false });
+    };
     window.addInterfacePreferencesToUrl = function (value) {
         return addInterfacePreferencesToUrl(value).href;
     };

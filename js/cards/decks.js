@@ -102,7 +102,7 @@ const ubHigurumaDeckText = `
 `;
 
 const byAceYamatoDeckText = `
-3xYAM1-004
+2xYAM1-004
 4xYAM1-003
 4xEB03-057
 4xST28-005

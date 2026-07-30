@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" href="../images/a-misc/logo-without-title.png">
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/settings.css">
-    <link rel="stylesheet" href="../css/galaxy-theme.css?v=adaptive-color-6">
+    <link rel="stylesheet" href="../css/galaxy-theme.css?v=adaptive-color-15">
 </head>
 <body class="workspace-body">
     <div class="workspace-shell">
@@ -181,9 +181,9 @@
             <div id="appearance" class="tab-content">
                 <div class="appearance-heading">
                     <div>
-                        <span class="page-eyebrow">Live preview</span>
+                        <span class="page-eyebrow">Interface options</span>
                         <h2>Interface Studio</h2>
-                        <p class="setting-description">Shape the simulator around your screen and play style. Changes preview instantly.</p>
+                        <p class="setting-description">Shape the simulator around your screen and play style. Save settings to apply your changes.</p>
                     </div>
                     <button id="resetAppearanceButton" class="appearance-reset" type="button">Reset appearance</button>
                 </div>
@@ -220,27 +220,49 @@
                         </span>
                     </label>
 
-                    <section class="appearance-control zen-accent-control" aria-labelledby="accentControlTitle">
-                        <div class="zen-accent-heading">
-                            <span>
-                                <strong id="accentControlTitle">Interface accent</strong>
-                                <small>One color for focus, selected states, and primary actions.</small>
-                            </span>
-                            <output id="accentColorValue" for="accentColor">#44D7B6</output>
+                    <section class="appearance-control interface-color-control" aria-labelledby="accentControlTitle">
+                        <div class="interface-color-heading">
+                            <strong id="accentControlTitle">Interface color</strong>
+                            <small>Choose a preset or create your own Zen-inspired accent.</small>
                         </div>
 
-                        <div class="zen-accent-editor">
-                            <label class="zen-color-well" title="Choose a custom accent">
-                                <input id="accentColor" type="color" value="#44d7b6" aria-label="Custom accent color">
-                                <span></span>
-                            </label>
-                            <div class="zen-accent-presets" aria-label="Accent presets">
-                                <button type="button" data-accent="#44d7b6" style="--swatch:#44d7b6" aria-label="Mint accent"></button>
-                                <button type="button" data-accent="#7c6cff" style="--swatch:#7c6cff" aria-label="Violet accent"></button>
-                                <button type="button" data-accent="#188df5" style="--swatch:#188df5" aria-label="Blue accent"></button>
-                                <button type="button" data-accent="#f06c9b" style="--swatch:#f06c9b" aria-label="Rose accent"></button>
-                                <button type="button" data-accent="#ef8a52" style="--swatch:#ef8a52" aria-label="Orange accent"></button>
-                                <button type="button" data-accent="#d6e05b" style="--swatch:#d6e05b" aria-label="Lime accent"></button>
+                        <div class="interface-color-presets" aria-label="Interface color presets">
+                            <button type="button" data-accent="#C9FF4A" style="--swatch:#C9FF4A"><i></i><span>Lime</span></button>
+                            <button type="button" data-accent="#FF5D66" style="--swatch:#FF5D66"><i></i><span>Red</span></button>
+                            <button type="button" data-accent="#35E58A" style="--swatch:#35E58A"><i></i><span>Green</span></button>
+                            <button type="button" data-accent="#55B8FF" style="--swatch:#55B8FF"><i></i><span>Blue</span></button>
+                            <button type="button" data-accent="#FFD45A" style="--swatch:#FFD45A"><i></i><span>Yellow</span></button>
+                            <button type="button" data-accent="#A477FF" style="--swatch:#A477FF"><i></i><span>Purple</span></button>
+                            <button type="button" data-accent="#FF944D" style="--swatch:#FF944D"><i></i><span>Orange</span></button>
+                            <button type="button" data-accent="#39D6D4" style="--swatch:#39D6D4"><i></i><span>Cyan</span></button>
+                            <button type="button" data-accent="#FF65B3" style="--swatch:#FF65B3"><i></i><span>Pink</span></button>
+                            <button type="button" data-accent="#7486FF" style="--swatch:#7486FF"><i></i><span>Indigo</span></button>
+                            <button type="button" data-accent="#B9F0FF" style="--swatch:#B9F0FF"><i></i><span>Ice</span></button>
+                            <button type="button" data-accent="#F3F5F7" style="--swatch:#F3F5F7"><i></i><span>White</span></button>
+                        </div>
+
+                        <div id="customColorStudio" class="custom-color-studio">
+                            <div class="custom-color-heading">
+                                <span><small>Custom color</small><output id="accentColorValue">#44D7B6</output></span>
+                            </div>
+
+                            <div class="asset-color-picker">
+                                <button class="color-map color-map-primary" type="button" data-color-map aria-label="Choose interface color from palette">
+                                    <img src="../images/interface-color/grad.png" alt="">
+                                    <img class="color-map-grid" src="../images/interface-color/grid.png" alt="">
+                                    <span class="color-map-cursor" aria-hidden="true"></span>
+                                </button>
+                            </div>
+
+                            <div class="color-picker-preferences" aria-label="Color picker preferences">
+                                <label>
+                                    <input id="colorPickerGrid" type="checkbox" checked>
+                                    <span><strong>Enable grid</strong><small>Show precision guides over the palette</small></span>
+                                </label>
+                                <label>
+                                    <input id="colorPickerFrame" type="checkbox">
+                                    <span><strong>Enable frame</strong><small>Add a high-contrast picker boundary</small></span>
+                                </label>
                             </div>
                         </div>
                     </section>
@@ -267,7 +289,7 @@
         </div>
     </div>
 
-    <script src="../js/pages/galaxy-theme.js?v=adaptive-color-3"></script>
-    <script src="../js/pages/settings.js?v=settings-9"></script>
+    <script src="../js/pages/galaxy-theme.js?v=adaptive-color-4"></script>
+    <script src="../js/pages/settings.js?v=settings-13"></script>
 </body>
 </html>

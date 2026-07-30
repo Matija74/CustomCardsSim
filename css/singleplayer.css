@@ -44,7 +44,7 @@ body {
 
 .game-layout {
     width: 100%;
-    max-width: 1720px;
+    max-width: none;
 
     display: flex;
     align-items: flex-start;
@@ -62,7 +62,8 @@ body {
     justify-content: center;
 
     gap: 12px;
-    width: fit-content;
+    width: auto;
+    flex: 1 1 auto;
     max-width: 100%;
     min-width: 0;
     overflow-x: auto;
@@ -72,7 +73,7 @@ body {
 }
 
 .card-preview-panel {
-    width: min(100%, 500px);
+    width: clamp(270px, 22vw, 360px);
 
     display: flex;
     flex-direction: column;
@@ -519,8 +520,8 @@ body {
 ========================= */
 
 .play-area {
-    width: min(100%, 1200px);
-    max-width: 1200px;
+    width: 100%;
+    max-width: none;
     display: grid;
 
     grid-template-columns:
@@ -592,11 +593,11 @@ body {
 
 .life-area:hover,
 .life-area.open {
-    width: 640px;
-    background: rgba(40, 40, 40, 0.95);
-    z-index: 100;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-    justify-content: flex-start;
+    width: auto;
+    background: rgba(120, 120, 120, 0.35);
+    z-index: auto;
+    box-shadow: none;
+    justify-content: center;
 }
 
 .life-card {
@@ -663,27 +664,27 @@ body {
 /* Expanded sideways */
 .life-area:hover .life-card:nth-child(2),
 .life-area.open .life-card:nth-child(2) {
-    transform: translateX(10px);
+    transform: none;
 }
 
 .life-area:hover .life-card:nth-child(3),
 .life-area.open .life-card:nth-child(3) {
-    transform: translateX(130px);
+    transform: none;
 }
 
 .life-area:hover .life-card:nth-child(4),
 .life-area.open .life-card:nth-child(4) {
-    transform: translateX(250px);
+    transform: none;
 }
 
 .life-area:hover .life-card:nth-child(5),
 .life-area.open .life-card:nth-child(5) {
-    transform: translateX(370px);
+    transform: none;
 }
 
 .life-area:hover .life-card:nth-child(6),
 .life-area.open .life-card:nth-child(6) {
-    transform: translateX(490px);
+    transform: none;
 }
 
 .life-toggle-text {
@@ -1091,27 +1092,27 @@ body {
 /* Expanded inward for flipped opponent board */
 .opponent-area .life-area:hover .life-card:nth-child(2),
 .opponent-area .life-area.open .life-card:nth-child(2) {
-    transform: translateX(0px) rotate(180deg);
+    transform: rotate(180deg);
 }
 
 .opponent-area .life-area:hover .life-card:nth-child(3),
 .opponent-area .life-area.open .life-card:nth-child(3) {
-    transform: translateX(120px) rotate(180deg);
+    transform: rotate(180deg);
 }
 
 .opponent-area .life-area:hover .life-card:nth-child(4),
 .opponent-area .life-area.open .life-card:nth-child(4) {
-    transform: translateX(240px) rotate(180deg);
+    transform: rotate(180deg);
 }
 
 .opponent-area .life-area:hover .life-card:nth-child(5),
 .opponent-area .life-area.open .life-card:nth-child(5) {
-    transform: translateX(360px) rotate(180deg);
+    transform: rotate(180deg);
 }
 
 .opponent-area .life-area:hover .life-card:nth-child(6),
 .opponent-area .life-area.open .life-card:nth-child(6) {
-    transform: translateX(480px) rotate(180deg);
+    transform: rotate(180deg);
 }
 
 .opponent-area .life-count {
@@ -1123,8 +1124,8 @@ body {
 ========================= */
 
 .hand {
-    width: min(100%, 1200px);
-    max-width: 1200px;
+    width: 100%;
+    max-width: none;
 
     display: flex;
     align-items: center;
@@ -1362,8 +1363,8 @@ body {
 ========================= */
 
 .battle-controls {
-    width: min(100%, 1200px);
-    max-width: 1200px;
+    width: 100%;
+    max-width: none;
     min-height: 48px;
 
     display: flex;
@@ -2125,7 +2126,7 @@ body {
     }
 }
 
-@media (max-width: 1850px) {
+@media (max-width: 1100px) {
     .game-layout {
         flex-direction: column;
         align-items: stretch;
@@ -2320,6 +2321,17 @@ body {
         padding: 8px 12px;
         max-width: 220px;
     }
+}
+
+/* Life remains a compact pile; inspecting it no longer changes board geometry. */
+.life-area:hover .life-card,
+.life-area.open .life-card {
+    transform: none !important;
+}
+
+.opponent-area .life-area:hover .life-card,
+.opponent-area .life-area.open .life-card {
+    transform: rotate(180deg) !important;
 }
 
 @media (max-width: 480px) {

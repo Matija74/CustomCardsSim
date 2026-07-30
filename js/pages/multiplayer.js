@@ -2367,9 +2367,16 @@ function showSelectedBoardActions() {
     const card = getSelectedBoardCardObject();
 
     if (!player || !card) return;
-    if (!isLocalMultiplayerPlayerKey(selectedBoardCardData.playerKey)) return;
+    if (!isLocalMultiplayerPlayerKey(selectedBoardCardData.playerKey)) {
+        const buttonContainer = getBoardActionButtonContainer();
+        if (!buttonContainer) return;
+        const detailsButton = createCardDetailsButton(card);
+        detailsButton.style.bottom = "8px";
+        buttonContainer.appendChild(detailsButton);
+        return;
+    }
 
-    const actionButtons = [];
+    const actionButtons = [createCardDetailsButton(card)];
     const attackButton = document.createElement("button");
     const activateMainEffect = getActivateMainEffect(card);
     const activateAnyEffect = getActivateAnyEffect(card);

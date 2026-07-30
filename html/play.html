@@ -7,7 +7,7 @@
 
     <link rel="icon" type="image/png" href="../images/a-misc/logo-without-title.png">
     <link rel="stylesheet" href="../css/play.css">
-    <link rel="stylesheet" href="../css/galaxy-theme.css?v=adaptive-color-6">
+    <link rel="stylesheet" href="../css/galaxy-theme.css?v=adaptive-color-11">
 </head>
 
 <body class="workspace-body">
@@ -67,8 +67,29 @@
 
             <div class="play-divider"></div>
 
-            <div class="play-side mode-card mode-card-online">
+            <div class="play-side mode-card mode-card-experimental">
                 <span class="mode-number">02</span>
+                <span class="experimental-badge">Experimental</span>
+                <h2>Next Board</h2>
+                <p>Try a new match workspace with a larger arena, clearer player zones, compact match controls, and a responsive mobile layout.</p>
+
+                <div class="board-layout-preview" aria-hidden="true">
+                    <span class="preview-activity-rail"></span>
+                    <span class="preview-arena">
+                        <i></i><i></i><i></i><i></i><i></i><i></i>
+                    </span>
+                    <span class="preview-control-rail"></span>
+                </div>
+
+                <a href="singleplayer.html?boardUI=next" class="btn btn-secondary experimental-board-button" id="experimentalBoardLink">
+                    Test New UI Board
+                </a>
+            </div>
+
+            <div class="play-divider"></div>
+
+            <div class="play-side mode-card mode-card-online">
+                <span class="mode-number">03</span>
                 <h2>Multiplayer</h2>
                 <p>Create or join a room, then enter the multiplayer table.</p>
 
@@ -82,11 +103,11 @@
         </div>
     </div>
 
-    <script src="../js/pages/galaxy-theme.js?v=adaptive-color-3"></script>
+    <script src="../js/pages/galaxy-theme.js?v=adaptive-color-4"></script>
     <script src="../js/cards/cardDataBundle.js?v=bundle-1"></script>
     <script src="../js/cards/cardDatabase.js?v=asset-root-1"></script>
     <script src="../js/cards/decks.js?v=killer-deck-1"></script>
-    <script src="../js/core/deckTools.js?v=deck-tools-2"></script>
-    <script src="../js/pages/play.js?v=deck-tools-3"></script>
+    <script src="../js/core/deckTools.js?v=testing-filter-1"></script>
+    <script src="../js/pages/play.js?v=testing-filter-1"></script>
 </body>
 </html>

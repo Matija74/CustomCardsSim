@@ -965,6 +965,176 @@ function getBoardActionButtonContainerFromData(boardCardData) {
     return null;
 }
 
+function createCardDetailsButton(card) {
+    const button = document.createElement("button");
+    button.className = "board-action-button-on-card card-details-button";
+    button.type = "button";
+    button.textContent = "Details";
+    button.title = `View ${card?.name || "card"} details`;
+    button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openCardDetailsModal(card);
+    });
+    return button;
+}
+
+function openCardDetailsModal(card) {
+    if (!card) return;
+
+    document.querySelector(".card-details-overlay")?.remove();
+
+    const overlay = document.createElement("div");
+    overlay.className = "card-details-overlay";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-label", `${card.name || "Card"} details`);
+
+    const modal = document.createElement("section");
+    modal.className = "card-details-modal";
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "card-details-toolbar";
+
+    const flipButton = document.createElement("button");
+    flipButton.type = "button";
+    flipButton.className = "card-details-flip";
+    flipButton.textContent = "Flip to details";
+
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.className = "card-details-close";
+    closeButton.setAttribute("aria-label", "Close card details");
+    closeButton.textContent = "×";
+
+    const scene = document.createElement("div");
+    scene.className = "card-details-scene";
+
+    const flipper = document.createElement("div");
+    flipper.className = "card-details-flipper";
+
+    const imageFace = document.createElement("div");
+    imageFace.className = "card-details-face card-details-image-face";
+    const image = document.createElement("img");
+    image.src = card.image || "";
+    image.alt = card.name || "Card";
+    imageFace.appendChild(image);
+
+    const infoFace = document.createElement("article");
+    infoFace.className = "card-details-face card-details-info-face";
+
+    const title = document.createElement("h2");
+    title.textContent = card.name || "Unknown card";
+    const subtitle = document.createElement("p");
+    subtitle.className = "card-details-subtitle";
+    subtitle.textContent = [card.cardNumber || card.id, card.cardType]
+        .filter(Boolean)
+        .join(" · ");
+    infoFace.append(title, subtitle);
+
+    const colors = String(card.color || "").split("/").map(value => value.trim()).filter(Boolean);
+    if (colors.length) {
+        const colorRow = document.createElement("div");
+        colorRow.className = "card-details-tags";
+        colors.forEach((color) => {
+            const tag = document.createElement("span");
+            tag.className = `card-detail-color card-detail-color-${color.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+            tag.textContent = color;
+            colorRow.appendChild(tag);
+        });
+        infoFace.appendChild(colorRow);
+    }
+
+    const stats = [
+        ["Cost", card.cost],
+        ["Power", card.power],
+        ["Counter", card.counter],
+        ["Life", card.life]
+    ].filter(([, value]) => value !== undefined && value !== null);
+    if (stats.length) {
+        const statGrid = document.createElement("div");
+        statGrid.className = "card-details-stats";
+        stats.forEach(([label, value]) => {
+            const stat = document.createElement("div");
+            const statLabel = document.createElement("small");
+            statLabel.textContent = label;
+            const statValue = document.createElement("strong");
+            statValue.textContent = value;
+            stat.append(statLabel, statValue);
+            statGrid.appendChild(stat);
+        });
+        infoFace.appendChild(statGrid);
+    }
+
+    const addTagGroup = (label, values) => {
+        const cleaned = values.filter(Boolean);
+        if (!cleaned.length) return;
+        const group = document.createElement("div");
+        group.className = "card-details-group";
+        const heading = document.createElement("small");
+        heading.textContent = label;
+        const tags = document.createElement("div");
+        tags.className = "card-details-tags";
+        cleaned.forEach((value) => {
+            const tag = document.createElement("span");
+            tag.textContent = value;
+            tags.appendChild(tag);
+        });
+        group.append(heading, tags);
+        infoFace.appendChild(group);
+    };
+
+    addTagGroup("Type", String(card.type || "").split("/").map(value => value.trim()));
+    addTagGroup("Attribute", [card.attribute]);
+    addTagGroup("Keywords", Array.isArray(card.keywords) ? card.keywords : []);
+
+    const effects = Array.isArray(card.effects) ? card.effects.filter(effect => effect?.text) : [];
+    const effectGroup = document.createElement("div");
+    effectGroup.className = "card-details-effects";
+    const effectHeading = document.createElement("small");
+    effectHeading.textContent = "Effects";
+    effectGroup.appendChild(effectHeading);
+    if (effects.length) {
+        effects.forEach((effect) => {
+            const paragraph = document.createElement("p");
+            paragraph.textContent = effect.text;
+            effectGroup.appendChild(paragraph);
+        });
+    } else {
+        const paragraph = document.createElement("p");
+        paragraph.textContent = "This card has no printed effects.";
+        effectGroup.appendChild(paragraph);
+    }
+    infoFace.appendChild(effectGroup);
+
+    flipper.append(imageFace, infoFace);
+    scene.appendChild(flipper);
+    toolbar.append(flipButton, closeButton);
+    modal.append(toolbar, scene);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const close = () => {
+        document.removeEventListener("keydown", handleKeydown);
+        document.body.classList.remove("card-details-open");
+        overlay.remove();
+    };
+    const handleKeydown = (event) => {
+        if (event.key === "Escape") close();
+    };
+
+    flipButton.addEventListener("click", () => {
+        const flipped = modal.classList.toggle("is-flipped");
+        flipButton.textContent = flipped ? "Flip to card" : "Flip to details";
+    });
+    closeButton.addEventListener("click", close);
+    overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) close();
+    });
+    document.addEventListener("keydown", handleKeydown);
+    document.body.classList.add("card-details-open");
+    closeButton.focus();
+}
+
 // =========================
 // General Helpers
 // =========================

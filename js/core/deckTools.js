@@ -356,6 +356,7 @@ function createPasteDeckSelection({ deckName, deckText, fallbackLeaderKey = "" }
 function openDeckPickerPopup({
     title = "Choose Deck",
     initialSelection = null,
+    presetFilter = null,
     onConfirm
 }) {
     const existingOverlay = document.getElementById("deckPickerOverlay");
@@ -365,7 +366,10 @@ function openDeckPickerPopup({
     }
 
     const localDecks = getLocalSavedDecks();
-    const presetDecks = window.getAvailableDecks?.() || [];
+    const allPresetDecks = window.getAvailableDecks?.() || [];
+    const presetDecks = typeof presetFilter === "function"
+        ? allPresetDecks.filter(presetFilter)
+        : allPresetDecks;
     const resolvedSelection = resolveDeckSelection(initialSelection) || getDefaultPresetDeck();
     const defaultLeaderKey = resolvedSelection?.leaderKey || Object.keys(window.leaders || {})[0] || "";
 

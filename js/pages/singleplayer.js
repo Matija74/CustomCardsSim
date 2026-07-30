@@ -77,6 +77,7 @@ function createUiBridge() {
 
 async function initializeGamePage() {
     try {
+        setupNextBoardWorkspace();
         await loadCardDatabase();
 
         gameState = createInitialGameState();
@@ -109,8 +110,46 @@ async function initializeGamePage() {
 
     } catch (error) {
         console.error(error);
-        addGameLog(`Failed to load card database: ${error.message}`);
+        addGameLog(`Unable to start match: ${error.message}`);
     }
+}
+
+function setupNextBoardWorkspace() {
+    if (!document.documentElement.classList.contains("next-board-ui")) return;
+
+    const logMount = document.getElementById("nextBoardLogMount");
+    const gameLog = document.querySelector(".card-preview-panel .game-log");
+    if (logMount && gameLog && gameLog.parentElement !== logMount) {
+        logMount.appendChild(gameLog);
+    }
+
+    if (typeof ResizeObserver === "function") {
+        const handObserver = new ResizeObserver((entries) => {
+            entries.forEach(entry => updateNextBoardHandOverlap(entry.target));
+        });
+        ["player1Hand", "player2Hand"].forEach((id) => {
+            const hand = document.getElementById(id);
+            if (!hand) return;
+            handObserver.observe(hand);
+            new MutationObserver(() => updateNextBoardHandOverlap(hand))
+                .observe(hand, { childList: true });
+        });
+    }
+}
+
+function updateNextBoardHandOverlap(handElement) {
+    if (!document.documentElement.classList.contains("next-board-ui") || !handElement) return;
+
+    const cards = handElement.querySelectorAll(".hand-card");
+    const cardCount = cards.length;
+    const availableWidth = Math.max(0, handElement.clientWidth - 76);
+    const cardWidth = window.matchMedia("(max-width: 760px)").matches ? 62 : 106;
+    const overlap = cardCount > 1
+        ? Math.max(-92, Math.min(-6, (availableWidth - (cardCount * cardWidth)) / (cardCount - 1)))
+        : 0;
+
+    handElement.style.setProperty("--hand-overlap", `${overlap}px`);
+    handElement.style.setProperty("--hand-size", String(cardCount));
 }
 
 document.addEventListener("DOMContentLoaded", initializeGamePage);
@@ -769,6 +808,7 @@ function renderPlayerHand(player, handElementId, hidden) {
     count.textContent = player.hand.length;
 
     handElement.appendChild(count);
+    updateNextBoardHandOverlap(handElement);
 
     setupCardPreview();
     setupHandCardSelection();
@@ -1694,7 +1734,7 @@ function showSelectedBoardActions() {
 
     if (!player || !card) return;
 
-    const actionButtons = [];
+    const actionButtons = [createCardDetailsButton(card)];
     const attackButton = document.createElement("button");
     const activateMainEffect = getActivateMainEffect(card);
     const activateAnyEffect = getActivateAnyEffect(card);
@@ -1767,7 +1807,11 @@ function showSelectedBoardActions() {
     if (!buttonContainer) return;
 
     actionButtons.forEach((button, index) => {
-        button.style.bottom = `${8 + (index * 35)}px`;
+        if (document.documentElement.classList.contains("next-board-ui")) {
+            button.style.setProperty("--board-action-index", index);
+        } else {
+            button.style.bottom = `${8 + (index * 35)}px`;
+        }
         buttonContainer.appendChild(button);
     });
 }
